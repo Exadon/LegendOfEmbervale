@@ -1,0 +1,23 @@
+{
+  "name": "elixirs-shadow",
+  "version": "1.0.0",
+  "description": "Elixir's Shadow - An Enshrouded prequel. Side-scrolling survival game.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "npx serve dist -s -l 3000"
+  },
+  "keywords": [
+    "phaser",
+    "game",
+    "enshrouded"
+  ],
+  "license": "ISC",
+  "dependencies": {
+    "phaser": "^3.90.0",
+    "terser": "^5.46.0",
+    "vite": "^7.3.1"
+  }
+}
