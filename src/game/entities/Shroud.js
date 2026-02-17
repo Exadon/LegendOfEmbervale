@@ -5,6 +5,9 @@ import { GlobalState } from '../GlobalState.js';
 export class Shroud {
     constructor(scene) {
         this.scene = scene;
+        this.currentSpeed = SHROUD.BASE_SPEED;
+        this.elapsed = 0;       // total seconds elapsed
+        this.lastRampTier = 0;  // last difficulty tier applied
 
         // Visual: TileSprite spanning full height
         this.visual = scene.add.tileSprite(
@@ -37,8 +40,22 @@ export class Shroud {
     }
 
     update(delta) {
+        // Speed ramp over time
+        this.elapsed += delta / 1000;
+        const tier = Math.floor(this.elapsed / SHROUD.RAMP_INTERVAL);
+        if (tier > this.lastRampTier) {
+            this.lastRampTier = tier;
+            this.currentSpeed = Math.min(
+                SHROUD.BASE_SPEED + tier * SHROUD.SPEED_RAMP,
+                SHROUD.SPEED_MAX
+            );
+            this.speedJustIncreased = true;
+        } else {
+            this.speedJustIncreased = false;
+        }
+
         // Advance shroud position
-        const advance = SHROUD.SPEED * (delta / 1000);
+        const advance = this.currentSpeed * (delta / 1000);
         GlobalState.shroudX += advance;
 
         // Move visual and hit zone
@@ -64,5 +81,9 @@ export class Shroud {
 
     getLeadingX() {
         return GlobalState.shroudX;
+    }
+
+    getDifficultyTier() {
+        return this.lastRampTier;
     }
 }

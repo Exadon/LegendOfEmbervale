@@ -1,13 +1,20 @@
 import Phaser from 'phaser';
+import { Settings } from './systems/Settings.js';
 import { Boot } from './scenes/Boot.js';
 import { Preloader } from './scenes/Preloader.js';
 import { MainMenu } from './scenes/MainMenu.js';
 import { Level1 } from './scenes/Level1.js';
+import { DevGuide } from './scenes/DevGuide.js';
+import { SpriteViewer } from './scenes/SpriteViewer.js';
+
+Settings.load();
+
+const [w, h] = Settings.data.resolution;
 
 const config = {
     type: Phaser.AUTO,
-    width: 1280,
-    height: 720,
+    width: w,
+    height: h,
     parent: 'game-container',
     backgroundColor: '#1A0A2E',
     physics: {
@@ -17,7 +24,7 @@ const config = {
             debug: false
         }
     },
-    scene: [Boot, Preloader, MainMenu, Level1]
+    scene: [Boot, Preloader, MainMenu, Level1, DevGuide, SpriteViewer]
 };
 
 export function StartGame(containerId) {

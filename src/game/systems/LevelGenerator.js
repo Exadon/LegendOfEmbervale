@@ -1,0 +1,192 @@
+import { WORLD, GENERATION, ELIXIR, LORE_ENTRIES, LORE_SCROLL, FLAME_SHRINE, ENEMIES, DECORATION, CRUMBLING_PLATFORM } from '../constants.js';
+import { ElixirVein } from '../entities/ElixirVein.js';
+import { FlameWisp } from '../entities/FlameWisp.js';
+import { CorruptionPool } from '../entities/CorruptionPool.js';
+import { LoreScroll } from '../entities/LoreScroll.js';
+import { FlameShrine } from '../entities/FlameShrine.js';
+import { Enemy } from '../entities/Enemy.js';
+import { CrumblingPlatform } from '../entities/CrumblingPlatform.js';
+
+export class LevelGenerator {
+    constructor(scene, groups, biomeManager) {
+        this.scene = scene;
+        this.platforms = groups.platforms;
+        this.elixirVeins = groups.elixirVeins;
+        this.flameWisps = groups.flameWisps;
+        this.corruptionPools = groups.corruptionPools;
+        this.loreScrolls = groups.loreScrolls;
+        this.flameShrines = groups.flameShrines;
+        this.enemies = groups.enemies;
+        this.decorations = groups.decorations;
+        this.crumblingPlatforms = groups.crumblingPlatforms;
+        this.biomeManager = biomeManager;
+
+        this.generatedUpTo = 0;
+        this.difficulty = 0;
+        this.loreIndex = 0; // cycles through LORE_ENTRIES
+
+        // Pre-compute total decoration weight for weighted random
+        this._totalDecoWeight = DECORATION.TYPES.reduce((sum, d) => sum + d.weight, 0);
+    }
+
+    setDifficulty(tier) {
+        this.difficulty = tier;
+    }
+
+    generateAhead(cameraRightX) {
+        const targetSegment = Math.ceil(
+            (cameraRightX + WORLD.SEGMENT_WIDTH * GENERATION.LOOKAHEAD_SEGMENTS) / WORLD.SEGMENT_WIDTH
+        );
+
+        while (this.generatedUpTo < targetSegment) {
+            this.generatedUpTo++;
+            this._generateSegment(this.generatedUpTo);
+        }
+    }
+
+    _generateSegment(index) {
+        const segX = index * WORLD.SEGMENT_WIDTH;
+        const rng = this._seededRandom(index);
+        const biome = this.biomeManager.getBiomeAt(segX);
+
+        // Skip first 2 segments (player start area)
+        if (index < 2) return;
+
+        // --- Platforms ---
+        if (rng() < GENERATION.PLATFORM_CHANCE) {
+            const count = 1 + (rng() < 0.3 ? 1 : 0);
+            for (let i = 0; i < count && i < GENERATION.MAX_PLATFORMS_PER_SEGMENT; i++) {
+                const px = segX + 80 + rng() * (WORLD.SEGMENT_WIDTH - 160);
+                const py = WORLD.GROUND_Y - 220 + rng() * 160;
+
+                // 15% chance to be a crumbling platform
+                if (rng() < CRUMBLING_PLATFORM.CHANCE) {
+                    const crumble = new CrumblingPlatform(this.scene, px, py);
+                    crumble.setTint(biome.platformTint);
+                    this.platforms.add(crumble);
+                    this.crumblingPlatforms.add(crumble);
+                } else {
+                    const plat = this.platforms.create(px, py, 'platform');
+                    plat.setTint(biome.platformTint);
+                }
+            }
+        }
+
+        // --- Decorations ---
+        if (rng() < DECORATION.CHANCE) {
+            const count = DECORATION.MIN_PER_SEGMENT +
+                Math.floor(rng() * (DECORATION.MAX_PER_SEGMENT - DECORATION.MIN_PER_SEGMENT + 1));
+            for (let i = 0; i < count; i++) {
+                const decoType = this._pickWeightedDecoration(rng);
+                const dx = segX + 20 + rng() * (WORLD.SEGMENT_WIDTH - 40);
+                // Tall decorations (trees, large rocks) render in front of
+                // the player so the player walks behind them for depth.
+                const isTall = decoType.height >= 128;
+                const deco = this.scene.add.image(dx, WORLD.GROUND_Y, decoType.key)
+                    .setOrigin(0.5, 1.0)
+                    .setDepth(isTall ? 6 : 0)
+                    .setTint(biome.treeTint);
+                if (isTall) deco.setAlpha(0.85);
+                // Slight random scale variation
+                const s = 0.8 + rng() * 0.4;
+                deco.setScale(s);
+                this.decorations.add(deco);
+            }
+        }
+
+        // --- Elixir Wells ---
+        if (rng() < GENERATION.VEIN_CHANCE) {
+            const vx = segX + 100 + rng() * (WORLD.SEGMENT_WIDTH - 200);
+            const vein = new ElixirVein(this.scene, vx, WORLD.GROUND_Y);
+            this.elixirVeins.add(vein);
+        }
+
+        // --- Flame Wisps ---
+        if (rng() < GENERATION.WISP_CHANCE) {
+            const wx = segX + 50 + rng() * (WORLD.SEGMENT_WIDTH - 100);
+            const wy = WORLD.GROUND_Y - 320 + rng() * 250;
+            const wisp = new FlameWisp(this.scene, wx, wy);
+            this.flameWisps.add(wisp);
+        }
+
+        // --- Corruption Pools ---
+        const corruptChance = GENERATION.CORRUPTION_CHANCE + this.difficulty * GENERATION.CORRUPTION_RAMP;
+        if (rng() < corruptChance) {
+            const cx = segX + 100 + rng() * (WORLD.SEGMENT_WIDTH - 200);
+            const pool = new CorruptionPool(this.scene, cx, WORLD.GROUND_Y);
+            this.corruptionPools.add(pool);
+        }
+
+        // --- Lore Scrolls (biome-specific chance) ---
+        if (rng() < biome.scrollChance) {
+            const sx = segX + 80 + rng() * (WORLD.SEGMENT_WIDTH - 160);
+            const sy = WORLD.GROUND_Y - LORE_SCROLL.HEIGHT / 2 - 5;
+            const entry = LORE_ENTRIES[this.loreIndex % LORE_ENTRIES.length];
+            this.loreIndex++;
+            const scroll = new LoreScroll(this.scene, sx, sy, entry);
+            this.loreScrolls.add(scroll);
+        }
+
+        // --- Flame Shrines (rare) ---
+        if (rng() < biome.shrineChance) {
+            const shx = segX + 150 + rng() * (WORLD.SEGMENT_WIDTH - 300);
+            const shy = WORLD.GROUND_Y - FLAME_SHRINE.HEIGHT / 2;
+            const shrine = new FlameShrine(this.scene, shx, shy);
+            this.flameShrines.add(shrine);
+        }
+
+        // --- Biome Enemies (distance-scaled density) ---
+        if (biome.enemies.length > 0) {
+            const distBonus = segX * GENERATION.ENEMY_DISTANCE_RAMP;
+            const enemyChance = Math.min(
+                GENERATION.ENEMY_CHANCE + this.difficulty * GENERATION.ENEMY_RAMP + distBonus,
+                0.95
+            );
+
+            // Roll for up to MAX_ENEMIES_PER_SEGMENT enemies
+            const thresholds = [0, 0.4, 0.7]; // offset subtracted for 2nd and 3rd enemy
+            let spawnCount = 0;
+            for (let i = 0; i < GENERATION.MAX_ENEMIES_PER_SEGMENT; i++) {
+                if (rng() < enemyChance - thresholds[i]) {
+                    spawnCount++;
+                } else {
+                    break;
+                }
+            }
+
+            // Place each enemy at a spread-out X offset
+            const slotWidth = (WORLD.SEGMENT_WIDTH - 200) / Math.max(spawnCount, 1);
+            for (let i = 0; i < spawnCount; i++) {
+                const typeId = biome.enemies[Math.floor(rng() * biome.enemies.length)];
+                const def = ENEMIES[typeId];
+                if (def) {
+                    const ex = segX + 100 + slotWidth * i + rng() * slotWidth;
+                    const ey = def.stationary
+                        ? WORLD.GROUND_Y - def.height / 2
+                        : WORLD.GROUND_Y - def.height / 2 - rng() * 100;
+                    const enemy = new Enemy(this.scene, ex, ey, typeId);
+                    this.enemies.add(enemy);
+                }
+            }
+        }
+    }
+
+    _pickWeightedDecoration(rng) {
+        let roll = rng() * this._totalDecoWeight;
+        for (const d of DECORATION.TYPES) {
+            roll -= d.weight;
+            if (roll <= 0) return d;
+        }
+        return DECORATION.TYPES[0];
+    }
+
+    _seededRandom(seed) {
+        let s = seed * 2654435761 >>> 0;
+        return () => {
+            s = (s ^ (s << 13)) >>> 0;
+            s = (s ^ (s >> 17)) >>> 0;
+            s = (s ^ (s << 5)) >>> 0;
+            return (s >>> 0) / 4294967296;
+        };
+    }
+}

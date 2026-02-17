@@ -14,10 +14,128 @@ body {
 }
 
 #game-container {
-    width: 1280px;
-    height: 720px;
+    position: relative;
 }
 
 #game-container canvas {
     display: block;
+}
+
+/* ─── HUD Layer ─── */
+
+#hud-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 10;
+    overflow: visible;
+}
+
+/* ─── HUD Window ─── */
+
+.hud-window {
+    position: absolute;
+    pointer-events: auto;
+    background: rgba(17, 17, 24, 0.55);
+    border: 1px solid #334455;
+    border-radius: 3px;
+    font-family: monospace;
+    color: #ccc;
+    cursor: grab;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    padding: 0 4px;
+}
+
+.hud-window.dragging {
+    cursor: grabbing;
+}
+
+/* ─── Bar Styles ─── */
+
+.hud-bar-bg {
+    background: #222;
+    border: 1px solid #444;
+    border-radius: 2px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.hud-bar-fill {
+    height: 100%;
+    border-radius: 1px;
+    transition: width 0.05s linear;
+}
+
+/* ─── Label / Icon / Value ─── */
+
+.hud-label {
+    font-size: 9px;
+    color: #aaa;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.hud-icon {
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.hud-value {
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+/* ─── Cooldown Group ─── */
+
+.hud-cd-group {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex-direction: column;
+}
+
+.hud-cd-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* ─── Stats Row ─── */
+
+.hud-stats-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.hud-stats-item {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+/* ─── Flame Low Pulse ─── */
+
+@keyframes hud-flame-pulse {
+    0%   { opacity: 1; }
+    50%  { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+.hud-flame-low .hud-bar-fill {
+    animation: hud-flame-pulse 0.6s ease-in-out infinite;
+}
+
+/* ─── Elixir Pop Animation ─── */
+
+@keyframes hud-pop {
+    0%   { transform: scale(1); }
+    50%  { transform: scale(1.4); }
+    100% { transform: scale(1); }
+}
+
+.hud-pop {
+    animation: hud-pop 0.2s ease-out;
 }

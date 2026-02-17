@@ -1,4 +1,5 @@
 import { FLAME, SHROUD } from './constants.js';
+import { SkillManager } from './systems/SkillManager.js';
 
 class _GlobalState {
     constructor() {
@@ -10,6 +11,7 @@ class _GlobalState {
         this._flame = FLAME.MAX;
         this._shroudX = SHROUD.START_X;
         this._gameOver = false;
+        SkillManager.reset();
     }
 
     get elixir() { return this._elixir; }

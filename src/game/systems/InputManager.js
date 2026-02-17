@@ -10,7 +10,11 @@ export class InputManager {
             down: Phaser.Input.Keyboard.KeyCodes.S,
             left: Phaser.Input.Keyboard.KeyCodes.A,
             right: Phaser.Input.Keyboard.KeyCodes.D,
-            jump: Phaser.Input.Keyboard.KeyCodes.SPACE
+            jump: Phaser.Input.Keyboard.KeyCodes.SPACE,
+            dash: Phaser.Input.Keyboard.KeyCodes.SHIFT,
+            flameBurst: Phaser.Input.Keyboard.KeyCodes.E,
+            classAttack: Phaser.Input.Keyboard.KeyCodes.Q,
+            pause: Phaser.Input.Keyboard.KeyCodes.ESC
         });
 
         // Gamepad (if connected)
@@ -46,6 +50,14 @@ export class InputManager {
         return false;
     }
 
+    get down() {
+        return this.keys.down.isDown;
+    }
+
+    get downJustPressed() {
+        return Phaser.Input.Keyboard.JustDown(this.keys.down);
+    }
+
     get jump() {
         if (Phaser.Input.Keyboard.JustDown(this.keys.jump)) return true;
         if (this.pad && this.pad.A && this._padAJustPressed()) return true;
@@ -59,6 +71,33 @@ export class InputManager {
         }
         if (!this.pad.A) this._prevA = false;
         return false;
+    }
+
+    get dash() {
+        if (Phaser.Input.Keyboard.JustDown(this.keys.dash)) return true;
+        if (this.pad && this.pad.B && this._padBJustPressed()) return true;
+        return false;
+    }
+
+    _padBJustPressed() {
+        if (!this._prevB && this.pad.B) {
+            this._prevB = true;
+            return true;
+        }
+        if (!this.pad.B) this._prevB = false;
+        return false;
+    }
+
+    get flameBurst() {
+        return Phaser.Input.Keyboard.JustDown(this.keys.flameBurst);
+    }
+
+    get classAttack() {
+        return Phaser.Input.Keyboard.JustDown(this.keys.classAttack);
+    }
+
+    get pause() {
+        return Phaser.Input.Keyboard.JustDown(this.keys.pause);
     }
 
     get horizontalAxis() {

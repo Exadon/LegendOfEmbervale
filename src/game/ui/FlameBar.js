@@ -1,39 +1,44 @@
-import { COLORS, FLAME } from '../constants.js';
+import { FLAME } from '../constants.js';
 import { GlobalState } from '../GlobalState.js';
 
+/**
+ * DOM-based flame bar: [icon] [████████░░░░]
+ */
 export class FlameBar {
-    constructor(scene, x, y) {
-        this.scene = scene;
+    constructor() {
+        this.el = document.createElement('div');
+        this.el.style.cssText = 'display:flex;align-items:center;gap:4px;width:100%;height:100%;padding:0 2px;';
 
-        const barWidth = 180;
-        const barHeight = 16;
+        // Flame icon
+        this.icon = document.createElement('span');
+        this.icon.className = 'hud-icon';
+        this.icon.textContent = '\u25C6'; // ◆
+        this.icon.style.cssText = 'color:#FF6600;font-size:14px;';
 
-        // Icon
-        this.icon = scene.add.image(x, y, 'flame_icon').setScrollFactor(0).setDepth(100);
+        // Bar background
+        this.barBg = document.createElement('div');
+        this.barBg.className = 'hud-bar-bg';
+        this.barBg.style.cssText = 'flex:1;height:14px;';
 
-        // Background
-        this.bg = scene.add.rectangle(x + 20, y, barWidth, barHeight, COLORS.BAR_BG)
-            .setOrigin(0, 0.5)
-            .setScrollFactor(0)
-            .setDepth(100);
+        // Bar fill
+        this.barFill = document.createElement('div');
+        this.barFill.className = 'hud-bar-fill';
+        this.barFill.style.cssText = 'width:100%;height:100%;background:#FF6600;';
 
-        // Fill
-        this.fill = scene.add.rectangle(x + 22, y, barWidth - 4, barHeight - 4, COLORS.BAR_FLAME_FULL)
-            .setOrigin(0, 0.5)
-            .setScrollFactor(0)
-            .setDepth(101);
-
-        this.maxWidth = barWidth - 4;
+        this.barBg.appendChild(this.barFill);
+        this.el.appendChild(this.icon);
+        this.el.appendChild(this.barBg);
     }
 
     update() {
         const pct = GlobalState.flame / FLAME.MAX;
-        this.fill.width = this.maxWidth * pct;
+        this.barFill.style.width = `${(pct * 100).toFixed(1)}%`;
 
-        // Color interpolation: orange at full -> red at empty
-        const r = 0xFF;
+        // Color interpolation: orange (#FF6600) at full → red (#FF0000) at empty
         const g = Math.floor(0x66 * pct);
-        const b = 0;
-        this.fill.fillColor = (r << 16) | (g << 8) | b;
+        this.barFill.style.background = `rgb(255, ${g}, 0)`;
+
+        // Urgency pulse when flame is low
+        this.el.classList.toggle('hud-flame-low', pct < 0.2);
     }
 }
