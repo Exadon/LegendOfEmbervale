@@ -1,4 +1,4 @@
-import { COLORS, PLAYER, ELIXIR, SHROUD, WORLD, CORRUPTION, ENEMIES, LORE_SCROLL } from '../constants.js';
+import { COLORS, PLAYER, ELIXIR, SHROUD, WORLD, CORRUPTION_POOL, ENEMIES, LORE_SCROLL } from '../constants.js';
 
 export class TextureGenerator {
     /**
@@ -98,8 +98,8 @@ export class TextureGenerator {
     }
 
     static generateCorruptionPool(scene) {
-        const w = CORRUPTION.WIDTH;
-        const h = CORRUPTION.HEIGHT;
+        const w = CORRUPTION_POOL.WIDTH;
+        const h = CORRUPTION_POOL.HEIGHT;
         const g = scene.make.graphics({ add: false });
         g.fillStyle(COLORS.CORRUPTION_PURPLE);
         g.fillRoundedRect(0, 0, w, h, h / 2);

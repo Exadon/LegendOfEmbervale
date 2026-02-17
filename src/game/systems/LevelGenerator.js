@@ -1,4 +1,4 @@
-import { WORLD, GENERATION, ELIXIR, LORE_ENTRIES, LORE_SCROLL, FLAME_SHRINE, ENEMIES, DECORATION, CRUMBLING_PLATFORM } from '../constants.js';
+import { WORLD, GENERATION, ELIXIR, LORE_ENTRIES, LORE_SCROLL, FLAME_SHRINE, ENEMIES, DECORATION, CRUMBLING_PLATFORM, SURVIVOR, CHALLENGE_SHRINE, CINDER_VESSEL, CRAFTSPERSON, OBELISK, DEADLY_SHROUD } from '../constants.js';
 import { ElixirVein } from '../entities/ElixirVein.js';
 import { FlameWisp } from '../entities/FlameWisp.js';
 import { CorruptionPool } from '../entities/CorruptionPool.js';
@@ -6,6 +6,11 @@ import { LoreScroll } from '../entities/LoreScroll.js';
 import { FlameShrine } from '../entities/FlameShrine.js';
 import { Enemy } from '../entities/Enemy.js';
 import { CrumblingPlatform } from '../entities/CrumblingPlatform.js';
+import { Survivor as SurvivorEntity } from '../entities/Survivor.js';
+import { ChallengeShrine as ChallengeShrineEntity } from '../entities/ChallengeShrine.js';
+import { CinderVessel } from '../entities/CinderVessel.js';
+import { Craftsperson } from '../entities/Craftsperson.js';
+import { AncientObelisk } from '../entities/AncientObelisk.js';
 
 export class LevelGenerator {
     constructor(scene, groups, biomeManager) {
@@ -19,6 +24,12 @@ export class LevelGenerator {
         this.enemies = groups.enemies;
         this.decorations = groups.decorations;
         this.crumblingPlatforms = groups.crumblingPlatforms;
+        this.survivors = groups.survivors;
+        this.challengeShrines = groups.challengeShrines;
+        this.cinderVessels = groups.cinderVessels;
+        this.craftspeople = groups.craftspeople;
+        this.obelisks = groups.obelisks;
+        this.deadlyShroudZones = groups.deadlyShroudZones;
         this.biomeManager = biomeManager;
 
         this.generatedUpTo = 0;
@@ -82,7 +93,7 @@ export class LevelGenerator {
                 // Tall decorations (trees, large rocks) render in front of
                 // the player so the player walks behind them for depth.
                 const isTall = decoType.height >= 128;
-                const deco = this.scene.add.image(dx, WORLD.GROUND_Y, decoType.key)
+                const deco = this.scene.add.image(dx, WORLD.GROUND_Y + 4, decoType.key)
                     .setOrigin(0.5, 1.0)
                     .setDepth(isTall ? 6 : 0)
                     .setTint(biome.treeTint);
@@ -168,6 +179,62 @@ export class LevelGenerator {
                     this.enemies.add(enemy);
                 }
             }
+        }
+
+        // --- Survivors (after segment 5, 3% chance) ---
+        if (index > 5 && rng() < SURVIVOR.CHANCE && this.survivors) {
+            const sx = segX + 100 + rng() * (WORLD.SEGMENT_WIDTH - 200);
+            const survivor = new SurvivorEntity(this.scene, sx);
+            this.survivors.add(survivor);
+        }
+
+        // --- Challenge Shrines (after segment 8, 2% chance) ---
+        if (index > 8 && rng() < CHALLENGE_SHRINE.CHANCE && this.challengeShrines) {
+            const csx = segX + 150 + rng() * (WORLD.SEGMENT_WIDTH - 300);
+            const shrine = new ChallengeShrineEntity(this.scene, csx);
+            this.challengeShrines.add(shrine);
+        }
+
+        // --- Cinder Vessels (after segment 10, 0.8% chance) (Feature 1) ---
+        if (index > 10 && rng() < CINDER_VESSEL.CHANCE && this.cinderVessels) {
+            const cvx = segX + 100 + rng() * (WORLD.SEGMENT_WIDTH - 200);
+            const vessel = new CinderVessel(this.scene, cvx);
+            this.cinderVessels.add(vessel);
+        }
+
+        // --- Craftspeople (after segment 12, 1.2% chance) (Feature 6) ---
+        if (index > 12 && rng() < CRAFTSPERSON.CHANCE && this.craftspeople) {
+            const cpx = segX + 100 + rng() * (WORLD.SEGMENT_WIDTH - 200);
+            const craftsperson = new Craftsperson(this.scene, cpx);
+            this.craftspeople.add(craftsperson);
+        }
+
+        // --- Ancient Obelisks (after segment 6, 1.5% chance) (Feature 7) ---
+        if (index > 6 && rng() < OBELISK.CHANCE && this.obelisks) {
+            const ox = segX + 100 + rng() * (WORLD.SEGMENT_WIDTH - 200);
+            const obelisk = new AncientObelisk(this.scene, ox);
+            this.obelisks.add(obelisk);
+        }
+
+        // --- Deadly Shroud Zones (after segment 15, 3% chance) (Feature 9) ---
+        if (index > 15 && rng() < DEADLY_SHROUD.CHANCE && this.deadlyShroudZones) {
+            const dzx = segX + 80 + rng() * (WORLD.SEGMENT_WIDTH - 160);
+            const zone = this.scene.add.rectangle(
+                dzx, WORLD.GROUND_Y - DEADLY_SHROUD.HEIGHT / 2,
+                DEADLY_SHROUD.WIDTH, DEADLY_SHROUD.HEIGHT, 0xFF0000, 0.25
+            ).setDepth(3);
+            // Pulsing
+            this.scene.tweens.add({
+                targets: zone,
+                alpha: { from: 0.15, to: 0.35 },
+                duration: 1500,
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut',
+            });
+            // Store bounds for overlap detection in Level1
+            zone._bounds = { x: dzx, w: DEADLY_SHROUD.WIDTH, h: DEADLY_SHROUD.HEIGHT };
+            this.deadlyShroudZones.add(zone);
         }
     }
 

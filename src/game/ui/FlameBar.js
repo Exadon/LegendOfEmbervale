@@ -31,7 +31,7 @@ export class FlameBar {
     }
 
     update() {
-        const pct = GlobalState.flame / FLAME.MAX;
+        const pct = GlobalState.flame / GlobalState.maxFlame;
         this.barFill.style.width = `${(pct * 100).toFixed(1)}%`;
 
         // Color interpolation: orange (#FF6600) at full → red (#FF0000) at empty

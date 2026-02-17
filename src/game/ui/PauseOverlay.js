@@ -39,72 +39,80 @@ export class PauseOverlay {
         this.scene.physics.pause();
 
         const { width, height } = this.scene.scale;
+        const zoom = this.scene.cameras.main.zoom;
+        const s = 1 / zoom;
 
-        // Dark backdrop (centered, oversized — covers screen at any zoom)
+        // Helper to create scaled text
+        const _text = (sx, sy, text, style, origin = 0.5) => {
+            const p = this._uiXY(sx, sy);
+            const t = this.scene.add.text(p.x, p.y, text, {
+                fontFamily: 'monospace', ...style
+            }).setOrigin(typeof origin === 'number' ? origin : origin[0], typeof origin === 'number' ? origin : origin[1])
+                .setScrollFactor(0).setDepth(301).setScale(s);
+            this._elements.push(t);
+            return t;
+        };
+
+        // Helper to create section background panel
+        const _panel = (sx, sy, pw, ph) => {
+            const p = this._uiXY(sx, sy);
+            const panel = this.scene.add.rectangle(p.x, p.y, pw * s, ph * s, 0x111122, 0.4)
+                .setScrollFactor(0).setDepth(300.5);
+            this._elements.push(panel);
+            return panel;
+        };
+
+        // Dark backdrop
         const bg = this.scene.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.8)
             .setScrollFactor(0).setDepth(300);
         this._elements.push(bg);
 
         // "PAUSED" header
-        const hp = this._uiXY(width / 2, Math.round(height * 0.07));
-        const header = this.scene.add.text(hp.x, hp.y, 'PAUSED', {
-            fontSize: '28px',
-            color: '#FFCC00',
-            fontFamily: 'monospace',
-            fontStyle: 'bold'
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(301);
-        this._elements.push(header);
+        _text(width / 2, Math.round(height * 0.07), 'PAUSED', {
+            fontSize: '28px', color: '#FFCC00', fontStyle: 'bold'
+        });
 
         // Player info line
         let infoStr = `Level ${SkillManager.level}`;
         if (SkillManager.activeClass && SkillManager.activeClass.className) {
             infoStr += `  -  ${SkillManager.activeClass.className}`;
         }
-        const ip = this._uiXY(width / 2, Math.round(height * 0.11));
-        const info = this.scene.add.text(ip.x, ip.y, infoStr, {
-            fontSize: '16px',
-            color: '#FFFFFF',
-            fontFamily: 'monospace'
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(301);
-        this._elements.push(info);
+        _text(width / 2, Math.round(height * 0.11), infoStr, {
+            fontSize: '16px', color: '#FFFFFF'
+        });
 
         // Divider
         const dp = this._uiXY(width / 2, Math.round(height * 0.14));
-        const divider = this.scene.add.rectangle(dp.x, dp.y, 400, 1, 0x666666)
+        const divider = this.scene.add.rectangle(dp.x, dp.y, 400 * s, 1, 0x666666)
             .setScrollFactor(0).setDepth(301);
         this._elements.push(divider);
 
         // Skills header
-        const shp = this._uiXY(width / 2, Math.round(height * 0.16));
-        const skillsHeader = this.scene.add.text(shp.x, shp.y, 'ACQUIRED SKILLS', {
-            fontSize: '14px',
-            color: '#AAAAAA',
-            fontFamily: 'monospace'
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(301);
-        this._elements.push(skillsHeader);
+        _text(width / 2, Math.round(height * 0.15), 'ACQUIRED SKILLS', {
+            fontSize: '14px', color: '#AAAAAA'
+        });
+
+        // Skills section background
+        const skillPanelH = SkillManager.acquired.length === 0 ? 30 : Math.min(SkillManager.acquired.length * 35 + 10, 180);
+        _panel(width / 2, Math.round(height * 0.15) + skillPanelH / 2 + 10, 420, skillPanelH);
 
         // Skill list
         if (SkillManager.acquired.length === 0) {
-            const nsp = this._uiXY(width / 2, Math.round(height * 0.19));
-            const noSkills = this.scene.add.text(nsp.x, nsp.y, 'No skills acquired yet', {
-                fontSize: '13px',
-                color: '#666666',
-                fontFamily: 'monospace',
-                fontStyle: 'italic'
-            }).setOrigin(0.5).setScrollFactor(0).setDepth(301);
-            this._elements.push(noSkills);
+            _text(width / 2, Math.round(height * 0.18), 'No skills acquired yet', {
+                fontSize: '13px', color: '#666666', fontStyle: 'italic'
+            });
         } else {
-            const startP = this._uiXY(0, Math.round(height * 0.19));
+            const startP = this._uiXY(0, Math.round(height * 0.18));
             let yPos = startP.y;
             for (const skillId of SkillManager.acquired) {
-                const skillDef = SKILLS.find(s => s.id === skillId);
+                const skillDef = SKILLS.find(sk => sk.id === skillId);
                 if (!skillDef) continue;
 
                 const colorStr = '#' + skillDef.color.toString(16).padStart(6, '0');
 
                 // Colored square
                 const sqP = this._uiXY(width / 2 - 180, 0);
-                const sq = this.scene.add.rectangle(sqP.x, yPos + 8, 16, 16, skillDef.color)
+                const sq = this.scene.add.rectangle(sqP.x, yPos + 6 * s, 12 * s, 12 * s, skillDef.color)
                     .setScrollFactor(0).setDepth(302);
                 sq.setStrokeStyle(1, 0xFFFFFF);
                 this._elements.push(sq);
@@ -112,56 +120,49 @@ export class PauseOverlay {
                 // Skill name
                 const nmP = this._uiXY(width / 2 - 164, 0);
                 const name = this.scene.add.text(nmP.x, yPos, skillDef.name, {
-                    fontSize: '14px',
-                    color: '#FFFFFF',
-                    fontFamily: 'monospace'
-                }).setOrigin(0, 0).setScrollFactor(0).setDepth(302);
+                    fontSize: '13px', color: '#FFFFFF', fontFamily: 'monospace'
+                }).setOrigin(0, 0).setScrollFactor(0).setDepth(302).setScale(s);
                 this._elements.push(name);
 
                 // Class name
                 const clP = this._uiXY(width / 2 + 100, 0);
                 const cls = this.scene.add.text(clP.x, yPos, skillDef.className, {
-                    fontSize: '12px',
-                    color: colorStr,
-                    fontFamily: 'monospace'
-                }).setOrigin(0, 0).setScrollFactor(0).setDepth(302);
+                    fontSize: '11px', color: colorStr, fontFamily: 'monospace'
+                }).setOrigin(0, 0).setScrollFactor(0).setDepth(302).setScale(s);
                 this._elements.push(cls);
 
                 // Description
-                const desc = this.scene.add.text(nmP.x, yPos + 18, skillDef.description, {
-                    fontSize: '12px',
-                    color: '#888888',
-                    fontFamily: 'monospace',
-                    wordWrap: { width: 420 }
-                }).setOrigin(0, 0).setScrollFactor(0).setDepth(302);
+                const desc = this.scene.add.text(nmP.x, yPos + 15 * s, skillDef.description, {
+                    fontSize: '11px', color: '#888888', fontFamily: 'monospace',
+                    wordWrap: { width: 420 / s }
+                }).setOrigin(0, 0).setScrollFactor(0).setDepth(302).setScale(s);
                 this._elements.push(desc);
 
-                yPos += 50;
+                yPos += 35 * s;
             }
         }
 
         // ─── Achievements section ───
-        const achDivP = this._uiXY(width / 2, Math.round(height * 0.50));
-        const achDivider = this.scene.add.rectangle(achDivP.x, achDivP.y, 400, 1, 0x666666)
+        const achDivP = this._uiXY(width / 2, Math.round(height * 0.42));
+        const achDivider = this.scene.add.rectangle(achDivP.x, achDivP.y, 400 * s, 1, 0x666666)
             .setScrollFactor(0).setDepth(301);
         this._elements.push(achDivider);
 
         const achCount = AchievementManager.getUnlockedCount();
         const achTotal = AchievementManager.getTotalCount();
-        const achHp = this._uiXY(width / 2, Math.round(height * 0.53));
-        const achHeader = this.scene.add.text(achHp.x, achHp.y, `ACHIEVEMENTS (${achCount}/${achTotal})`, {
-            fontSize: '14px',
-            color: achCount >= achTotal ? '#44FF44' : '#AAAAAA',
-            fontFamily: 'monospace'
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(301);
-        this._elements.push(achHeader);
+        _text(width / 2, Math.round(height * 0.44), `ACHIEVEMENTS (${achCount}/${achTotal})`, {
+            fontSize: '14px', color: achCount >= achTotal ? '#44FF44' : '#AAAAAA'
+        });
+
+        // Achievements section background
+        _panel(width / 2, Math.round(height * 0.50), 420, 80);
 
         // Two-column category layout
         const categories = AchievementManager.getCategories();
         const colLeftX = width / 2 - 160;
         const colRightX = width / 2 + 40;
-        const catStartY = Math.round(height * 0.56);
-        const catLineH = 18;
+        const catStartY = Math.round(height * 0.46);
+        const catLineH = 12;
 
         for (let i = 0; i < categories.length; i++) {
             const cat = categories[i];
@@ -173,108 +174,108 @@ export class PauseOverlay {
             const cp = this._uiXY(col, catStartY + row * catLineH);
             const catText = this.scene.add.text(cp.x, cp.y,
                 `${icon} ${cat} ${done}/${total}`, {
-                fontSize: '12px',
+                fontSize: '11px',
                 color: complete ? '#44FF44' : '#888888',
                 fontFamily: 'monospace'
-            }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(302);
+            }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(302).setScale(s);
             this._elements.push(catText);
         }
 
         // ─── Settings section ───
-        const settDiv = this._uiXY(width / 2, Math.round(height * 0.72));
-        const settDivider = this.scene.add.rectangle(settDiv.x, settDiv.y, 400, 1, 0x666666)
+        const settDiv = this._uiXY(width / 2, Math.round(height * 0.62));
+        const settDivider = this.scene.add.rectangle(settDiv.x, settDiv.y, 400 * s, 1, 0x666666)
             .setScrollFactor(0).setDepth(301);
         this._elements.push(settDivider);
 
-        const settHp = this._uiXY(width / 2, Math.round(height * 0.74));
-        const settHeader = this.scene.add.text(settHp.x, settHp.y, 'SETTINGS', {
-            fontSize: '14px',
-            color: '#AAAAAA',
-            fontFamily: 'monospace'
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(301);
-        this._elements.push(settHeader);
+        _text(width / 2, Math.round(height * 0.64), 'SETTINGS', {
+            fontSize: '14px', color: '#AAAAAA'
+        });
+
+        // Settings section background
+        _panel(width / 2, Math.round(height * 0.74), 420, 130);
 
         // Sound toggle
         const audio = this.scene.audio;
-        const soundLabelP = this._uiXY(width / 2 - 140, Math.round(height * 0.78));
+        const soundLabelP = this._uiXY(width / 2 - 140, Math.round(height * 0.67));
         const soundLabel = this.scene.add.text(soundLabelP.x, soundLabelP.y, '[M]  Sound:', {
-            fontSize: '14px',
-            color: '#CCCCCC',
-            fontFamily: 'monospace'
-        }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301);
+            fontSize: '13px', color: '#CCCCCC', fontFamily: 'monospace'
+        }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301).setScale(s);
         this._elements.push(soundLabel);
 
-        const soundValP = this._uiXY(width / 2 + 60, Math.round(height * 0.78));
+        const soundValP = this._uiXY(width / 2 + 60, Math.round(height * 0.67));
         this._soundText = this.scene.add.text(soundValP.x, soundValP.y,
             audio.muted ? 'OFF' : 'ON', {
-            fontSize: '14px',
+            fontSize: '13px',
             color: audio.muted ? '#FF4444' : '#44FF44',
-            fontFamily: 'monospace',
-            fontStyle: 'bold'
-        }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301);
+            fontFamily: 'monospace', fontStyle: 'bold'
+        }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301).setScale(s);
         this._elements.push(this._soundText);
 
         // Resolution toggle
         const [rw, rh] = Settings.data.resolution;
-        const resLabelP = this._uiXY(width / 2 - 140, Math.round(height * 0.82));
+        const resLabelP = this._uiXY(width / 2 - 140, Math.round(height * 0.71));
         const resLabel = this.scene.add.text(resLabelP.x, resLabelP.y, '[R]  Resolution:', {
-            fontSize: '14px', color: '#CCCCCC', fontFamily: 'monospace'
-        }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301);
+            fontSize: '13px', color: '#CCCCCC', fontFamily: 'monospace'
+        }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301).setScale(s);
         this._elements.push(resLabel);
 
-        const resValP = this._uiXY(width / 2 + 60, Math.round(height * 0.82));
+        const resValP = this._uiXY(width / 2 + 60, Math.round(height * 0.71));
         this._resText = this.scene.add.text(resValP.x, resValP.y, `${rw}x${rh}`, {
-            fontSize: '14px', color: '#FFCC00', fontFamily: 'monospace', fontStyle: 'bold'
-        }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301);
+            fontSize: '13px', color: '#FFCC00', fontFamily: 'monospace', fontStyle: 'bold'
+        }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301).setScale(s);
         this._elements.push(this._resText);
 
         // Grid snap toggle
-        const snapLabelP = this._uiXY(width / 2 - 140, Math.round(height * 0.86));
+        const snapLabelP = this._uiXY(width / 2 - 140, Math.round(height * 0.75));
         const snapLabel = this.scene.add.text(snapLabelP.x, snapLabelP.y, '[N]  Grid Snap:', {
-            fontSize: '14px', color: '#CCCCCC', fontFamily: 'monospace'
-        }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301);
+            fontSize: '13px', color: '#CCCCCC', fontFamily: 'monospace'
+        }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301).setScale(s);
         this._elements.push(snapLabel);
 
-        const snapValP = this._uiXY(width / 2 + 60, Math.round(height * 0.86));
+        const snapValP = this._uiXY(width / 2 + 60, Math.round(height * 0.75));
         this._snapText = this.scene.add.text(snapValP.x, snapValP.y,
             Settings.data.gridSnap ? 'ON' : 'OFF', {
-            fontSize: '14px',
+            fontSize: '13px',
             color: Settings.data.gridSnap ? '#44FF44' : '#FF4444',
             fontFamily: 'monospace', fontStyle: 'bold'
-        }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301);
+        }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301).setScale(s);
         this._elements.push(this._snapText);
 
         // Reset HUD positions
-        const resetP = this._uiXY(width / 2 - 140, Math.round(height * 0.90));
-        const resetLabel = this.scene.add.text(resetP.x, resetP.y, '[P]  Reset HUD Positions', {
-            fontSize: '14px', color: '#CCCCCC', fontFamily: 'monospace'
-        }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301);
+        const resetLabelP = this._uiXY(width / 2 - 140, Math.round(height * 0.79));
+        const resetLabel = this.scene.add.text(resetLabelP.x, resetLabelP.y, '[P]  Reset HUD Positions', {
+            fontSize: '13px', color: '#CCCCCC', fontFamily: 'monospace'
+        }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301).setScale(s);
         this._elements.push(resetLabel);
 
+        // Lore Compendium
+        const loreLabelP = this._uiXY(width / 2 - 140, Math.round(height * 0.83));
+        const loreLabel = this.scene.add.text(loreLabelP.x, loreLabelP.y, '[J]  Lore Compendium', {
+            fontSize: '13px', color: '#CCCCCC', fontFamily: 'monospace'
+        }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301).setScale(s);
+        this._elements.push(loreLabel);
+
         // ─── Dev Options (compact) ───
-        const devDiv = this._uiXY(width / 2, Math.round(height * 0.93));
-        const devDivider = this.scene.add.rectangle(devDiv.x, devDiv.y, 400, 1, 0x666666)
+        const devDiv = this._uiXY(width / 2, Math.round(height * 0.87));
+        const devDivider = this.scene.add.rectangle(devDiv.x, devDiv.y, 400 * s, 1, 0x666666)
             .setScrollFactor(0).setDepth(301);
         this._elements.push(devDivider);
 
         const clsName = SkillManager.activeClass.className || 'Default';
-        const devHp = this._uiXY(width / 2, Math.round(height * 0.96));
-        const devLine = this.scene.add.text(devHp.x, devHp.y,
+        const devLine = this.scene.add.text(0, 0,
             `DEV  [L] Level Up  [G] Guide  [C] Class: ${clsName}`, {
-            fontSize: '12px',
-            color: '#FF6666',
-            fontFamily: 'monospace'
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(301);
+            fontSize: '11px', color: '#FF6666', fontFamily: 'monospace'
+        });
+        const devHp = this._uiXY(width / 2, Math.round(height * 0.91));
+        devLine.setPosition(devHp.x, devHp.y).setOrigin(0.5).setScrollFactor(0).setDepth(301).setScale(s);
         this._elements.push(devLine);
         this._devLine = devLine;
 
         // Resume prompt at bottom
         const pp = this._uiXY(width / 2, height - 30);
         const prompt = this.scene.add.text(pp.x, pp.y, 'Press [ESC] to resume', {
-            fontSize: '14px',
-            color: '#FFCC00',
-            fontFamily: 'monospace'
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(301);
+            fontSize: '14px', color: '#FFCC00', fontFamily: 'monospace'
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(301).setScale(s);
         this._elements.push(prompt);
 
         // Pulse the prompt
@@ -303,6 +304,8 @@ export class PauseOverlay {
                 this._openGuide();
             } else if (event.key === 'c' || event.key === 'C') {
                 this._cycleClass();
+            } else if (event.key === 'j' || event.key === 'J') {
+                this._openLoreCompendium();
             }
         };
         this.scene.input.keyboard.on('keydown', this._keyHandler);
@@ -360,6 +363,13 @@ export class PauseOverlay {
         this.hide();
         if (this.scene.levelUpOverlay && !this.scene.levelUpOverlay.active) {
             this.scene.levelUpOverlay.show();
+        }
+    }
+
+    _openLoreCompendium() {
+        this.hide();
+        if (this.scene.loreCompendium) {
+            this.scene.loreCompendium.show();
         }
     }
 

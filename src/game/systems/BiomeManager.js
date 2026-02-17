@@ -1,4 +1,4 @@
-import { BIOMES, PLAYER } from '../constants.js';
+import { BIOMES, PLAYER, BIOME_LORE } from '../constants.js';
 
 export class BiomeManager {
     constructor(scene) {
@@ -80,5 +80,13 @@ export class BiomeManager {
                 ease: 'Power2'
             });
         });
+
+        // Show biome lore excerpt 2s after banner
+        const loreEntry = BIOME_LORE[biome.id];
+        if (loreEntry && this.scene.hud) {
+            this.scene.time.delayedCall(2000, () => {
+                this.scene.hud.showLoreScroll(loreEntry);
+            });
+        }
     }
 }

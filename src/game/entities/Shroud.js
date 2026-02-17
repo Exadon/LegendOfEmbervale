@@ -6,6 +6,7 @@ export class Shroud {
     constructor(scene) {
         this.scene = scene;
         this.currentSpeed = SHROUD.BASE_SPEED;
+        this.speedMultiplier = 1.0;
         this.elapsed = 0;       // total seconds elapsed
         this.lastRampTier = 0;  // last difficulty tier applied
 
@@ -55,7 +56,7 @@ export class Shroud {
         }
 
         // Advance shroud position
-        const advance = this.currentSpeed * (delta / 1000);
+        const advance = this.currentSpeed * this.speedMultiplier * (delta / 1000);
         GlobalState.shroudX += advance;
 
         // Move visual and hit zone

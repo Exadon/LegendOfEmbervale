@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { PLAYER, FLAME_STEP, CORRUPTION, DOUBLE_JUMP, WALL_SLIDE, GLIDER, GROUND_SLAM, FLAME_BURST } from '../constants.js';
+import { PLAYER, FLAME_STEP, CORRUPTION_POOL, DOUBLE_JUMP, WALL_SLIDE, GLIDER, GROUND_SLAM, FLAME_BURST } from '../constants.js';
 import { SkillManager } from '../systems/SkillManager.js';
 import { DEFAULT_CLASS } from '../systems/ClassDefs.js';
 
@@ -203,6 +203,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
                 if (this.jumpBufferTimer > 0) {
                     this.setVelocityY(SkillManager.getValue('player.jumpVelocity', PLAYER.JUMP_VELOCITY));
                     this.jumpBufferTimer = 0;
+                    this.scene.events.emit('jump');
                 }
             }
             // Land from slam
@@ -265,7 +266,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         // Normal movement
         const h = input.horizontalAxis;
         const immuneSlow = SkillManager.getFlag('corruption.immuneSlow');
-        const speedMult = (this.inCorruption && !immuneSlow) ? CORRUPTION.SLOW_FACTOR : 1;
+        const speedMult = (this.inCorruption && !immuneSlow) ? CORRUPTION_POOL.SLOW_FACTOR : 1;
         const glideMult = this.isGliding ? GLIDER.HORIZONTAL_BOOST : 1;
         this.setVelocityX(h * SkillManager.getValue('player.speed', PLAYER.SPEED) * speedMult * glideMult);
 
@@ -287,6 +288,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             } else if (canGroundJump) {
                 this.setVelocityY(SkillManager.getValue('player.jumpVelocity', PLAYER.JUMP_VELOCITY));
                 this.coyoteTimer = 0; // consume coyote
+                this.scene.events.emit('jump');
             } else if (this.airJumpsRemaining > 0) {
                 // Double jump
                 this.airJumpsRemaining--;

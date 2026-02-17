@@ -1,10 +1,10 @@
 import Phaser from 'phaser';
-import { CORRUPTION } from '../constants.js';
+import { CORRUPTION_POOL } from '../constants.js';
 
 export class CorruptionPool extends Phaser.Physics.Arcade.Sprite {
     constructor(scene, x, y) {
         // Place on top of ground surface
-        super(scene, x, y - CORRUPTION.HEIGHT / 2, 'corruption_pool');
+        super(scene, x, y - CORRUPTION_POOL.HEIGHT / 2, 'corruption_pool');
         scene.add.existing(this);
         scene.physics.add.existing(this, true);
 

@@ -2,9 +2,10 @@ import { FlameBar } from './FlameBar.js';
 import { ElixirCounter } from './ElixirCounter.js';
 import { UIWindow } from './UIWindow.js';
 import { Settings } from '../systems/Settings.js';
-import { LORE_SCROLL, WINDOW_DEFS } from '../constants.js';
+import { LORE_SCROLL, WINDOW_DEFS, WORLD, BIOMES, PROGRESSION_BAR } from '../constants.js';
 import { SkillManager } from '../systems/SkillManager.js';
 import { AchievementManager } from '../systems/AchievementManager.js';
+import { FlameAltar } from '../systems/FlameAltar.js';
 
 const HIGHSCORE_KEY = 'elixirs-shadow-highscore';
 
@@ -24,7 +25,31 @@ export class HUD {
             x: pos.flame.x, y: pos.flame.y,
             w: WINDOW_DEFS.flame.w, h: WINDOW_DEFS.flame.h
         });
-        this.windows.flame.add(this.flameBar.el);
+
+        // Container for flame bar + corruption bar
+        const flameContainer = document.createElement('div');
+        flameContainer.style.cssText = 'display:flex;flex-direction:column;gap:2px;width:100%;height:100%;';
+        flameContainer.appendChild(this.flameBar.el);
+
+        // Corruption bar (hidden when 0)
+        this._corruptBarWrap = document.createElement('div');
+        this._corruptBarWrap.style.cssText = 'display:none;align-items:center;gap:4px;width:100%;padding:0 2px;';
+        const corruptIcon = document.createElement('span');
+        corruptIcon.className = 'hud-icon';
+        corruptIcon.textContent = '\u2623'; // ☣
+        corruptIcon.style.cssText = 'color:#9933FF;font-size:10px;';
+        const corruptBg = document.createElement('div');
+        corruptBg.className = 'hud-bar-bg';
+        corruptBg.style.cssText = 'flex:1;height:8px;';
+        this._corruptFill = document.createElement('div');
+        this._corruptFill.className = 'hud-bar-fill';
+        this._corruptFill.style.cssText = 'width:0%;height:100%;background:#9933FF;';
+        corruptBg.appendChild(this._corruptFill);
+        this._corruptBarWrap.appendChild(corruptIcon);
+        this._corruptBarWrap.appendChild(corruptBg);
+        flameContainer.appendChild(this._corruptBarWrap);
+
+        this.windows.flame.add(flameContainer);
 
         // --- Cooldowns window ---
         this.windows.cooldowns = new UIWindow({
@@ -100,8 +125,15 @@ export class HUD {
 
         this.scrollCount = 0;
 
+        // Relic icon row
+        const relicRow = document.createElement('div');
+        relicRow.className = 'hud-stats-row';
+        relicRow.style.gap = '4px';
+        this._relicRow = relicRow;
+
         statsContainer.appendChild(statsRow1);
         statsContainer.appendChild(statsRow2);
+        statsContainer.appendChild(relicRow);
         this.windows.stats.add(statsContainer);
 
         // --- Distance window ---
@@ -168,6 +200,16 @@ export class HUD {
                 duration: 1500
             });
         });
+
+        // ─── Progress bar (top of screen) ───
+        this._progressGfx = scene.add.graphics().setScrollFactor(0).setDepth(PROGRESSION_BAR.DEPTH);
+        this._progressPct = 0;
+
+        // ─── Shroud proximity warning (left edge red overlay) ───
+        const swp = u(0, height / 2);
+        this.shroudWarnRect = scene.add.rectangle(swp.x, swp.y, 60, height, 0xFF0000, 0)
+            .setScrollFactor(0).setDepth(99).setOrigin(0, 0.5);
+        this._shroudWarnTween = null;
 
         // ─── Scene shutdown cleanup ───
         scene.events.once('shutdown', () => this.destroy());
@@ -245,6 +287,9 @@ export class HUD {
 
         if (distanceMeters !== undefined) {
             this._distText.textContent = `${Math.floor(distanceMeters)}m`;
+            // Update progress bar
+            const pct = Math.min(1, (distanceMeters * 10) / WORLD.WIDTH);
+            this._drawProgressBar(pct);
         }
     }
 
@@ -409,6 +454,36 @@ export class HUD {
             fontSize: '13px', color: '#FFCC00'
         });
 
+        // Flame Altar meta-progression
+        const altarY = achY + 28;
+        const altarLevel = FlameAltar.level;
+        const altarMax = FlameAltar.maxLevel;
+        _t(width / 2, altarY, `Flame Level ${altarLevel} / ${altarMax}`, {
+            fontSize: '13px', color: '#FF8800'
+        });
+
+        // Flame Altar progress bar
+        if (altarLevel < altarMax) {
+            const prog = FlameAltar.getProgressToNext();
+            const barY = altarY + 18;
+            const bp = u(width / 2, barY);
+            const barW = 200;
+            const barH = 8;
+            const barBg = scene.add.rectangle(bp.x, bp.y, barW, barH, 0x333333)
+                .setScrollFactor(0).setDepth(d).setAlpha(0);
+            const fillW = Math.max(2, barW * prog.pct);
+            const barFill = scene.add.rectangle(bp.x - barW / 2 + fillW / 2, bp.y, fillW, barH, 0xFF8800)
+                .setScrollFactor(0).setDepth(d).setAlpha(0);
+            this._gameOverElements.push(barBg, barFill);
+            _t(width / 2, barY + 14, `${prog.current} / ${prog.needed} elixir to next level`, {
+                fontSize: '10px', color: '#888888'
+            });
+        } else {
+            _t(width / 2, altarY + 18, 'MAX LEVEL \u2014 The Flame burns eternal', {
+                fontSize: '10px', color: '#FF8800', fontStyle: 'italic'
+            });
+        }
+
         // Restart prompt
         const restart = _t(width / 2, height * 0.88, 'Press SPACE to awaken again', {
             fontSize: '14px', color: '#D4A04A'
@@ -456,6 +531,105 @@ export class HUD {
 
     popElixir() {
         this.elixirCounter.pop();
+    }
+
+    updateRelics(relicManager) {
+        if (!this._relicRow || !relicManager) return;
+        this._relicRow.innerHTML = '';
+        for (const relic of relicManager.active) {
+            const span = document.createElement('span');
+            span.textContent = relic.icon;
+            span.title = `${relic.name}: ${relic.desc}`;
+            span.style.cssText = 'font-size:14px;cursor:default;';
+            this._relicRow.appendChild(span);
+        }
+    }
+
+    updateCorruption(c) {
+        if (c <= 0) {
+            this._corruptBarWrap.style.display = 'none';
+            return;
+        }
+        this._corruptBarWrap.style.display = 'flex';
+        const pct = Math.min(100, c);
+        this._corruptFill.style.width = `${pct.toFixed(1)}%`;
+        // Brighter at high corruption
+        const r = Math.floor(0x99 + (0xFF - 0x99) * (pct / 100));
+        this._corruptFill.style.background = `rgb(${r}, 51, 255)`;
+    }
+
+    // ─── Progress bar drawing ───
+
+    _drawProgressBar(pct) {
+        const gfx = this._progressGfx;
+        if (!gfx) return;
+        gfx.clear();
+
+        const { width } = this.scene.scale;
+        const z = this.scene.cameras.main.zoom;
+        const barW = width / z;
+        const barH = PROGRESSION_BAR.HEIGHT;
+
+        // Position at top of visible area
+        const topLeft = this._uiXY(0, 0);
+
+        // Draw biome color segments
+        const totalDist = WORLD.WIDTH;
+        for (let i = 0; i < BIOMES.length; i++) {
+            const start = BIOMES[i].startDistance / totalDist;
+            const end = (i + 1 < BIOMES.length ? BIOMES[i + 1].startDistance : totalDist) / totalDist;
+            const color = PROGRESSION_BAR.BIOME_COLORS[i] || 0x444444;
+
+            const segX = topLeft.x + start * barW;
+            const segW = (end - start) * barW;
+            const fillW = Math.min(segW, Math.max(0, pct * barW - start * barW));
+
+            if (fillW > 0) {
+                gfx.fillStyle(color, 0.8);
+                gfx.fillRect(segX, topLeft.y, fillW, barH);
+            }
+
+            // Biome tick mark
+            if (i > 0) {
+                gfx.fillStyle(0xFFFFFF, 0.5);
+                gfx.fillRect(topLeft.x + start * barW, topLeft.y, 1, barH);
+            }
+        }
+
+        // Background for unfilled portion
+        const filledW = pct * barW;
+        if (filledW < barW) {
+            gfx.fillStyle(0x222222, 0.4);
+            gfx.fillRect(topLeft.x + filledW, topLeft.y, barW - filledW, barH);
+        }
+    }
+
+    updateShroudProximity(dist) {
+        if (dist < PROGRESSION_BAR.SHROUD_WARN_DISTANCE) {
+            const intensity = 1 - (dist / PROGRESSION_BAR.SHROUD_WARN_DISTANCE);
+            const targetAlpha = intensity * PROGRESSION_BAR.SHROUD_WARN_MAX_ALPHA;
+
+            if (!this._shroudWarnTween) {
+                this.shroudWarnRect.setAlpha(0);
+                this._shroudWarnTween = this.scene.tweens.add({
+                    targets: this.shroudWarnRect,
+                    alpha: { from: 0, to: targetAlpha },
+                    duration: 600,
+                    yoyo: true,
+                    repeat: -1,
+                    ease: 'Sine.easeInOut'
+                });
+            } else {
+                // Update pulse intensity
+                this._shroudWarnTween.data[0].end = targetAlpha;
+            }
+        } else {
+            if (this._shroudWarnTween) {
+                this._shroudWarnTween.destroy();
+                this._shroudWarnTween = null;
+                this.shroudWarnRect.setAlpha(0);
+            }
+        }
     }
 
     // ─── Cleanup DOM on scene shutdown/restart ───

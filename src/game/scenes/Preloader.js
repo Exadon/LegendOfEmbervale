@@ -40,6 +40,11 @@ export class Preloader extends Phaser.Scene {
         this.load.image('deco_fence2', 'assests/decoration/fence2_32px.png');
         this.load.image('deco_grass1', 'assests/decoration/gras1_32px.png');
 
+        // Fell Vine spritesheet (3x3 grid: idle, attack, death)
+        this.load.spritesheet('fell_vine_sheet', 'assests/FellFine.png', {
+            frameWidth: 301, frameHeight: 341
+        });
+
         // Elixir Wells
         this.load.image('well', 'assests/well.png');
         this.load.image('driedwell', 'assests/driedwell.png');
@@ -146,6 +151,11 @@ export class Preloader extends Phaser.Scene {
             frameRate: 8,
             repeat: -1
         });
+
+        // Fell Vine animations (3 frames each row)
+        this.anims.create({ key: 'fell_vine_idle',   frames: this.anims.generateFrameNumbers('fell_vine_sheet', { start: 0, end: 2 }), frameRate: 4, repeat: -1 });
+        this.anims.create({ key: 'fell_vine_attack', frames: this.anims.generateFrameNumbers('fell_vine_sheet', { start: 3, end: 5 }), frameRate: 6, repeat: 0 });
+        this.anims.create({ key: 'fell_vine_death',  frames: this.anims.generateFrameNumbers('fell_vine_sheet', { start: 6, end: 8 }), frameRate: 6, repeat: 0 });
 
         // ─── Class Character Animations ───
         this._createAtlasAnims();

@@ -9,11 +9,46 @@
  *   AchievementManager.popNewlyUnlocked();            // drain toast queue
  */
 
-import { BIOMES } from '../constants.js';
+import { BIOMES, LORE_ENTRIES } from '../constants.js';
 import { GlobalState } from '../GlobalState.js';
 import { SkillManager } from './SkillManager.js';
 
+const LORE_STORAGE_KEY = 'elixirs-shadow-lore-collected';
+
 const STORAGE_KEY = 'elixirs-shadow-achievements';
+
+// ── Lore helpers for lifetime achievements ──
+
+function _getLoreCount() {
+    try {
+        const raw = localStorage.getItem(LORE_STORAGE_KEY);
+        if (raw) return JSON.parse(raw).length;
+    } catch {}
+    return 0;
+}
+
+function _checkBiomeLore(biomeId) {
+    try {
+        const raw = localStorage.getItem(LORE_STORAGE_KEY);
+        if (!raw) return false;
+        const collected = new Set(JSON.parse(raw));
+        // Check that every entry whose author mentions biome-relevant content is collected
+        // Use a simpler approach: map biomes to author substrings that indicate Springlands/Revelwood lore
+        const biomeAuthors = {
+            springlands: ['Elin, Watchkeeper', 'Alden Crowley'],
+            revelwood: ['Revelwood Chronicle', 'Sophie, Moth\'s Grove'],
+        };
+        const authors = biomeAuthors[biomeId];
+        if (!authors) return false;
+        for (let i = 0; i < LORE_ENTRIES.length; i++) {
+            if (authors.some(a => LORE_ENTRIES[i].author.includes(a))) {
+                if (!collected.has(i)) return false;
+            }
+        }
+        return true;
+    } catch {}
+    return false;
+}
 
 // ── Achievement Definitions ──
 
@@ -51,10 +86,15 @@ const ACHIEVEMENTS = [
     { id: 'survive_120',   name: 'Enduring Flame',       description: 'Survive 2 minutes',            category: 'Survival',   icon: '\u{1F525}', check: (s) => s.survivalTime >= 120 },
     { id: 'survive_300',   name: 'Eternal Ember',        description: 'Survive 5 minutes',            category: 'Survival',   icon: '\u{1F525}', check: (s) => s.survivalTime >= 300 },
 
-    // Lore (3)
-    { id: 'lore_1',    name: 'Curious Mind',            description: 'Find your first lore scroll',  category: 'Lore',       icon: '\u{1F4DC}', check: (s) => s.loreScrollsFound >= 1 },
-    { id: 'lore_3',    name: 'Scholar',                  description: 'Find 3 lore scrolls',          category: 'Lore',       icon: '\u{1F4DC}', check: (s) => s.loreScrollsFound >= 3 },
-    { id: 'lore_5',    name: 'Lorekeeper',               description: 'Find 5 lore scrolls',          category: 'Lore',       icon: '\u{1F4DC}', check: (s) => s.loreScrollsFound >= 5 },
+    // Lore (8)
+    { id: 'lore_1',    name: 'Curious Mind',            description: 'Find your first lore scroll',          category: 'Lore', icon: '\u{1F4DC}', check: (s) => s.loreScrollsFound >= 1 },
+    { id: 'lore_3',    name: 'Scholar',                  description: 'Find 3 lore scrolls in one run',      category: 'Lore', icon: '\u{1F4DC}', check: (s) => s.loreScrollsFound >= 3 },
+    { id: 'lore_5',    name: 'Lorekeeper',               description: 'Find 5 lore scrolls in one run',      category: 'Lore', icon: '\u{1F4DC}', check: (s) => s.loreScrollsFound >= 5 },
+    { id: 'lore_10',   name: 'Archivist',                description: 'Find 10 lore scrolls in one run',     category: 'Lore', icon: '\u{1F4DC}', check: (s) => s.loreScrollsFound >= 10 },
+    { id: 'lore_all_springlands', name: 'Springlands Scholar', description: 'Collect all Springlands lore (lifetime)', category: 'Lore', icon: '\u{1F4DC}', check: () => _checkBiomeLore('springlands') },
+    { id: 'lore_all_revelwood',   name: 'Revelwood Scholar',   description: 'Collect all Revelwood lore (lifetime)',   category: 'Lore', icon: '\u{1F4DC}', check: () => _checkBiomeLore('revelwood') },
+    { id: 'lore_half', name: 'Halfway There',            description: 'Collect half of all lore (lifetime)',  category: 'Lore', icon: '\u{1F4DC}', check: () => _getLoreCount() >= Math.ceil(LORE_ENTRIES.length / 2) },
+    { id: 'lore_master', name: 'Loremaster',             description: 'Collect every lore scroll (lifetime)', category: 'Lore', icon: '\u{1F4DC}', check: () => _getLoreCount() >= LORE_ENTRIES.length },
 
     // Biome (4)
     { id: 'biome_revelwood',  name: 'Into the Blackmire',    description: 'Reach Revelwood',            category: 'Biome', icon: '\u{1F332}', check: (s) => s.biomesReached.has('revelwood') },
