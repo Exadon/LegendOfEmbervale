@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { CLASS_DEFS } from '../systems/ClassDefs.js';
 import { SkillManager } from '../systems/SkillManager.js';
+import { ALL_CLASS_IDS } from '../systems/MetaProgression.js';
 import { GlobalState } from '../GlobalState.js';
 
 export class DebugPanel {
@@ -9,7 +10,7 @@ export class DebugPanel {
         this.visible = false;
         this.godMode = false;
         this.classIndex = -1;
-        this.classKeys = Object.keys(CLASS_DEFS);
+        this.classKeys = ALL_CLASS_IDS;
 
         // Convert screen position to zoom-adjusted coords
         const u = (sx, sy) => this._uiXY(sx, sy);
@@ -123,9 +124,9 @@ export class DebugPanel {
 
     _cycleClass() {
         this.classIndex = (this.classIndex + 1) % this.classKeys.length;
-        const skillId = this.classKeys[this.classIndex];
-        const classDef = CLASS_DEFS[skillId];
-        SkillManager.activeClass = classDef;
+        const classId = this.classKeys[this.classIndex];
+        const classDef = CLASS_DEFS[classId];
+        SkillManager.selectClass(classId);
         if (this.scene.player) {
             this.scene.player.swapClassSprite(classDef);
         }

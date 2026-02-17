@@ -28,7 +28,7 @@ export class LevelUpOverlay {
         this.active = true;
 
         const { width, height } = this.scene.scale;
-        this.choices = SkillManager.getRandomChoices(3);
+        this.choices = SkillManager.getAvailableNodes(3);
         if (this.choices.length === 0) {
             this.active = false;
             return;
@@ -121,8 +121,9 @@ export class LevelUpOverlay {
         bg.setStrokeStyle(2, skill.color);
         els.push(bg);
 
-        // Class name — full font size + setScale for crisp rendering
-        const classText = this.scene.add.text(x, y - Math.round(82 * s), skill.className, {
+        // Tier badge — full font size + setScale for crisp rendering
+        const tierLabel = skill.tier !== undefined ? `Tier ${skill.tier + 1}` : (skill.className || '');
+        const classText = this.scene.add.text(x, y - Math.round(82 * s), tierLabel, {
             fontSize: '12px',
             color: colorStr,
             fontFamily: 'monospace'

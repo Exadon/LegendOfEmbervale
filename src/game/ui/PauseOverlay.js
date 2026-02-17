@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 import { SkillManager } from '../systems/SkillManager.js';
-import { SKILLS } from '../systems/SkillDefs.js';
+import { CLASS_SKILL_TREES } from '../systems/ClassSkillTrees.js';
 import { CLASS_DEFS } from '../systems/ClassDefs.js';
+import { ALL_CLASS_IDS } from '../systems/MetaProgression.js';
 import { Settings } from '../systems/Settings.js';
 import { AchievementManager } from '../systems/AchievementManager.js';
 
@@ -12,7 +13,7 @@ export class PauseOverlay {
         this._elements = [];
         this._keyHandler = null;
         this._soundText = null;
-        this._classKeys = Object.keys(CLASS_DEFS);
+        this._classKeys = ALL_CLASS_IDS;
         this._classIndex = -1;
     }
 
@@ -102,37 +103,38 @@ export class PauseOverlay {
                 fontSize: '13px', color: '#666666', fontStyle: 'italic'
             });
         } else {
+            const tree = CLASS_SKILL_TREES[SkillManager.selectedClassId] || [];
             const startP = this._uiXY(0, Math.round(height * 0.18));
             let yPos = startP.y;
-            for (const skillId of SkillManager.acquired) {
-                const skillDef = SKILLS.find(sk => sk.id === skillId);
-                if (!skillDef) continue;
+            for (const nodeId of SkillManager.acquired) {
+                const nodeDef = tree.find(n => n.id === nodeId);
+                if (!nodeDef) continue;
 
-                const colorStr = '#' + skillDef.color.toString(16).padStart(6, '0');
+                const colorStr = '#' + nodeDef.color.toString(16).padStart(6, '0');
 
                 // Colored square
                 const sqP = this._uiXY(width / 2 - 180, 0);
-                const sq = this.scene.add.rectangle(sqP.x, yPos + 6 * s, 12 * s, 12 * s, skillDef.color)
+                const sq = this.scene.add.rectangle(sqP.x, yPos + 6 * s, 12 * s, 12 * s, nodeDef.color)
                     .setScrollFactor(0).setDepth(302);
                 sq.setStrokeStyle(1, 0xFFFFFF);
                 this._elements.push(sq);
 
-                // Skill name
+                // Node name
                 const nmP = this._uiXY(width / 2 - 164, 0);
-                const name = this.scene.add.text(nmP.x, yPos, skillDef.name, {
+                const name = this.scene.add.text(nmP.x, yPos, nodeDef.name, {
                     fontSize: '13px', color: '#FFFFFF', fontFamily: 'monospace'
                 }).setOrigin(0, 0).setScrollFactor(0).setDepth(302).setScale(s);
                 this._elements.push(name);
 
-                // Class name
+                // Tier label
                 const clP = this._uiXY(width / 2 + 100, 0);
-                const cls = this.scene.add.text(clP.x, yPos, skillDef.className, {
+                const cls = this.scene.add.text(clP.x, yPos, `Tier ${nodeDef.tier + 1}`, {
                     fontSize: '11px', color: colorStr, fontFamily: 'monospace'
                 }).setOrigin(0, 0).setScrollFactor(0).setDepth(302).setScale(s);
                 this._elements.push(cls);
 
                 // Description
-                const desc = this.scene.add.text(nmP.x, yPos + 15 * s, skillDef.description, {
+                const desc = this.scene.add.text(nmP.x, yPos + 15 * s, nodeDef.description, {
                     fontSize: '11px', color: '#888888', fontFamily: 'monospace',
                     wordWrap: { width: 420 / s }
                 }).setOrigin(0, 0).setScrollFactor(0).setDepth(302).setScale(s);
@@ -375,9 +377,9 @@ export class PauseOverlay {
 
     _cycleClass() {
         this._classIndex = (this._classIndex + 1) % this._classKeys.length;
-        const skillId = this._classKeys[this._classIndex];
-        const classDef = CLASS_DEFS[skillId];
-        SkillManager.activeClass = classDef;
+        const classId = this._classKeys[this._classIndex];
+        const classDef = CLASS_DEFS[classId];
+        SkillManager.selectClass(classId);
         if (this.scene.player) {
             this.scene.player.swapClassSprite(classDef);
         }

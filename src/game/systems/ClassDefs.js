@@ -1,5 +1,5 @@
 /**
- * Class Definitions — maps each skill ID to its class sprite, animations, and attack config.
+ * Class Definitions — maps each class ID to its sprite, animations, and Q attack config.
  *
  * spriteKey    – texture key loaded in Preloader
  * isAtlas      – true if loaded via this.load.atlas (JSON), false if spritesheet
@@ -17,9 +17,11 @@
  */
 
 export const CLASS_DEFS = Object.freeze({
-    // ── Red (Combat) ──
-    earthshatter: {
+    barbarian: {
+        id: 'barbarian',
         className: 'Barbarian',
+        color: 0xFF4444,
+        description: 'Kill-chaining, melee, self-sustain',
         spriteKey: 'barbarian',
         isAtlas: true,
         frameSize: 96,
@@ -35,57 +37,12 @@ export const CLASS_DEFS = Object.freeze({
         stunRadius: 180,
         stunDuration: 2000,
     },
-    flameCleave: {
-        className: 'Warrior',
-        spriteKey: 'elite_swordsman',
-        isAtlas: true,
-        frameSize: 96,
-        displaySize: 104,
-        feetRatio: 0.65,
-        idleAnim: 'elite_swordsman_idle',
-        moveAnim: 'elite_swordsman_move',
-        attackAnim: 'elite_swordsman_attack2',
-        attackName: 'Cleave',
-        attackCooldown: 6000,
-        attackType: 'frontal_banish',
-        attackRadius: 80,
-    },
-    aerialFury: {
-        className: 'Athlete',
-        spriteKey: 'monk',
-        isAtlas: true,
-        frameSize: 96,
-        displaySize: 108,
-        feetRatio: 0.67,
-        idleAnim: 'monk_idle',
-        moveAnim: 'monk_move',
-        attackAnim: 'monk_spin',
-        attackName: 'Staff Spin',
-        attackCooldown: 7000,
-        attackType: 'knockback',
-        pushDistance: 200,
-        stunDuration: 2000,
-        attackRadius: 120,
-    },
-    emberWard: {
-        className: 'Tank',
-        spriteKey: 'elite_knight',
-        isAtlas: true,
-        frameSize: 96,
-        displaySize: 108,
-        feetRatio: 0.60,
-        idleAnim: 'elite_knight_idle',
-        moveAnim: 'elite_knight_move',
-        attackAnim: 'elite_knight_block',
-        attackName: 'Shield Block',
-        attackCooldown: 12000,
-        attackType: 'shield',
-        shieldDuration: 4000,
-    },
 
-    // ── Blue (Flame/Magic) ──
-    infernoNova: {
+    wizard: {
+        id: 'wizard',
         className: 'Wizard',
+        color: 0x4488FF,
+        description: 'AoE damage, cooldowns, elemental',
         spriteKey: 'elite_mage',
         isAtlas: true,
         frameSize: 64,
@@ -103,70 +60,12 @@ export const CLASS_DEFS = Object.freeze({
         stunDuration: 0,
         useBlastVFX: true,
     },
-    wardingFlame: {
-        className: 'Battlemage',
-        spriteKey: 'pyromancer',
-        isAtlas: false,
-        frameSize: 32,
-        idleAnim: 'pyromancer_idle',
-        moveAnim: 'pyromancer_move',
-        attackAnim: 'pyromancer_attack',
-        attackName: 'Fire Nova',
-        attackCooldown: 8000,
-        attackType: 'aoe_banish',
-        attackRadius: 100,
-        stunRadius: 160,
-        stunDuration: 3000,
-    },
-    kindlingSpirit: {
-        className: 'Healer',
-        spriteKey: 'royal_mage',
-        isAtlas: true,
-        frameSize: 32,
-        idleAnim: 'royal_mage_idle',
-        moveAnim: 'royal_mage_move',
-        attackAnim: 'royal_mage_attack',
-        attackName: 'Heal Pulse',
-        attackCooldown: 15000,
-        attackType: 'heal',
-        healAmount: 30,
-        drainReduction: 0.5,
-        drainReductionDuration: 5000,
-    },
-    riposteDash: {
-        className: 'Trickster',
-        spriteKey: 'adventurer',
-        isAtlas: false,
-        frameSize: 32,
-        idleAnim: 'adventurer_idle',
-        moveAnim: 'adventurer_move',
-        attackAnim: 'adventurer_attack',
-        attackName: 'Quick Strike',
-        attackCooldown: 5000,
-        attackType: 'melee_banish',
-    },
-    elixirBolt: {
-        className: 'Arcane Archer',
-        spriteKey: 'elven_archeress',
-        isAtlas: true,
-        frameSize: 64,
-        frameHeight: 32,
-        displaySize: 104,
-        feetRatio: 0.90,
-        idleAnim: 'elven_archeress_idle',
-        moveAnim: 'elven_archeress_move',
-        attackAnim: 'elven_archeress_release',
-        attackName: 'Power Shot',
-        attackCooldown: 6000,
-        attackType: 'projectile',
-        projectileRange: 400,
-        projectileSpeed: 500,
-        grantsElixir: true,
-    },
 
-    // ── Green (Mobility/Survival) ──
-    windRunner: {
+    ranger: {
+        id: 'ranger',
         className: 'Ranger',
+        color: 0x44DD66,
+        description: 'Mobility, ranged, evasion',
         spriteKey: 'elven_archeress',
         isAtlas: true,
         frameSize: 64,
@@ -181,8 +80,50 @@ export const CLASS_DEFS = Object.freeze({
         attackType: 'screen_stun',
         stunDuration: 3000,
     },
-    shadowStep: {
+
+    tank: {
+        id: 'tank',
+        className: 'Tank',
+        color: 0xCCCCCC,
+        description: 'Defense, damage reduction, parry',
+        spriteKey: 'elite_knight',
+        isAtlas: true,
+        frameSize: 96,
+        displaySize: 108,
+        feetRatio: 0.60,
+        idleAnim: 'elite_knight_idle',
+        moveAnim: 'elite_knight_move',
+        attackAnim: 'elite_knight_block',
+        attackName: 'Shield Block',
+        attackCooldown: 12000,
+        attackType: 'shield',
+        shieldDuration: 4000,
+    },
+
+    healer: {
+        id: 'healer',
+        className: 'Healer',
+        color: 0x88DDFF,
+        description: 'Flame sustain, wisps, auras',
+        spriteKey: 'royal_mage',
+        isAtlas: true,
+        frameSize: 32,
+        idleAnim: 'royal_mage_idle',
+        moveAnim: 'royal_mage_move',
+        attackAnim: 'royal_mage_attack',
+        attackName: 'Heal Pulse',
+        attackCooldown: 15000,
+        attackType: 'heal',
+        healAmount: 30,
+        drainReduction: 0.5,
+        drainReductionDuration: 5000,
+    },
+
+    assassin: {
+        id: 'assassin',
         className: 'Assassin',
+        color: 0xAA44FF,
+        description: 'Speed, positioning, burst',
         spriteKey: 'elven_assassin',
         isAtlas: true,
         frameSize: 64,
@@ -197,38 +138,12 @@ export const CLASS_DEFS = Object.freeze({
         attackType: 'blink',
         blinkDistance: 150,
     },
-    spiritCompanion: {
-        className: 'Beast Master',
-        spriteKey: 'rogue',
-        isAtlas: false,
-        frameSize: 32,
-        idleAnim: 'rogue_idle',
-        moveAnim: 'rogue_move',
-        attackAnim: 'rogue_attack',
-        attackName: 'Throw Knife',
-        attackCooldown: 5000,
-        attackType: 'projectile',
-        projectileRange: 200,
-        projectileSpeed: 400,
-        grantsElixir: false,
-        flameRestore: 5,
-    },
 
-    // ── Passive classes (no class attack) ──
-    emberveil: {
-        className: 'Survivor',
-        spriteKey: 'adventurer',
-        isAtlas: false,
-        frameSize: 32,
-        idleAnim: 'adventurer_idle',
-        moveAnim: 'adventurer_move',
-        attackAnim: null,
-        attackName: null,
-        attackCooldown: 0,
-        attackType: null,
-    },
-    elixirSiphon: {
-        className: 'Core',
+    adventurer: {
+        id: 'adventurer',
+        className: 'Adventurer',
+        color: 0xFFCC00,
+        description: 'Jack of all trades — generic survival',
         spriteKey: 'adventurer',
         isAtlas: false,
         frameSize: 32,
@@ -241,16 +156,5 @@ export const CLASS_DEFS = Object.freeze({
     },
 });
 
-/** Default class before any skill is chosen — uses the adventurer sprite */
-export const DEFAULT_CLASS = Object.freeze({
-    className: null,
-    spriteKey: 'adventurer',
-    isAtlas: false,
-    frameSize: 32,
-    idleAnim: 'adventurer_idle',
-    moveAnim: 'adventurer_move',
-    attackAnim: null,
-    attackName: null,
-    attackCooldown: 0,
-    attackType: null,
-});
+/** Default class before any class is selected — uses the adventurer sprite */
+export const DEFAULT_CLASS = CLASS_DEFS.adventurer;

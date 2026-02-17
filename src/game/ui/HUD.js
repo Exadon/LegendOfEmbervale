@@ -69,14 +69,21 @@ export class HUD {
         this._burstGroup = this._createCooldownBar('E', '#FF6600');
         cdContainer.appendChild(this._burstGroup.el);
 
-        // Q class attack cooldown (hidden until class chosen)
+        // Q class attack cooldown (visible from start if class has Q attack)
         this._classGroup = this._createCooldownBar('Q', '#FF4444');
-        this._classGroup.el.style.display = 'none';
+        if (!SkillManager.hasClassAttack()) {
+            this._classGroup.el.style.display = 'none';
+        }
 
         // Class attack name label
         this._classNameLabel = document.createElement('span');
         this._classNameLabel.className = 'hud-label';
-        this._classNameLabel.style.cssText = 'color:#FFCC00;font-size:10px;font-weight:bold;display:none;';
+        this._classNameLabel.style.cssText = 'color:#FFCC00;font-size:10px;font-weight:bold;';
+        if (SkillManager.hasClassAttack()) {
+            this._classNameLabel.textContent = SkillManager.activeClass.attackName;
+        } else {
+            this._classNameLabel.style.display = 'none';
+        }
 
         cdContainer.appendChild(this._classGroup.el);
         cdContainer.appendChild(this._classNameLabel);

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { CLASS_DEFS, DEFAULT_CLASS } from '../systems/ClassDefs.js';
+import { CLASS_DEFS } from '../systems/ClassDefs.js';
 
 /**
  * Debug scene: shows each class sprite with its animations frame-by-frame.
@@ -19,10 +19,7 @@ export class SpriteViewer extends Phaser.Scene {
         const { width, height } = this.scale;
 
         // Build ordered list of class entries
-        this._entries = [
-            { id: '(default)', def: DEFAULT_CLASS },
-            ...Object.entries(CLASS_DEFS).map(([id, def]) => ({ id, def })),
-        ];
+        this._entries = Object.entries(CLASS_DEFS).map(([id, def]) => ({ id, def }));
         this._index = 0;
         this._paused = false;
         this._sprites = [];

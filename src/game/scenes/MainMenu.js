@@ -203,7 +203,7 @@ export class MainMenu extends Phaser.Scene {
             this.input.keyboard.removeAllListeners();
             this.cameras.main.fadeOut(800, 0, 0, 0);
             this.cameras.main.once('camerafadeoutcomplete', () => {
-                this.scene.start('Level1');
+                this.scene.start('ClassSelect');
             });
         });
     }

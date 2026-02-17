@@ -2,7 +2,6 @@ import Phaser from 'phaser';
 import { WORLD, PLAYER, FLAME, FLAME_WISP, FLAME_SHRINE, WRAITH, SHROUD, GROUND_SLAM, FLAME_BURST, COMBO, PROGRESSION_BAR, LORE_ENTRIES, SHRINE_INSCRIPTIONS, NEAR_DEATH, SURVIVOR, CHALLENGE_SHRINE, RELIC, ENEMIES, CINDER_VESSEL, ELIXIR_CORRUPTION, CRAFTSPERSON, OBELISK, DEADLY_SHROUD } from '../constants.js';
 import { GlobalState } from '../GlobalState.js';
 import { SkillManager } from '../systems/SkillManager.js';
-import { CLASS_DEFS } from '../systems/ClassDefs.js';
 import { Player } from '../entities/Player.js';
 import { Shroud } from '../entities/Shroud.js';
 import { InputManager } from '../systems/InputManager.js';
@@ -1507,14 +1506,10 @@ export class Level1 extends Phaser.Scene {
         }
     }
 
-    // ─── Skill Acquired (sprite swap) ───
+    // ─── Skill Acquired ───
 
-    _onSkillAcquired(skillId) {
-        // First skill defines the class — swap sprite
-        if (SkillManager.acquired.length === 1 && CLASS_DEFS[skillId]) {
-            const classDef = CLASS_DEFS[skillId];
-            this.player.swapClassSprite(classDef);
-        }
+    _onSkillAcquired(_nodeId) {
+        // Class is chosen pre-run, no sprite swap needed during level-up
     }
 
     // ─── Class Attack Dispatcher ───

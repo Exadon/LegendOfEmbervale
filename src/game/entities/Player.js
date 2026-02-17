@@ -1,31 +1,33 @@
 import Phaser from 'phaser';
 import { PLAYER, FLAME_STEP, CORRUPTION_POOL, DOUBLE_JUMP, WALL_SLIDE, GLIDER, GROUND_SLAM, FLAME_BURST } from '../constants.js';
 import { SkillManager } from '../systems/SkillManager.js';
-import { DEFAULT_CLASS } from '../systems/ClassDefs.js';
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
     constructor(scene, x, y) {
-        super(scene, x, y, 'adventurer', 0);
+        const classDef = SkillManager.activeClass;
+        super(scene, x, y, classDef.spriteKey, classDef.isAtlas ? undefined : 0);
         scene.add.existing(this);
         scene.physics.add.existing(this);
         this.setDepth(3);
 
-        // Normalize adventurer 32x32 frame to 48x48 display via setScale
-        this._targetScale = 48 / DEFAULT_CLASS.frameSize;
+        // Initialize sprite for the selected class
+        const fw = classDef.frameSize;
+        const fh = classDef.frameHeight || fw;
+        const displaySize = classDef.displaySize || Math.max(48, Math.round(fw * 0.75));
+        this._targetScale = displaySize / fw;
         this.setScale(this._targetScale);
         // Constant world-space body (28×44) regardless of sprite scale
-        const fw = DEFAULT_CLASS.frameSize;
-        const fh = DEFAULT_CLASS.frameHeight || fw;
         const bodyW = (PLAYER.WIDTH - 4) / this._targetScale;
         const bodyH = (PLAYER.HEIGHT - 4) / this._targetScale;
         this.body.setSize(bodyW, bodyH);
         const bodyOffX = (fw - bodyW) / 2;
-        const bodyOffY = (fh - 2) - bodyH;
+        const feetY = classDef.feetRatio ? fh * classDef.feetRatio : fh - 2;
+        const bodyOffY = feetY - bodyH;
         this.body.setOffset(bodyOffX, bodyOffY);
         this.setCollideWorldBounds(true);
 
         // Play idle animation immediately
-        this.play(DEFAULT_CLASS.idleAnim);
+        this.play(classDef.idleAnim);
 
         this.isMining = false;
         this.miningTimer = 0;
@@ -71,7 +73,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         // Class attack
         this.classAttackCooldownTimer = 0;
         this.isClassAttacking = false;
-        this._classDef = DEFAULT_CLASS;
+        this._classDef = classDef;
         this._attackFallbackTimer = null;
     }
 
