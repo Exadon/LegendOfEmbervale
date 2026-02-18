@@ -188,6 +188,51 @@ export class HUD {
 
         this.loreTimer = null;
 
+        // Survivor dialogue overlay (reuses lore scroll pattern)
+        const sd = u(width / 2, height - 80);
+        this.survivorBg = scene.add.rectangle(sd.x, sd.y, 700, 60, 0x000000, 0.85)
+            .setScrollFactor(0).setDepth(180).setVisible(false);
+        this.survivorBorder = scene.add.rectangle(sd.x, sd.y, 704, 64, 0x000000, 0)
+            .setScrollFactor(0).setDepth(179).setVisible(false);
+        this.survivorBorder.setStrokeStyle(1, 0x44FF44);
+
+        const sq = u(width / 2, height - 90);
+        this.survivorQuote = scene.add.text(sq.x, sq.y, '', {
+            fontSize: '12px', color: '#FFFFFF', fontFamily: 'monospace',
+            fontStyle: 'italic', wordWrap: { width: 680 }, align: 'center'
+        }).setOrigin(0.5, 0.5).setScrollFactor(0).setDepth(181).setVisible(false);
+
+        const sb = u(width / 2, height - 68);
+        this.survivorBuffText = scene.add.text(sb.x, sb.y, '', {
+            fontSize: '12px', color: '#44FF44', fontFamily: 'monospace',
+            fontStyle: 'bold'
+        }).setOrigin(0.5, 0.5).setScrollFactor(0).setDepth(181).setVisible(false);
+
+        this._survivorTimer = null;
+
+        // Active buff indicator (DOM, in cooldowns window area)
+        this._buffGroup = document.createElement('div');
+        this._buffGroup.className = 'hud-cd-group';
+        this._buffGroup.style.display = 'none';
+
+        const buffLabel = document.createElement('span');
+        buffLabel.className = 'hud-label';
+        buffLabel.style.fontSize = '9px';
+        this._buffLabel = buffLabel;
+
+        const buffBarBg = document.createElement('div');
+        buffBarBg.className = 'hud-bar-bg';
+        buffBarBg.style.cssText = 'width:58px;height:10px;';
+
+        this._buffFill = document.createElement('div');
+        this._buffFill.className = 'hud-bar-fill';
+        this._buffFill.style.cssText = 'width:100%;height:100%;background:#44FF44;';
+
+        buffBarBg.appendChild(this._buffFill);
+        this._buffGroup.appendChild(buffLabel);
+        this._buffGroup.appendChild(buffBarBg);
+        cdContainer.appendChild(this._buffGroup);
+
         // Game over overlay — elements created dynamically in showGameOver
         this._gameOverElements = [];
 
@@ -322,6 +367,58 @@ export class HUD {
         }
     }
 
+    showSurvivorDialogue(dialogue, buff) {
+        // Dismiss lore scroll if showing
+        if (this.loreTimer) {
+            this.loreTimer.destroy();
+            this.loreTimer = null;
+            this.loreBg.setVisible(false).setAlpha(1);
+            this.loreBorder.setVisible(false).setAlpha(1);
+            this.loreQuote.setVisible(false).setAlpha(1);
+            this.loreAuthor.setVisible(false).setAlpha(1);
+        }
+
+        // Cancel previous survivor dialogue if any
+        if (this._survivorTimer) {
+            this._survivorTimer.destroy();
+            this._survivorTimer = null;
+        }
+
+        this.survivorQuote.setText(dialogue);
+        this.survivorBuffText.setText(`${buff.name}: ${buff.desc}`);
+        this.survivorBg.setVisible(true).setAlpha(1);
+        this.survivorBorder.setVisible(true).setAlpha(1);
+        this.survivorQuote.setVisible(true).setAlpha(1);
+        this.survivorBuffText.setVisible(true).setAlpha(1);
+
+        this._survivorTimer = this.scene.time.delayedCall(4000, () => {
+            this.scene.tweens.add({
+                targets: [this.survivorBg, this.survivorBorder, this.survivorQuote, this.survivorBuffText],
+                alpha: 0,
+                duration: 800,
+                onComplete: () => {
+                    this.survivorBg.setVisible(false).setAlpha(1);
+                    this.survivorBorder.setVisible(false).setAlpha(1);
+                    this.survivorQuote.setVisible(false).setAlpha(1);
+                    this.survivorBuffText.setVisible(false).setAlpha(1);
+                }
+            });
+        });
+    }
+
+    updateBuff(buffType, remaining, total) {
+        if (!buffType || remaining <= 0) {
+            this._buffGroup.style.display = 'none';
+            return;
+        }
+        this._buffGroup.style.display = '';
+        const names = { flame_regen: 'REGEN', speed: 'SWIFT', shroud_slow: 'WARD' };
+        this._buffLabel.textContent = names[buffType] || 'BUFF';
+        const pct = Math.max(0, remaining / total) * 100;
+        this._buffFill.style.width = `${pct.toFixed(1)}%`;
+        this._buffFill.style.background = pct > 30 ? '#44FF44' : '#FFCC00';
+    }
+
     showLoreScroll(entry) {
         this.scrollCount++;
         this._scrollText.textContent = String(this.scrollCount);
@@ -421,6 +518,43 @@ export class HUD {
         const best = _t(width / 2, height * 0.27, bestLabel, {
             fontSize: isNewBest ? '16px' : '13px', color: bestColor, fontStyle: isNewBest ? 'bold' : ''
         });
+
+        // NEW BEST celebration
+        if (isNewBest) {
+            scene.time.delayedCall(600, () => {
+                if (!best.active) return;
+                // Pulsing glow
+                scene.tweens.add({
+                    targets: best,
+                    scaleX: { from: 1, to: 1.05 },
+                    scaleY: { from: 1, to: 1.05 },
+                    alpha: { from: 1, to: 0.8 },
+                    duration: 600,
+                    yoyo: true,
+                    repeat: -1,
+                    ease: 'Sine.easeInOut'
+                });
+                // Gold particle burst
+                if (scene.textures.exists('pixel')) {
+                    const bp = u(width / 2, height * 0.27);
+                    const emitter = scene.add.particles(bp.x, bp.y, 'pixel', {
+                        speed: { min: 30, max: 100 },
+                        angle: { min: 0, max: 360 },
+                        scale: { start: 2, end: 0 },
+                        alpha: { start: 1, end: 0 },
+                        lifespan: { min: 500, max: 1000 },
+                        tint: [0xFFCC00, 0xFFAA00, 0xFFEE44],
+                        blendMode: 'ADD',
+                        quantity: 20,
+                        emitting: false
+                    }).setDepth(d + 1).setScrollFactor(0);
+                    emitter.explode(20);
+                    this._gameOverElements.push(emitter);
+                }
+                // Achievement stinger
+                if (scene.audio) scene.audio.playAchievement();
+            });
+        }
 
         // Stats — two columns
         const lx = width / 2 - 140;

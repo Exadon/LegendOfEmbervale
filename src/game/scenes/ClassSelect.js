@@ -13,6 +13,7 @@ export class ClassSelect extends Phaser.Scene {
     }
 
     create() {
+        this.cameras.main.fadeIn(400, 0, 0, 0);
         const { width, height } = this.scale;
 
         this._selectedIdx = 0;
@@ -22,25 +23,25 @@ export class ClassSelect extends Phaser.Scene {
         this.add.rectangle(0, 0, width, height, 0x0A0A1E).setOrigin(0, 0);
 
         // Title
-        this.add.text(width / 2, 30, 'CHOOSE YOUR CLASS', {
-            fontSize: '24px', color: '#FFCC00', fontFamily: 'monospace', fontStyle: 'bold'
+        this.add.text(width / 2, 20, 'CHOOSE YOUR CLASS', {
+            fontSize: '22px', color: '#FFCC00', fontFamily: 'monospace', fontStyle: 'bold'
         }).setOrigin(0.5);
 
         // Elixir balance
         const avail = MetaProgression.getAvailableElixir();
-        this._elixirText = this.add.text(width / 2, 56, `Available Elixir: ${avail}`, {
-            fontSize: '13px', color: '#88DDFF', fontFamily: 'monospace'
+        this._elixirText = this.add.text(width / 2, 44, `Available Elixir: ${avail}`, {
+            fontSize: '12px', color: '#88DDFF', fontFamily: 'monospace'
         }).setOrigin(0.5);
 
         // Build panel grid — 3 columns × 2 rows + 1 centered
         const cols = 3;
-        const panelW = 200;
-        const panelH = 180;
-        const gapX = 20;
-        const gapY = 16;
+        const panelW = Math.min(200, Math.floor((width - 80) / 3));
+        const panelH = 130;
+        const gapX = 16;
+        const gapY = 10;
         const totalW = cols * panelW + (cols - 1) * gapX;
         const startX = (width - totalW) / 2 + panelW / 2;
-        const startY = 90;
+        const startY = 60 + panelH / 2;  // header takes ~60px
 
         for (let i = 0; i < ALL_CLASS_IDS.length; i++) {
             const classId = ALL_CLASS_IDS[i];
@@ -66,20 +67,21 @@ export class ClassSelect extends Phaser.Scene {
         // Select first panel
         this._updateSelection();
 
-        // Description area
-        this._descText = this.add.text(width / 2, height - 80, '', {
+        // Description area (below panels)
+        const footerY = startY + 2 * (panelH + gapY) + panelH / 2 + 16;
+        this._descText = this.add.text(width / 2, footerY, '', {
             fontSize: '12px', color: '#CCCCCC', fontFamily: 'monospace',
             wordWrap: { width: 500 }, align: 'center'
-        }).setOrigin(0.5);
-
-        // Controls hint
-        this.add.text(width / 2, height - 40, '[1-7] Select   [U] Unlock   [SPACE] Confirm   [ESC] Back', {
-            fontSize: '12px', color: '#666666', fontFamily: 'monospace'
-        }).setOrigin(0.5);
+        }).setOrigin(0.5, 0);
 
         // Unlock cost display
-        this._unlockText = this.add.text(width / 2, height - 56, '', {
+        this._unlockText = this.add.text(width / 2, footerY + 20, '', {
             fontSize: '12px', color: '#FF8800', fontFamily: 'monospace'
+        }).setOrigin(0.5, 0);
+
+        // Controls hint
+        this.add.text(width / 2, height - 16, '[1-7] Select   [U] Unlock   [M] Masteries   [SPACE] Confirm   [ESC] Back', {
+            fontSize: '11px', color: '#555555', fontFamily: 'monospace'
         }).setOrigin(0.5);
 
         this._updateDescription();
@@ -121,6 +123,9 @@ export class ClassSelect extends Phaser.Scene {
                 case 'KeyU':
                     this._tryUnlock();
                     break;
+                case 'KeyM':
+                    this._openMasteries();
+                    break;
                 case 'Space':
                     this._confirmSelection();
                     break;
@@ -135,50 +140,65 @@ export class ClassSelect extends Phaser.Scene {
     _createPanel(x, y, w, h, classId, classDef, unlocked, index) {
         const colorNum = classDef.color;
         const colorStr = '#' + colorNum.toString(16).padStart(6, '0');
+        const halfH = h / 2;
 
         // Panel background
         const bg = this.add.rectangle(x, y, w, h, 0x1A1A2E).setStrokeStyle(2, unlocked ? colorNum : 0x444444);
 
-        // Index number
-        this.add.text(x - w / 2 + 8, y - h / 2 + 6, `${index + 1}`, {
-            fontSize: '10px', color: '#555555', fontFamily: 'monospace'
+        // Index number (top-left corner)
+        this.add.text(x - w / 2 + 6, y - halfH + 4, `${index + 1}`, {
+            fontSize: '9px', color: '#444444', fontFamily: 'monospace'
         });
 
-        // Class name
+        // Class name (near top of panel)
         const nameColor = unlocked ? colorStr : '#555555';
-        const nameText = this.add.text(x, y - h / 2 + 24, classDef.className, {
-            fontSize: '16px', color: nameColor, fontFamily: 'monospace', fontStyle: 'bold'
+        const nameText = this.add.text(x, y - halfH + 18, classDef.className, {
+            fontSize: '14px', color: nameColor, fontFamily: 'monospace', fontStyle: 'bold'
         }).setOrigin(0.5);
 
-        // Sprite preview or lock icon
+        // Sprite preview or lock icon (pushed down into lower half of panel)
         let spritePreview = null;
+        const spriteY = y + 10;
         if (unlocked) {
-            // Show animated sprite preview
             if (this.textures.exists(classDef.spriteKey)) {
-                spritePreview = this.add.sprite(x, y + 10, classDef.spriteKey);
-                const displaySize = classDef.displaySize || Math.max(48, Math.round(classDef.frameSize * 0.75));
-                const scale = Math.min(64 / classDef.frameSize, 64 / (classDef.frameHeight || classDef.frameSize));
+                spritePreview = this.add.sprite(x, spriteY, classDef.spriteKey);
+                const fh = classDef.frameHeight || classDef.frameSize;
+                // Cap sprite to 50px tall max within panel
+                const maxDisplay = 50;
+                const scale = Math.min(maxDisplay / classDef.frameSize, maxDisplay / fh);
                 spritePreview.setScale(scale);
                 if (classDef.idleAnim && this.anims.exists(classDef.idleAnim)) {
                     spritePreview.play(classDef.idleAnim);
                 }
             }
         } else {
-            // Lock icon
-            this.add.text(x, y + 10, '\uD83D\uDD12', {
-                fontSize: '32px'
+            this.add.text(x, spriteY, '\uD83D\uDD12', {
+                fontSize: '28px'
             }).setOrigin(0.5);
         }
 
-        // Q attack name (if unlocked and has one)
-        let attackText = null;
-        if (unlocked && classDef.attackName) {
-            attackText = this.add.text(x, y + h / 2 - 22, `Q: ${classDef.attackName}`, {
-                fontSize: '10px', color: '#AAAAAA', fontFamily: 'monospace'
+        // Bottom info: Q attack name OR cost OR progress
+        const bottomY = y + halfH - 14;
+        if (unlocked) {
+            const nodeCount = MetaProgression.getClassNodeCount(classId);
+            const progressStr = nodeCount > 0 ? `${nodeCount}/12 discovered` : '';
+            const masteryRanks = MetaProgression.getTotalMasteryRanks(classId);
+            const masteryStr = `${masteryRanks}/15 mastery`;
+            const infoStr = classDef.attackName ? `Q: ${classDef.attackName}` : 'No Q attack';
+            this.add.text(x, bottomY - 16, infoStr, {
+                fontSize: '9px', color: '#AAAAAA', fontFamily: 'monospace'
             }).setOrigin(0.5);
-        } else if (!unlocked) {
+            if (progressStr) {
+                this.add.text(x, bottomY - 4, progressStr, {
+                    fontSize: '9px', color: '#888800', fontFamily: 'monospace'
+                }).setOrigin(0.5);
+            }
+            this.add.text(x, bottomY + 8, masteryStr, {
+                fontSize: '9px', color: masteryRanks > 0 ? '#AA88FF' : '#555555', fontFamily: 'monospace'
+            }).setOrigin(0.5);
+        } else {
             const cost = MetaProgression.getUnlockCost();
-            this.add.text(x, y + h / 2 - 22, `Cost: ${cost} Elixir`, {
+            this.add.text(x, bottomY, `Cost: ${cost} Elixir`, {
                 fontSize: '10px', color: '#FF8800', fontFamily: 'monospace'
             }).setOrigin(0.5);
         }
@@ -207,7 +227,7 @@ export class ClassSelect extends Phaser.Scene {
             this._descText.setText(`${classDef.className}: ${classDef.description}`);
             this._unlockText.setText('');
         } else {
-            this._descText.setText(`${classDef.className}: ${classDef.description}\n[LOCKED]`);
+            this._descText.setText(`${classDef.className}: ${classDef.description}  [LOCKED]`);
             const cost = MetaProgression.getUnlockCost();
             const avail = MetaProgression.getAvailableElixir();
             const canAfford = avail >= cost;
@@ -223,11 +243,9 @@ export class ClassSelect extends Phaser.Scene {
 
         const success = MetaProgression.unlockClass(panel.classId);
         if (success) {
-            // Refresh the entire scene to rebuild panels
             this.input.keyboard.removeAllListeners();
             this.scene.restart();
         } else {
-            // Flash the unlock text red
             this._unlockText.setColor('#FF0000');
             this.time.delayedCall(400, () => {
                 this._updateDescription();
@@ -235,12 +253,19 @@ export class ClassSelect extends Phaser.Scene {
         }
     }
 
+    _openMasteries() {
+        const panel = this._panels[this._selectedIdx];
+        if (!panel) return;
+        if (!MetaProgression.isClassUnlocked(panel.classId)) return;
+        this.input.keyboard.removeAllListeners();
+        this.scene.start('ClassMasteryScene', { classId: panel.classId });
+    }
+
     _confirmSelection() {
         const panel = this._panels[this._selectedIdx];
         if (!panel) return;
         if (!MetaProgression.isClassUnlocked(panel.classId)) return;
 
-        // Set the class in SkillManager
         SkillManager.selectClass(panel.classId);
 
         this.input.keyboard.removeAllListeners();

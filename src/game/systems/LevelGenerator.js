@@ -93,7 +93,7 @@ export class LevelGenerator {
                 // Tall decorations (trees, large rocks) render in front of
                 // the player so the player walks behind them for depth.
                 const isTall = decoType.height >= 128;
-                const deco = this.scene.add.image(dx, WORLD.GROUND_Y + 4, decoType.key)
+                const deco = this.scene.add.image(dx, WORLD.GROUND_Y + 12, decoType.key)
                     .setOrigin(0.5, 1.0)
                     .setDepth(isTall ? 6 : 0)
                     .setTint(biome.treeTint);

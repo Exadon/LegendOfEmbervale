@@ -11,12 +11,11 @@ export class Tombstone extends Phaser.GameObjects.Container {
 
         this.setDepth(1).setAlpha(0.6);
 
-        // Gravestone body
-        const stone = scene.add.rectangle(0, -20, 20, 32, 0x888888)
-            .setOrigin(0.5, 1);
-        const top = scene.add.rectangle(0, -50, 14, 6, 0x999999)
-            .setOrigin(0.5, 1);
-        this.add([stone, top]);
+        // Undead hand sprite
+        const hand = scene.add.sprite(0, -16, 'undead_hand').setDisplaySize(24, 24);
+        hand.setTint(0x888888);
+        hand.play('undead_hand_idle');
+        this.add(hand);
 
         // Distance label
         const label = scene.add.text(0, -56, `${Math.floor(distanceMeters)}m`, {

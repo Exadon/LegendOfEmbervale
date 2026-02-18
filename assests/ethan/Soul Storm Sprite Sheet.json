@@ -1,0 +1,146 @@
+{ "frames": {
+   "Soul Storm Sprite Sheet (Soul Storm) 0.ase": {
+    "frame": { "x": 0, "y": 0, "w": 192, "h": 160 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 160 },
+    "sourceSize": { "w": 192, "h": 160 },
+    "duration": 100
+   },
+   "Soul Storm Sprite Sheet (Soul Storm) 1.ase": {
+    "frame": { "x": 0, "y": 160, "w": 192, "h": 160 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 160 },
+    "sourceSize": { "w": 192, "h": 160 },
+    "duration": 100
+   },
+   "Soul Storm Sprite Sheet (Soul Storm) 2.ase": {
+    "frame": { "x": 0, "y": 320, "w": 192, "h": 160 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 160 },
+    "sourceSize": { "w": 192, "h": 160 },
+    "duration": 100
+   },
+   "Soul Storm Sprite Sheet (Soul Storm) 3.ase": {
+    "frame": { "x": 0, "y": 480, "w": 192, "h": 160 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 160 },
+    "sourceSize": { "w": 192, "h": 160 },
+    "duration": 100
+   },
+   "Soul Storm Sprite Sheet (Soul Storm) 4.ase": {
+    "frame": { "x": 0, "y": 640, "w": 192, "h": 160 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 160 },
+    "sourceSize": { "w": 192, "h": 160 },
+    "duration": 100
+   },
+   "Soul Storm Sprite Sheet (Soul Storm) 5.ase": {
+    "frame": { "x": 0, "y": 800, "w": 192, "h": 160 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 160 },
+    "sourceSize": { "w": 192, "h": 160 },
+    "duration": 100
+   },
+   "Soul Storm Sprite Sheet (Soul Storm) 6.ase": {
+    "frame": { "x": 0, "y": 960, "w": 192, "h": 160 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 160 },
+    "sourceSize": { "w": 192, "h": 160 },
+    "duration": 100
+   },
+   "Soul Storm Sprite Sheet (Soul Storm) 7.ase": {
+    "frame": { "x": 0, "y": 1120, "w": 192, "h": 160 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 160 },
+    "sourceSize": { "w": 192, "h": 160 },
+    "duration": 100
+   },
+   "Soul Storm Sprite Sheet (Soul Storm) 8.ase": {
+    "frame": { "x": 0, "y": 1280, "w": 192, "h": 160 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 160 },
+    "sourceSize": { "w": 192, "h": 160 },
+    "duration": 100
+   },
+   "Soul Storm Sprite Sheet (Soul Storm) 9.ase": {
+    "frame": { "x": 0, "y": 1440, "w": 192, "h": 160 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 160 },
+    "sourceSize": { "w": 192, "h": 160 },
+    "duration": 100
+   },
+   "Soul Storm Sprite Sheet (Soul Storm) 10.ase": {
+    "frame": { "x": 0, "y": 1600, "w": 192, "h": 160 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 160 },
+    "sourceSize": { "w": 192, "h": 160 },
+    "duration": 100
+   },
+   "Soul Storm Sprite Sheet (Soul Storm) 11.ase": {
+    "frame": { "x": 0, "y": 1760, "w": 192, "h": 160 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 160 },
+    "sourceSize": { "w": 192, "h": 160 },
+    "duration": 100
+   },
+   "Soul Storm Sprite Sheet (Soul Storm) 12.ase": {
+    "frame": { "x": 0, "y": 1920, "w": 192, "h": 160 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 160 },
+    "sourceSize": { "w": 192, "h": 160 },
+    "duration": 100
+   },
+   "Soul Storm Sprite Sheet (Soul Storm) 13.ase": {
+    "frame": { "x": 0, "y": 2080, "w": 192, "h": 160 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 160 },
+    "sourceSize": { "w": 192, "h": 160 },
+    "duration": 100
+   },
+   "Soul Storm Sprite Sheet (Soul Storm) 14.ase": {
+    "frame": { "x": 0, "y": 2240, "w": 192, "h": 160 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 160 },
+    "sourceSize": { "w": 192, "h": 160 },
+    "duration": 100
+   },
+   "Soul Storm Sprite Sheet (Soul Storm) 15.ase": {
+    "frame": { "x": 0, "y": 2400, "w": 192, "h": 160 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 160 },
+    "sourceSize": { "w": 192, "h": 160 },
+    "duration": 100
+   }
+ },
+ "meta": {
+  "app": "https://www.aseprite.org/",
+  "version": "1.2.40-x64",
+  "image": "Soul Storm Sprite Sheet.png",
+  "format": "RGBA8888",
+  "size": { "w": 192, "h": 2560 },
+  "scale": "1",
+  "frameTags": [
+  ],
+  "layers": [
+   { "name": "Soul Storm", "opacity": 255, "blendMode": "normal" }
+  ],
+  "slices": [
+  ]
+ }
+}

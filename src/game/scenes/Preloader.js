@@ -49,6 +49,16 @@ export class Preloader extends Phaser.Scene {
         this.load.image('well', 'assests/well.png');
         this.load.image('driedwell', 'assests/driedwell.png');
 
+        // Music
+        this.load.audio('music_menu', 'assests/music/menu.ogg');
+        this.load.audio('music_springlands', 'assests/music/springlands.ogg');
+        this.load.audio('music_revelwood', 'assests/music/revelwood.ogg');
+        this.load.audio('music_highlands', 'assests/music/highlands.ogg');
+        this.load.audio('music_kindlewastes', 'assests/music/kindlewastes.ogg');
+        this.load.audio('music_shroud', 'assests/music/shroud.ogg');
+        this.load.audio('music_boss', 'assests/music/boss.ogg');
+        this.load.audio('music_gameover', 'assests/music/gameover.ogg');
+
         // UI
         this.load.image('logo_color', 'assests/ui/logoColor_256x128px.png');
 
@@ -72,6 +82,34 @@ export class Preloader extends Phaser.Scene {
         this.load.atlas('fx_blast',       E + 'Blast Spell Sprite Sheet.png', E + 'Blast Spell Sprite Sheet.json');
         this.load.spritesheet('fx_fireball',   E + 'Fireball Sprite Sheet.png',          { frameWidth: 32, frameHeight: 32 });
         this.load.spritesheet('fx_spell_proj', E + 'Spell Projectile Sprite Sheet.png',  { frameWidth: 32, frameHeight: 32 });
+
+        // ─── NPC Spritesheets (32x32) ───
+        this.load.spritesheet('npc_blacksmith',  E + 'Blacksmith Sprite Sheet.png',        { frameWidth: 32, frameHeight: 32 });
+        this.load.spritesheet('npc_alchemist',   E + 'Alchemist Sprite Sheet.png',         { frameWidth: 32, frameHeight: 32 });
+        this.load.spritesheet('npc_hunter',      E + 'Archer Sprite Sheet.png',            { frameWidth: 32, frameHeight: 32 });
+        this.load.spritesheet('npc_bard',        E + 'Bard Sprite Sheet.png',              { frameWidth: 32, frameHeight: 32 });
+        this.load.spritesheet('npc_old_man',     E + 'Old Man Sprite Sheet.png',           { frameWidth: 32, frameHeight: 32 });
+        this.load.spritesheet('npc_farmer',      E + 'Farmer Sprite Sheet.png',            { frameWidth: 32, frameHeight: 32 });
+        this.load.spritesheet('npc_villager_f',  E + 'Villager Female Sprite Sheet.png',   { frameWidth: 32, frameHeight: 32 });
+        this.load.spritesheet('npc_healer',      E + 'Healer Sprite Sheet.png',            { frameWidth: 32, frameHeight: 32 });
+
+        // ─── Enemy Spritesheets ───
+        this.load.spritesheet('skeletal_warrior', E + 'SkeletalWarrior_Sprites.png',       { frameWidth: 32, frameHeight: 32 });
+        this.load.spritesheet('skeletal_mage',    E + 'Skeletal_Mage Sprite Sheet.png',    { frameWidth: 32, frameHeight: 32 });
+        this.load.spritesheet('death_sprite',     E + 'Death Sprite Sheet.png',            { frameWidth: 48, frameHeight: 48 });
+        this.load.spritesheet('necromancer',      E + 'Necromancer Sprite Sheet.png',      { frameWidth: 32, frameHeight: 32 });
+        this.load.spritesheet('ice_elemental',    E + 'Ice Elemental Sprite Sheet.png',    { frameWidth: 32, frameHeight: 32 });
+        this.load.atlas('rotting_soldier', E + 'Rotting Soldier Sprite Sheet.png', E + 'Rotting Soldier Sprite Sheet.json');
+
+        // ─── Boss Sprites ───
+        this.load.spritesheet('skeleton_king',      E + 'Skeleton King Sprite Sheet 96x96px.png',     { frameWidth: 96, frameHeight: 96 });
+        this.load.spritesheet('skeleton_king_leap',  E + 'Skeleton King Leap Animation 96x128.png',   { frameWidth: 96, frameHeight: 128 });
+        this.load.atlas('wind_elemental', E + 'Wind Elemental Sprite Sheet.png', E + 'Wind Elemental Sprite Sheet.json');
+
+        // ─── Misc Entity Sprites ───
+        this.load.spritesheet('wisp',       E + 'Wisp Sprite Sheet.png',       { frameWidth: 32, frameHeight: 32 });
+        this.load.spritesheet('skullflame', E + 'Skullflame Sprite Sheet.png', { frameWidth: 64, frameHeight: 64 });
+        this.load.atlas('undead_hand', E + 'Undead Hand Sprite Sheet.png', E + 'Undead Hand Sprite Sheet.json');
 
     }
 
@@ -161,6 +199,10 @@ export class Preloader extends Phaser.Scene {
         this._createAtlasAnims();
         this._createSpritesheetAnims();
         this._createEffectAnims();
+        this._createNpcAnims();
+        this._createEnemyAnims();
+        this._createBossAnims();
+        this._createMiscAnims();
     }
 
     /** Helper: create a single atlas animation */
@@ -253,6 +295,69 @@ export class Preloader extends Phaser.Scene {
         this.anims.create({ key: 'rogue_idle',   frames: this.anims.generateFrameNumbers('rogue', { start: 0,  end: 3  }), frameRate: 10, repeat: -1 });
         this.anims.create({ key: 'rogue_move',   frames: this.anims.generateFrameNumbers('rogue', { start: 8,  end: 15 }), frameRate: 10, repeat: -1 });
         this.anims.create({ key: 'rogue_attack', frames: this.anims.generateFrameNumbers('rogue', { start: 16, end: 19 }), frameRate: 14, repeat: 0 });
+    }
+
+    _createNpcAnims() {
+        // 8-column sheets: idle = row 0 (0-7), move = row 1 (8-15)
+        const npc8 = ['npc_blacksmith', 'npc_alchemist', 'npc_hunter', 'npc_farmer', 'npc_villager_f'];
+        for (const key of npc8) {
+            this.anims.create({ key: `${key}_idle`, frames: this.anims.generateFrameNumbers(key, { start: 0, end: 7 }),  frameRate: 8, repeat: -1 });
+            this.anims.create({ key: `${key}_move`, frames: this.anims.generateFrameNumbers(key, { start: 8, end: 15 }), frameRate: 8, repeat: -1 });
+        }
+        // 15-column sheets: idle = 0-14, move = 15-29
+        this.anims.create({ key: 'npc_bard_idle',    frames: this.anims.generateFrameNumbers('npc_bard',    { start: 0,  end: 14 }), frameRate: 8, repeat: -1 });
+        this.anims.create({ key: 'npc_bard_move',    frames: this.anims.generateFrameNumbers('npc_bard',    { start: 15, end: 29 }), frameRate: 8, repeat: -1 });
+        this.anims.create({ key: 'npc_old_man_idle', frames: this.anims.generateFrameNumbers('npc_old_man', { start: 0,  end: 14 }), frameRate: 8, repeat: -1 });
+        this.anims.create({ key: 'npc_old_man_move', frames: this.anims.generateFrameNumbers('npc_old_man', { start: 15, end: 29 }), frameRate: 8, repeat: -1 });
+        // 16-column sheet: idle = 0-15, move = 16-31
+        this.anims.create({ key: 'npc_healer_idle',  frames: this.anims.generateFrameNumbers('npc_healer',  { start: 0,  end: 15 }), frameRate: 8, repeat: -1 });
+        this.anims.create({ key: 'npc_healer_move',  frames: this.anims.generateFrameNumbers('npc_healer',  { start: 16, end: 31 }), frameRate: 8, repeat: -1 });
+    }
+
+    _createEnemyAnims() {
+        // Skeletal Warrior (10 cols): idle 0-9, move 10-19
+        this.anims.create({ key: 'skeletal_warrior_idle', frames: this.anims.generateFrameNumbers('skeletal_warrior', { start: 0,  end: 9  }), frameRate: 10, repeat: -1 });
+        this.anims.create({ key: 'skeletal_warrior_move', frames: this.anims.generateFrameNumbers('skeletal_warrior', { start: 10, end: 19 }), frameRate: 10, repeat: -1 });
+        // Skeletal Mage (8 cols): idle 0-7, move 8-15
+        this.anims.create({ key: 'skeletal_mage_idle', frames: this.anims.generateFrameNumbers('skeletal_mage', { start: 0, end: 7  }), frameRate: 10, repeat: -1 });
+        this.anims.create({ key: 'skeletal_mage_move', frames: this.anims.generateFrameNumbers('skeletal_mage', { start: 8, end: 15 }), frameRate: 10, repeat: -1 });
+        // Death Sprite (28 cols): idle 0-27, move 28-55
+        this.anims.create({ key: 'death_sprite_idle', frames: this.anims.generateFrameNumbers('death_sprite', { start: 0,  end: 27 }), frameRate: 10, repeat: -1 });
+        this.anims.create({ key: 'death_sprite_move', frames: this.anims.generateFrameNumbers('death_sprite', { start: 28, end: 55 }), frameRate: 10, repeat: -1 });
+        // Necromancer (8 cols): idle 0-7, move 8-15
+        this.anims.create({ key: 'necromancer_idle', frames: this.anims.generateFrameNumbers('necromancer', { start: 0, end: 7  }), frameRate: 10, repeat: -1 });
+        this.anims.create({ key: 'necromancer_move', frames: this.anims.generateFrameNumbers('necromancer', { start: 8, end: 15 }), frameRate: 10, repeat: -1 });
+        // Ice Elemental (9 cols): idle 0-8, move 9-17
+        this.anims.create({ key: 'ice_elemental_idle', frames: this.anims.generateFrameNumbers('ice_elemental', { start: 0, end: 8  }), frameRate: 10, repeat: -1 });
+        this.anims.create({ key: 'ice_elemental_move', frames: this.anims.generateFrameNumbers('ice_elemental', { start: 9, end: 17 }), frameRate: 10, repeat: -1 });
+        // Rotting Soldier atlas (16 frames each)
+        const RS = 'Rotting Soldier Sprite Sheet';
+        this._atlasAnim('rotting_soldier_idle', 'rotting_soldier', RS, 'Idle',     16, 10, -1);
+        this._atlasAnim('rotting_soldier_move', 'rotting_soldier', RS, 'Movement', 16, 10, -1);
+    }
+
+    _createBossAnims() {
+        // Skeleton King (13 cols x 7 rows): idle row0 0-12, move row1 13-25, attack row2 26-38
+        this.anims.create({ key: 'skeleton_king_idle',   frames: this.anims.generateFrameNumbers('skeleton_king', { start: 0,  end: 12 }), frameRate: 10, repeat: -1 });
+        this.anims.create({ key: 'skeleton_king_move',   frames: this.anims.generateFrameNumbers('skeleton_king', { start: 13, end: 25 }), frameRate: 10, repeat: -1 });
+        this.anims.create({ key: 'skeleton_king_attack', frames: this.anims.generateFrameNumbers('skeleton_king', { start: 26, end: 38 }), frameRate: 12, repeat: 0 });
+        // Skeleton King Leap (13 cols x 1 row)
+        this.anims.create({ key: 'skeleton_king_leap', frames: this.anims.generateFrameNumbers('skeleton_king_leap', { start: 0, end: 12 }), frameRate: 12, repeat: 0 });
+        // Wind Elemental atlas (8 frames each)
+        const WE = 'Wind Elemental Sprite Sheet';
+        this._atlasAnim('wind_elemental_idle',   'wind_elemental', WE, 'Idle',     8, 10, -1);
+        this._atlasAnim('wind_elemental_move',   'wind_elemental', WE, 'Movement', 8, 10, -1);
+        this._atlasAnim('wind_elemental_attack', 'wind_elemental', WE, 'Attack',   8, 12, 0);
+    }
+
+    _createMiscAnims() {
+        // Wisp: use only the clearly-visible frames (0-4) to avoid flicker
+        this.anims.create({ key: 'wisp_idle', frames: this.anims.generateFrameNumbers('wisp', { start: 0, end: 4 }), frameRate: 6, repeat: -1 });
+        // Skullflame (8 cols): idle 0-7
+        this.anims.create({ key: 'skullflame_idle', frames: this.anims.generateFrameNumbers('skullflame', { start: 0, end: 7 }), frameRate: 8, repeat: -1 });
+        // Undead Hand atlas (16 frames idle)
+        const UH = 'Undead Hand Sprite Sheet';
+        this._atlasAnim('undead_hand_idle', 'undead_hand', UH, 'Idle', 16, 8, -1);
     }
 
     _createEffectAnims() {

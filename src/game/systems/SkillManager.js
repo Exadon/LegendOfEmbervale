@@ -1,6 +1,7 @@
 import { CLASS_SKILL_TREES, LEVEL_THRESHOLDS } from './ClassSkillTrees.js';
 import { CLASS_DEFS, DEFAULT_CLASS } from './ClassDefs.js';
 import { MetaProgression } from './MetaProgression.js';
+import { CLASS_MASTERIES } from './ClassMasteries.js';
 
 class _SkillManager {
     constructor() {
@@ -22,6 +23,20 @@ class _SkillManager {
         this._flags = new Set();  // boolean flags
         // Preserve selected class across reset (set before run starts)
         this.activeClass = CLASS_DEFS[this.selectedClassId] || DEFAULT_CLASS;
+        // Apply persistent mastery bonuses
+        this._applyMasteries();
+    }
+
+    /** Apply persistent class mastery bonuses at run start */
+    _applyMasteries() {
+        const masteries = CLASS_MASTERIES[this.selectedClassId];
+        if (!masteries) return;
+        for (const mastery of masteries) {
+            const rank = MetaProgression.getMasteryRank(this.selectedClassId, mastery.id);
+            if (rank > 0) {
+                mastery.ranks[rank - 1].apply(this);
+            }
+        }
     }
 
     setMult(key, value) {

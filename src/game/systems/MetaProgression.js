@@ -4,6 +4,7 @@
  */
 
 import { FlameAltar } from './FlameAltar.js';
+import { CLASS_MASTERIES, MASTERY_RANK_COSTS } from './ClassMasteries.js';
 
 const STORAGE_KEY = 'elixirs-shadow-meta-progression';
 
@@ -19,6 +20,7 @@ class _MetaProgression {
         this.unlockedClasses = ['adventurer'];
         this.totalSpent = 0;
         this.classProgress = {};
+        this.classMasteries = {};  // { classId: { masteryId: rank (0-3) } }
         this._load();
     }
 
@@ -31,6 +33,7 @@ class _MetaProgression {
                     this.unlockedClasses = data.unlockedClasses || ['adventurer'];
                     this.totalSpent = data.totalSpent || 0;
                     this.classProgress = data.classProgress || {};
+                    this.classMasteries = data.classMasteries || {};
                 }
             }
         } catch {}
@@ -43,6 +46,7 @@ class _MetaProgression {
                 unlockedClasses: this.unlockedClasses,
                 totalSpent: this.totalSpent,
                 classProgress: this.classProgress,
+                classMasteries: this.classMasteries,
             }));
         } catch {}
     }
@@ -90,8 +94,51 @@ class _MetaProgression {
         this._save();
     }
 
+    /** Get the current rank (0-3) of a mastery for a class */
+    getMasteryRank(classId, masteryId) {
+        return (this.classMasteries[classId] && this.classMasteries[classId][masteryId]) || 0;
+    }
+
+    /** Get the cost for the next rank of a mastery, or null if maxed */
+    getMasteryCost(classId, masteryId) {
+        const rank = this.getMasteryRank(classId, masteryId);
+        if (rank >= MASTERY_RANK_COSTS.length) return null;
+        return MASTERY_RANK_COSTS[rank];
+    }
+
+    /** Attempt to upgrade a mastery. Returns true on success. */
+    upgradeMastery(classId, masteryId) {
+        const cost = this.getMasteryCost(classId, masteryId);
+        if (cost === null) return false;
+        if (this.getAvailableElixir() < cost) return false;
+
+        if (!this.classMasteries[classId]) {
+            this.classMasteries[classId] = {};
+        }
+        this.classMasteries[classId][masteryId] = this.getMasteryRank(classId, masteryId) + 1;
+        this.totalSpent += cost;
+        this._save();
+        return true;
+    }
+
+    /** Sum of all mastery ranks for a class (0-15) */
+    getTotalMasteryRanks(classId) {
+        const classData = this.classMasteries[classId];
+        if (!classData) return 0;
+        let total = 0;
+        for (const mid of Object.keys(classData)) {
+            total += classData[mid];
+        }
+        return total;
+    }
+
     getTotalSpent() {
         return this.totalSpent;
+    }
+
+    /** How many unique nodes have ever been unlocked for a class */
+    getClassNodeCount(classId) {
+        return (this.classProgress[classId] || []).length;
     }
 }
 

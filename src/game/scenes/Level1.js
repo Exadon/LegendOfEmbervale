@@ -7,6 +7,7 @@ import { Shroud } from '../entities/Shroud.js';
 import { InputManager } from '../systems/InputManager.js';
 import { ParallaxBackground } from '../systems/ParallaxBackground.js';
 import { AudioManager } from '../systems/AudioManager.js';
+import { Settings } from '../systems/Settings.js';
 import { LevelGenerator } from '../systems/LevelGenerator.js';
 import { ParticleManager } from '../systems/ParticleManager.js';
 import { PopupText } from '../systems/PopupText.js';
@@ -27,6 +28,7 @@ import { RelicOverlay } from '../ui/RelicOverlay.js';
 import { ChallengeArena } from '../systems/ChallengeArena.js';
 import { BossManager } from '../systems/BossManager.js';
 import { FlameAltar } from '../systems/FlameAltar.js';
+import { MusicManager } from '../systems/MusicManager.js';
 
 export class Level1 extends Phaser.Scene {
     constructor() {
@@ -43,8 +45,15 @@ export class Level1 extends Phaser.Scene {
 
         // Audio
         this.audio = new AudioManager();
-        this.input.once('pointerdown', () => { this.audio.init(); this.audio.resume(); });
-        this.input.keyboard.once('keydown', () => { this.audio.init(); this.audio.resume(); });
+        const initAudio = () => {
+            this.audio.init();
+            this.audio.resume();
+            this.audio.setVolume(Settings.data.volume);
+            MusicManager.init(this.sound);
+            MusicManager.playBiome(this.biomeManager.getCurrentBiome().id);
+        };
+        this.input.once('pointerdown', initAudio);
+        this.input.keyboard.once('keydown', initAudio);
 
         // Ground
         this.ground = this.add.tileSprite(
@@ -323,9 +332,11 @@ export class Level1 extends Phaser.Scene {
         // Boss fight events
         this.events.on('bossFightStart', () => {
             this.shroud.speedMultiplier = 0;
+            MusicManager.playBoss();
         });
         this.events.on('bossFightEnd', () => {
             this.shroud.speedMultiplier = 1.0;
+            MusicManager.stopBoss();
         });
         this.events.on('bossVineSweep', (bx, sweepW) => {
             // Create brief damage zone
@@ -372,11 +383,14 @@ export class Level1 extends Phaser.Scene {
             });
         });
 
-        // Biome change — trigger boss
+        // Biome change — trigger boss + music
         const origBiomeChange = this.biomeManager.onBiomeChange;
         this.biomeManager.onBiomeChange = (biome) => {
             if (origBiomeChange) origBiomeChange(biome);
             this.bossManager.trySpawnBoss(biome.id);
+            if (!this.bossManager.active) {
+                MusicManager.playBiome(biome.id);
+            }
         };
 
         // Fell split event (Feature 3)
@@ -727,6 +741,7 @@ export class Level1 extends Phaser.Scene {
         if (this.audio.initialized) {
             const intensity = Phaser.Math.Clamp(1 - shroudDist / 400, 0, 1);
             this.audio.setShroudIntensity(intensity);
+            MusicManager.playShroud(intensity);
 
             // Shroud warning rumble
             if (shroudDist < PROGRESSION_BAR.SHROUD_WARN_DISTANCE) {
@@ -818,8 +833,10 @@ export class Level1 extends Phaser.Scene {
         // --- Survivor buff timer ---
         if (this._survivorBuffTimer > 0) {
             this._survivorBuffTimer -= delta;
+            this.hud.updateBuff(this._survivorBuffType, this._survivorBuffTimer, SURVIVOR.BUFF_DURATION);
             if (this._survivorBuffTimer <= 0) {
                 this._survivorBuffType = null;
+                this.hud.updateBuff(null, 0, 0);
                 this.popups.show(this.player.x, this.player.y - 40, 'BUFF EXPIRED', '#888888', '11px');
             }
         }
@@ -970,6 +987,11 @@ export class Level1 extends Phaser.Scene {
     _updateWisps() {
         for (const wisp of this.flameWisps.getChildren()) {
             if (!wisp.active || wisp.collected) continue;
+            // Magnet: pull wisp toward player when close
+            const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, wisp.x, wisp.y);
+            if (dist < FLAME_WISP.MAGNET_RANGE && dist > 5) {
+                wisp.magnetTo(this.player.x, this.player.y);
+            }
             if (this.physics.overlap(this.player, wisp)) {
                 if (wisp.collect()) {
                     this.runStats.wispsCollected++;
@@ -1818,9 +1840,12 @@ export class Level1 extends Phaser.Scene {
                     if (result) {
                         this._survivorBuffType = result.buff.id;
                         this._survivorBuffTimer = SURVIVOR.BUFF_DURATION;
-                        this.popups.show(survivor.x, survivor.y - 70, result.dialogue, '#FFFFFF', '11px');
-                        this.popups.show(survivor.x, survivor.y - 50, `${result.buff.name}: ${result.buff.desc}`, '#44FF44', '12px');
+                        this.hud.showSurvivorDialogue(result.dialogue, result.buff);
                         this.audio.playWispCollect();
+                        // Fade survivor away after dialogue dismisses
+                        this.time.delayedCall(4000, () => {
+                            if (survivor.active) survivor.fadeAway();
+                        });
                     }
                 }
             } else {
@@ -2106,6 +2131,7 @@ export class Level1 extends Phaser.Scene {
             this.audio.setShroudIntensity(0);
             this.audio.playGameOverStinger();
         }
+        MusicManager.playGameOver();
 
         // Player rapid flicker (8 cycles, 50ms each)
         let flickerCount = 0;
@@ -2135,5 +2161,6 @@ export class Level1 extends Phaser.Scene {
 
     shutdown() {
         AchievementManager.unbind();
+        MusicManager.stopAll();
     }
 }

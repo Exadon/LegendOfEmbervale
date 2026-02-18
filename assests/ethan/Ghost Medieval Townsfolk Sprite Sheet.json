@@ -1,0 +1,992 @@
+{ "frames": {
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-1 Idle) 0.ase": {
+    "frame": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-1 Idle) 1.ase": {
+    "frame": { "x": 32, "y": 0, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-1 Idle) 2.ase": {
+    "frame": { "x": 64, "y": 0, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-1 Idle) 3.ase": {
+    "frame": { "x": 96, "y": 0, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-1 Idle) 4.ase": {
+    "frame": { "x": 128, "y": 0, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-1 Idle) 5.ase": {
+    "frame": { "x": 160, "y": 0, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-1 Idle) 6.ase": {
+    "frame": { "x": 192, "y": 0, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-1 Idle) 7.ase": {
+    "frame": { "x": 224, "y": 0, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-1 Move) 0.ase": {
+    "frame": { "x": 0, "y": 96, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-1 Move) 1.ase": {
+    "frame": { "x": 32, "y": 96, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-1 Move) 2.ase": {
+    "frame": { "x": 64, "y": 96, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-1 Move) 3.ase": {
+    "frame": { "x": 96, "y": 96, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-1 Move) 4.ase": {
+    "frame": { "x": 128, "y": 96, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-1 Move) 5.ase": {
+    "frame": { "x": 160, "y": 96, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-1 Move) 6.ase": {
+    "frame": { "x": 192, "y": 96, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-1 Move) 7.ase": {
+    "frame": { "x": 224, "y": 96, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-1 Yes) 0.ase": {
+    "frame": { "x": 0, "y": 192, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-1 Yes) 1.ase": {
+    "frame": { "x": 32, "y": 192, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-1 Yes) 2.ase": {
+    "frame": { "x": 64, "y": 192, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-1 Yes) 3.ase": {
+    "frame": { "x": 96, "y": 192, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-1 Yes) 4.ase": {
+    "frame": { "x": 128, "y": 192, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-1 Yes) 5.ase": {
+    "frame": { "x": 160, "y": 192, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-1 Yes) 6.ase": {
+    "frame": { "x": 192, "y": 192, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-1 Yes) 7.ase": {
+    "frame": { "x": 224, "y": 192, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-1 No) 0.ase": {
+    "frame": { "x": 0, "y": 288, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-1 No) 1.ase": {
+    "frame": { "x": 32, "y": 288, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-1 No) 2.ase": {
+    "frame": { "x": 64, "y": 288, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-1 No) 3.ase": {
+    "frame": { "x": 96, "y": 288, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-1 No) 4.ase": {
+    "frame": { "x": 128, "y": 288, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-1 No) 5.ase": {
+    "frame": { "x": 160, "y": 288, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-1 No) 6.ase": {
+    "frame": { "x": 192, "y": 288, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-1 No) 7.ase": {
+    "frame": { "x": 224, "y": 288, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-1 Pass On) 0.ase": {
+    "frame": { "x": 0, "y": 384, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-1 Pass On) 1.ase": {
+    "frame": { "x": 32, "y": 384, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-1 Pass On) 2.ase": {
+    "frame": { "x": 64, "y": 384, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-1 Pass On) 3.ase": {
+    "frame": { "x": 96, "y": 384, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-1 Pass On) 4.ase": {
+    "frame": { "x": 128, "y": 384, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-1 Pass On) 5.ase": {
+    "frame": { "x": 160, "y": 384, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-1 Pass On) 6.ase": {
+    "frame": { "x": 192, "y": 384, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-1 Pass On) 7.ase": {
+    "frame": { "x": 224, "y": 384, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-2 Idle) 0.ase": {
+    "frame": { "x": 0, "y": 480, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-2 Idle) 1.ase": {
+    "frame": { "x": 32, "y": 480, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-2 Idle) 2.ase": {
+    "frame": { "x": 64, "y": 480, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-2 Idle) 3.ase": {
+    "frame": { "x": 96, "y": 480, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-2 Idle) 4.ase": {
+    "frame": { "x": 128, "y": 480, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-2 Idle) 5.ase": {
+    "frame": { "x": 160, "y": 480, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-2 Idle) 6.ase": {
+    "frame": { "x": 192, "y": 480, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-2 Idle) 7.ase": {
+    "frame": { "x": 224, "y": 480, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-2 Move) 0.ase": {
+    "frame": { "x": 0, "y": 576, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-2 Move) 1.ase": {
+    "frame": { "x": 32, "y": 576, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-2 Move) 2.ase": {
+    "frame": { "x": 64, "y": 576, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-2 Move) 3.ase": {
+    "frame": { "x": 96, "y": 576, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-2 Move) 4.ase": {
+    "frame": { "x": 128, "y": 576, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-2 Move) 5.ase": {
+    "frame": { "x": 160, "y": 576, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-2 Move) 6.ase": {
+    "frame": { "x": 192, "y": 576, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-2 Move) 7.ase": {
+    "frame": { "x": 224, "y": 576, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-2 Yes) 0.ase": {
+    "frame": { "x": 0, "y": 672, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-2 Yes) 1.ase": {
+    "frame": { "x": 32, "y": 672, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-2 Yes) 2.ase": {
+    "frame": { "x": 64, "y": 672, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-2 Yes) 3.ase": {
+    "frame": { "x": 96, "y": 672, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-2 Yes) 4.ase": {
+    "frame": { "x": 128, "y": 672, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-2 Yes) 5.ase": {
+    "frame": { "x": 160, "y": 672, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-2 Yes) 6.ase": {
+    "frame": { "x": 192, "y": 672, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-2 Yes) 7.ase": {
+    "frame": { "x": 224, "y": 672, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-2 No) 0.ase": {
+    "frame": { "x": 0, "y": 768, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-2 No) 1.ase": {
+    "frame": { "x": 32, "y": 768, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-2 No) 2.ase": {
+    "frame": { "x": 64, "y": 768, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-2 No) 3.ase": {
+    "frame": { "x": 96, "y": 768, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-2 No) 4.ase": {
+    "frame": { "x": 128, "y": 768, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-2 No) 5.ase": {
+    "frame": { "x": 160, "y": 768, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-2 No) 6.ase": {
+    "frame": { "x": 192, "y": 768, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-2 No) 7.ase": {
+    "frame": { "x": 224, "y": 768, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-2 Pass On) 0.ase": {
+    "frame": { "x": 0, "y": 864, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-2 Pass On) 1.ase": {
+    "frame": { "x": 32, "y": 864, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-2 Pass On) 2.ase": {
+    "frame": { "x": 64, "y": 864, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-2 Pass On) 3.ase": {
+    "frame": { "x": 96, "y": 864, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-2 Pass On) 4.ase": {
+    "frame": { "x": 128, "y": 864, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-2 Pass On) 5.ase": {
+    "frame": { "x": 160, "y": 864, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-2 Pass On) 6.ase": {
+    "frame": { "x": 192, "y": 864, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-2 Pass On) 7.ase": {
+    "frame": { "x": 224, "y": 864, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-3 Idle) 0.ase": {
+    "frame": { "x": 0, "y": 960, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-3 Idle) 1.ase": {
+    "frame": { "x": 32, "y": 960, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-3 Idle) 2.ase": {
+    "frame": { "x": 64, "y": 960, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-3 Idle) 3.ase": {
+    "frame": { "x": 96, "y": 960, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-3 Idle) 4.ase": {
+    "frame": { "x": 128, "y": 960, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-3 Idle) 5.ase": {
+    "frame": { "x": 160, "y": 960, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-3 Idle) 6.ase": {
+    "frame": { "x": 192, "y": 960, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-3 Idle) 7.ase": {
+    "frame": { "x": 224, "y": 960, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-3 Move) 0.ase": {
+    "frame": { "x": 0, "y": 1056, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-3 Move) 1.ase": {
+    "frame": { "x": 32, "y": 1056, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-3 Move) 2.ase": {
+    "frame": { "x": 64, "y": 1056, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-3 Move) 3.ase": {
+    "frame": { "x": 96, "y": 1056, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-3 Move) 4.ase": {
+    "frame": { "x": 128, "y": 1056, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-3 Move) 5.ase": {
+    "frame": { "x": 160, "y": 1056, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-3 Move) 6.ase": {
+    "frame": { "x": 192, "y": 1056, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-3 Move) 7.ase": {
+    "frame": { "x": 224, "y": 1056, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-3 Yes) 0.ase": {
+    "frame": { "x": 0, "y": 1152, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-3 Yes) 1.ase": {
+    "frame": { "x": 32, "y": 1152, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-3 Yes) 2.ase": {
+    "frame": { "x": 64, "y": 1152, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-3 Yes) 3.ase": {
+    "frame": { "x": 96, "y": 1152, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-3 Yes) 4.ase": {
+    "frame": { "x": 128, "y": 1152, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-3 Yes) 5.ase": {
+    "frame": { "x": 160, "y": 1152, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-3 Yes) 6.ase": {
+    "frame": { "x": 192, "y": 1152, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-3 Yes) 7.ase": {
+    "frame": { "x": 224, "y": 1152, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-3 No) 0.ase": {
+    "frame": { "x": 0, "y": 1248, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-3 No) 1.ase": {
+    "frame": { "x": 32, "y": 1248, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-3 No) 2.ase": {
+    "frame": { "x": 64, "y": 1248, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-3 No) 3.ase": {
+    "frame": { "x": 96, "y": 1248, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-3 No) 4.ase": {
+    "frame": { "x": 128, "y": 1248, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-3 No) 5.ase": {
+    "frame": { "x": 160, "y": 1248, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-3 No) 6.ase": {
+    "frame": { "x": 192, "y": 1248, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-3 No) 7.ase": {
+    "frame": { "x": 224, "y": 1248, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-3 Pass On) 0.ase": {
+    "frame": { "x": 0, "y": 1344, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-3 Pass On) 1.ase": {
+    "frame": { "x": 32, "y": 1344, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-3 Pass On) 2.ase": {
+    "frame": { "x": 64, "y": 1344, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-3 Pass On) 3.ase": {
+    "frame": { "x": 96, "y": 1344, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-3 Pass On) 4.ase": {
+    "frame": { "x": 128, "y": 1344, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-3 Pass On) 5.ase": {
+    "frame": { "x": 160, "y": 1344, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-3 Pass On) 6.ase": {
+    "frame": { "x": 192, "y": 1344, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   },
+   "Ghost Medieval Townsfolk Sprite Sheet (Ghost-3 Pass On) 7.ase": {
+    "frame": { "x": 224, "y": 1344, "w": 32, "h": 96 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 32, "h": 96 },
+    "sourceSize": { "w": 32, "h": 96 },
+    "duration": 100
+   }
+ },
+ "meta": {
+  "app": "https://www.aseprite.org/",
+  "version": "1.3.14.3-x64",
+  "image": "Ghost Medieval Townsfolk Sprite Sheet.png",
+  "format": "RGBA8888",
+  "size": { "w": 256, "h": 1440 },
+  "scale": "1",
+  "frameTags": [
+  ],
+  "layers": [
+   { "name": "Ghost-1 Idle", "opacity": 255, "blendMode": "normal" },
+   { "name": "Ghost-1 Move", "opacity": 255, "blendMode": "normal" },
+   { "name": "Ghost-1 Yes", "opacity": 255, "blendMode": "normal" },
+   { "name": "Ghost-1 No", "opacity": 255, "blendMode": "normal" },
+   { "name": "Ghost-1 Pass On", "opacity": 255, "blendMode": "normal" },
+   { "name": "Ghost-2 Idle", "opacity": 255, "blendMode": "normal" },
+   { "name": "Ghost-2 Move", "opacity": 255, "blendMode": "normal" },
+   { "name": "Ghost-2 Yes", "opacity": 255, "blendMode": "normal" },
+   { "name": "Ghost-2 No", "opacity": 255, "blendMode": "normal" },
+   { "name": "Ghost-2 Pass On", "opacity": 255, "blendMode": "normal" },
+   { "name": "Ghost-3 Idle", "opacity": 255, "blendMode": "normal" },
+   { "name": "Ghost-3 Move", "opacity": 255, "blendMode": "normal" },
+   { "name": "Ghost-3 Yes", "opacity": 255, "blendMode": "normal" },
+   { "name": "Ghost-3 No", "opacity": 255, "blendMode": "normal" },
+   { "name": "Ghost-3 Pass On", "opacity": 255, "blendMode": "normal" }
+  ],
+  "slices": [
+  ]
+ }
+}

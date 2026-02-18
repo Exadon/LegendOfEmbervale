@@ -4,6 +4,7 @@ const DEFAULTS = {
     resolution: [960, 600],
     gridSnap: true,
     gridSize: 8,
+    volume: 1.0,
     windows: {
         flame:     { x: 370, y: 4 },
         cooldowns: { x: 6, y: 4 },
@@ -29,6 +30,7 @@ export class Settings {
                 if (saved.resolution) Settings.data.resolution = saved.resolution;
                 if (saved.gridSnap !== undefined) Settings.data.gridSnap = saved.gridSnap;
                 if (saved.gridSize !== undefined) Settings.data.gridSize = saved.gridSize;
+                if (saved.volume !== undefined) Settings.data.volume = saved.volume;
                 if (saved.windows) {
                     for (const key of Object.keys(DEFAULTS.windows)) {
                         if (saved.windows[key]) {

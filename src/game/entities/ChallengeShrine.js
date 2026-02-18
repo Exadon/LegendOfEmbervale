@@ -12,19 +12,17 @@ export class ChallengeShrine extends Phaser.GameObjects.Container {
         this.setDepth(4);
         this.used = false;
 
-        // Stone base (purple-red tinted)
-        const base = scene.add.rectangle(0, 0, 48, 56, 0x6A3A6A);
-        this.add(base);
+        // Skullflame sprite
+        this.skull = scene.add.sprite(0, -8, 'skullflame').setDisplaySize(48, 48);
+        this.skull.setTint(0xFF4488);
+        this.skull.play('skullflame_idle');
+        this.add(this.skull);
 
-        // Pulsing glow
-        this.glow = scene.add.circle(0, -20, 16, 0xFF4488, 0.4);
-        this.add(this.glow);
-
+        // Pulsing scale
         scene.tweens.add({
-            targets: this.glow,
-            alpha: { from: 0.2, to: 0.6 },
-            scaleX: { from: 0.9, to: 1.3 },
-            scaleY: { from: 0.9, to: 1.3 },
+            targets: this.skull,
+            scaleX: { from: this.skull.scaleX * 0.9, to: this.skull.scaleX * 1.1 },
+            scaleY: { from: this.skull.scaleY * 0.9, to: this.skull.scaleY * 1.1 },
             duration: 1000,
             yoyo: true,
             repeat: -1,
@@ -42,7 +40,7 @@ export class ChallengeShrine extends Phaser.GameObjects.Container {
     activate() {
         if (this.used) return false;
         this.used = true;
-        this.glow.setAlpha(0.1);
+        this.skull.setAlpha(0.3);
         return true;
     }
 }

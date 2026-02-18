@@ -1,4 +1,5 @@
 import { AUDIO } from '../constants.js';
+import { MusicManager } from './MusicManager.js';
 
 export class AudioManager {
     constructor() {
@@ -46,6 +47,7 @@ export class AudioManager {
                 this.ctx.currentTime, 0.05
             );
         }
+        MusicManager.setMute(this.muted);
     }
 
     setVolume(vol) {
@@ -55,6 +57,7 @@ export class AudioManager {
                 this._volume, this.ctx.currentTime, 0.05
             );
         }
+        MusicManager.setVolume(this._volume);
     }
 
     _setupShroudHum() {

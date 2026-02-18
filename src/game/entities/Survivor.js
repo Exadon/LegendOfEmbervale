@@ -13,14 +13,15 @@ export class Survivor extends Phaser.GameObjects.Container {
         this.buff = SURVIVOR.BUFFS[Math.floor(Math.random() * SURVIVOR.BUFFS.length)];
         this.dialogue = SURVIVOR.DIALOGUES[Math.floor(Math.random() * SURVIVOR.DIALOGUES.length)];
 
-        // Body
-        const body = scene.add.rectangle(0, -24, 12, 28, 0xBBAA88).setOrigin(0.5, 1);
-        // Head
-        const head = scene.add.circle(0, -34, 6, 0xDDCCAA);
+        // NPC sprite (random villager)
+        const npcPool = ['npc_old_man', 'npc_farmer', 'npc_villager_f', 'npc_healer'];
+        const spriteKey = npcPool[Math.floor(Math.random() * npcPool.length)];
+        const npcSprite = scene.add.sprite(0, -20, spriteKey).setDisplaySize(28, 28);
+        npcSprite.play(`${spriteKey}_idle`);
         // Campfire glow
         this.campfire = scene.add.circle(18, -6, 8, 0xFF6600, 0.6);
 
-        this.add([body, head, this.campfire]);
+        this.add([npcSprite, this.campfire]);
 
         // Flicker campfire
         scene.tweens.add({
@@ -54,7 +55,17 @@ export class Survivor extends Phaser.GameObjects.Container {
         if (this.interacted) return null;
         this.interacted = true;
         this.prompt.setVisible(false);
-        this.campfire.setAlpha(0.2);
         return { buff: this.buff, dialogue: this.dialogue };
+    }
+
+    fadeAway() {
+        this.scene.tweens.add({
+            targets: this.list,
+            alpha: 0,
+            duration: 1000,
+            onComplete: () => {
+                this.setActive(false).setVisible(false);
+            }
+        });
     }
 }

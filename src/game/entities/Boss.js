@@ -21,13 +21,22 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         this.stunTimer = 0;
         this.alive = true;
 
-        this.setDisplaySize(48 * def.scale, 48 * def.scale);
+        const displayH = 48 * def.scale;
+        this.setDisplaySize(48 * def.scale, displayH);
         this.setDepth(10);
         this.body.setSize(40, 60);
+        // Put physics body at the bottom of the display so the sprite
+        // sits ON the ground instead of sinking into it
+        this.body.setOffset((48 * def.scale - 40) / 2, displayH - 60);
         this.body.setAllowGravity(true);
         this.setCollideWorldBounds(false);
 
         if (def.tint) this.setTint(def.tint);
+
+        // Play idle animation if defined
+        if (def.idleAnim && this.scene.anims.exists(def.idleAnim)) {
+            this.play(def.idleAnim);
+        }
     }
 
     hit() {
@@ -76,6 +85,17 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             return;
         }
 
+        // Animation switching (idle/move based on velocity)
+        if (this.def.idleAnim) {
+            const isMoving = Math.abs(this.body.velocity.x) > 5;
+            const desiredAnim = isMoving ? this.def.moveAnim : this.def.idleAnim;
+            const currentKey = this.anims.currentAnim ? this.anims.currentAnim.key : null;
+            if (currentKey !== desiredAnim && currentKey !== this.def.attackAnim) {
+                this.play(desiredAnim, true);
+            }
+            this.setFlipX(this.body.velocity.x > 0);
+        }
+
         this.attackTimer += delta;
         const interval = this.def.attackInterval / speedMult;
 
@@ -88,6 +108,12 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
                 break;
             case 'kindlewastes':
                 this._updatePyrelord(delta, playerX, playerY, interval, speedMult);
+                break;
+            case 'hollow':
+                this._updateHollowCyclops(delta, playerX, playerY, interval, speedMult);
+                break;
+            case 'albaneve':
+                this._updateFrostWyvern(delta, playerX, playerY, interval, speedMult);
                 break;
         }
     }
@@ -138,6 +164,83 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
                 } else if (Math.abs(dx) < 150) {
                     // Ground pound
                     this.scene.events.emit('bossGroundPound', this.x, this.def.groundPoundRadius);
+                }
+            }
+        } else if (this.aiState === AI_STATE.ATTACK) {
+            this.stateTimer -= delta;
+            if (this.stateTimer <= 0) {
+                this.aiState = AI_STATE.IDLE;
+                this.setVelocityX(0);
+            }
+        }
+    }
+
+    _playAttackAnim() {
+        if (this.def.attackAnim && this.scene.anims.exists(this.def.attackAnim)) {
+            this.play(this.def.attackAnim);
+            this.once('animationcomplete', () => {
+                if (this.active && this.alive && this.def.idleAnim) {
+                    this.play(this.def.idleAnim, true);
+                }
+            });
+        }
+    }
+
+    _updateHollowCyclops(delta, playerX, playerY, interval, speedMult) {
+        const dx = playerX - this.x;
+
+        if (this.aiState === AI_STATE.IDLE) {
+            const dir = dx > 0 ? 1 : -1;
+            this.setVelocityX(dir * 70 * speedMult);
+            this.setFlipX(dir < 0);
+
+            if (this.attackTimer >= interval) {
+                this.attackTimer = 0;
+                if (Math.abs(dx) < 180) {
+                    // Ground pound
+                    this._playAttackAnim();
+                    this.scene.events.emit('bossGroundPound', this.x, this.def.groundPoundRadius);
+                } else {
+                    // Summon skeletons
+                    for (let i = 0; i < this.def.summonCount; i++) {
+                        const offset = (Math.random() - 0.5) * 200;
+                        const def = ENEMIES['hollow_skeleton'] || ENEMIES['fell_critter'];
+                        if (def) {
+                            const enemy = new Enemy(this.scene, this.x + offset, WORLD.GROUND_Y - def.height / 2, 'hollow_skeleton');
+                            this.scene.enemyGroup.add(enemy);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    _updateFrostWyvern(delta, playerX, playerY, interval, speedMult) {
+        const dx = playerX - this.x;
+        const dir = dx > 0 ? 1 : -1;
+        this.setFlipX(dir < 0);
+
+        if (this.aiState === AI_STATE.IDLE) {
+            // Kite at distance
+            if (Math.abs(dx) < 150) {
+                this.setVelocityX(-dir * 60 * speedMult);
+            } else if (Math.abs(dx) > 350) {
+                this.setVelocityX(dir * 80 * speedMult);
+            } else {
+                this.setVelocityX(0);
+            }
+
+            if (this.attackTimer >= interval) {
+                this.attackTimer = 0;
+                if (Math.random() < 0.5 || this.currentPhase === 2) {
+                    // Breath attack
+                    this._playAttackAnim();
+                    this.scene.events.emit('bossVineSweep', this.x, this.def.breathWidth * speedMult);
+                } else {
+                    // Dive bomb
+                    this.aiState = AI_STATE.ATTACK;
+                    this.stateTimer = 700;
+                    this.setVelocityX(dir * this.def.diveBombSpeed * speedMult);
                 }
             }
         } else if (this.aiState === AI_STATE.ATTACK) {

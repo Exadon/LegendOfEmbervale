@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GlobalState } from '../GlobalState.js';
 import { Settings } from '../systems/Settings.js';
+import { MusicManager } from '../systems/MusicManager.js';
 
 export class MainMenu extends Phaser.Scene {
     constructor() {
@@ -178,6 +179,15 @@ export class MainMenu extends Phaser.Scene {
             fontFamily: 'monospace'
         }).setOrigin(0.5);
 
+        // Music (start on first gesture)
+        const startMusic = () => {
+            MusicManager.init(this.sound);
+            MusicManager.setVolume(Settings.data.volume);
+            MusicManager.playMenu();
+        };
+        this.input.once('pointerdown', startMusic);
+        this.input.keyboard.once('keydown', startMusic);
+
         // Resolution toggle key
         this.input.keyboard.on('keydown-R', () => {
             const [cw, ch] = Settings.data.resolution;
@@ -201,6 +211,7 @@ export class MainMenu extends Phaser.Scene {
         // Input
         this.input.keyboard.on('keydown-SPACE', () => {
             this.input.keyboard.removeAllListeners();
+            MusicManager.stopMenu();
             this.cameras.main.fadeOut(800, 0, 0, 0);
             this.cameras.main.once('camerafadeoutcomplete', () => {
                 this.scene.start('ClassSelect');

@@ -204,14 +204,22 @@ export class PauseOverlay {
         }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301).setScale(s);
         this._elements.push(soundLabel);
 
+        const volPct = Math.round(audio.volume * 100);
         const soundValP = this._uiXY(width / 2 + 60, Math.round(height * 0.67));
         this._soundText = this.scene.add.text(soundValP.x, soundValP.y,
-            audio.muted ? 'OFF' : 'ON', {
+            audio.muted ? 'OFF' : `ON ${volPct}%`, {
             fontSize: '13px',
             color: audio.muted ? '#FF4444' : '#44FF44',
             fontFamily: 'monospace', fontStyle: 'bold'
         }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301).setScale(s);
         this._elements.push(this._soundText);
+
+        // Volume hint
+        const volHintP = this._uiXY(width / 2 - 140, Math.round(height * 0.67) + 14);
+        const volHint = this.scene.add.text(volHintP.x, volHintP.y, '[-/+]  Volume', {
+            fontSize: '11px', color: '#888888', fontFamily: 'monospace'
+        }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301).setScale(s);
+        this._elements.push(volHint);
 
         // Resolution toggle
         const [rw, rh] = Settings.data.resolution;
@@ -308,6 +316,10 @@ export class PauseOverlay {
                 this._cycleClass();
             } else if (event.key === 'j' || event.key === 'J') {
                 this._openLoreCompendium();
+            } else if (event.key === '-' || event.key === '_') {
+                this._adjustVolume(-0.1);
+            } else if (event.key === '=' || event.key === '+') {
+                this._adjustVolume(0.1);
             }
         };
         this.scene.input.keyboard.on('keydown', this._keyHandler);
@@ -316,8 +328,23 @@ export class PauseOverlay {
     _toggleSound() {
         const audio = this.scene.audio;
         audio.toggleMute();
+        this._updateSoundText();
+    }
+
+    _adjustVolume(delta) {
+        const audio = this.scene.audio;
+        const newVol = Math.round(Math.max(0, Math.min(1, audio.volume + delta)) * 10) / 10;
+        audio.setVolume(newVol);
+        Settings.data.volume = newVol;
+        Settings.save();
+        this._updateSoundText();
+    }
+
+    _updateSoundText() {
+        const audio = this.scene.audio;
         if (this._soundText) {
-            this._soundText.setText(audio.muted ? 'OFF' : 'ON');
+            const pct = Math.round(audio.volume * 100);
+            this._soundText.setText(audio.muted ? 'OFF' : `ON ${pct}%`);
             this._soundText.setColor(audio.muted ? '#FF4444' : '#44FF44');
         }
     }

@@ -25,10 +25,12 @@ export class Craftsperson extends Phaser.GameObjects.Container {
         this.add(scene.add.rectangle(0, -cageH, cageW, 2, 0x888888));
         this.add(scene.add.rectangle(0, 0, cageW, 2, 0x888888));
 
-        // NPC body inside cage
-        const npcBody = scene.add.rectangle(0, -18, 10, 22, this._getNpcColor()).setOrigin(0.5, 1);
-        const npcHead = scene.add.circle(0, -26, 5, 0xDDCCAA);
-        this.add([npcBody, npcHead]);
+        // NPC sprite inside cage
+        const spriteMap = { blacksmith: 'npc_blacksmith', alchemist: 'npc_alchemist', hunter: 'npc_hunter', bard: 'npc_bard' };
+        const spriteKey = spriteMap[this.craftType.id] || 'npc_blacksmith';
+        const npcSprite = scene.add.sprite(0, -20, spriteKey).setDisplaySize(28, 28);
+        npcSprite.play(`${spriteKey}_idle`);
+        this.add(npcSprite);
 
         // Name label
         this.nameLabel = scene.add.text(0, -50, this.craftType.name, {
@@ -41,16 +43,6 @@ export class Craftsperson extends Phaser.GameObjects.Container {
         scene.physics.add.existing(this, true);
         this.body.setSize(CRAFTSPERSON.RESCUE_RADIUS * 2, 60);
         this.body.setOffset(-CRAFTSPERSON.RESCUE_RADIUS, -60);
-    }
-
-    _getNpcColor() {
-        switch (this.craftType.id) {
-            case 'blacksmith': return 0x886644;
-            case 'alchemist': return 0x44AA66;
-            case 'hunter': return 0x668844;
-            case 'bard': return 0xAA6688;
-            default: return 0xBBAA88;
-        }
     }
 
     showPrompt() {
