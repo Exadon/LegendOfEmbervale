@@ -1237,13 +1237,14 @@ export class Level1 extends Phaser.Scene {
         MusicManager.playGameOver();
 
         // Player rapid flicker (8 cycles, 50ms each)
+        let flickerCount = 0;
         this.time.addEvent({
             delay: 50,
             repeat: 15,
-            callback: (_args, event) => {
+            callback: () => {
                 if (this.player.active) {
-                    const count = 16 - event.repeatCount;
-                    this.player.setAlpha(count % 2 === 0 ? 0 : 1);
+                    this.player.setAlpha(flickerCount % 2 === 0 ? 0 : 1);
+                    flickerCount++;
                 }
             }
         });
