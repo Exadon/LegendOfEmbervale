@@ -35,7 +35,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         // Fell mutation (Feature 3)
         this.aliveTimer = 0;
         this.mutated = false;
-        this.hitsToKill = 1;
+        this.hitsToKill = def.hitsToKill || 1;
 
         // Shaman buff timer (Feature 4)
         this._shamanBuffTimer = 0;

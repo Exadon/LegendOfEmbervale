@@ -14,7 +14,7 @@ export class Survivor extends Phaser.GameObjects.Container {
         this.dialogue = SURVIVOR.DIALOGUES[Math.floor(Math.random() * SURVIVOR.DIALOGUES.length)];
 
         // NPC sprite (random villager)
-        const npcPool = ['npc_old_man', 'npc_farmer', 'npc_villager_f', 'npc_healer'];
+        const npcPool = ['npc_old_man', 'npc_farmer', 'npc_villager_f', 'npc_healer', 'npc_bard'];
         const spriteKey = npcPool[Math.floor(Math.random() * npcPool.length)];
         const npcSprite = scene.add.sprite(0, -20, spriteKey).setDisplaySize(28, 28);
         npcSprite.play(`${spriteKey}_idle`);

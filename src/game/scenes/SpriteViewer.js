@@ -71,6 +71,23 @@ export class SpriteViewer extends Phaser.Scene {
         }
     }
 
+    /** Check if a texture frame actually exists in the loaded texture */
+    _isFrameValid(textureKey, frameName) {
+        const texture = this.textures.get(textureKey);
+        if (!texture || texture.key === '__MISSING') return false;
+        if (frameName === undefined || frameName === null) return true;
+        return texture.has(frameName);
+    }
+
+    /** Count how many animation frames reference valid texture frames */
+    _countValidFrames(animData) {
+        let valid = 0;
+        for (const frame of animData.frames) {
+            if (this._isFrameValid(frame.textureKey, frame.textureFrame)) valid++;
+        }
+        return valid;
+    }
+
     _showClass(index) {
         this._index = index;
         const { id, def } = this._entries[index];
@@ -118,7 +135,6 @@ export class SpriteViewer extends Phaser.Scene {
         const spriteY = height * 0.38;
 
         // Preview scale: show sprites large enough to see detail
-        // Use a magnified scale so small frames are visible (at least 3x native or fill ~120px)
         const previewScale = Math.max(3, 120 / Math.max(fw, fh));
 
         for (let i = 0; i < anims.length; i++) {
@@ -133,7 +149,15 @@ export class SpriteViewer extends Phaser.Scene {
             // Try to play animation
             const animData = this.anims.get(anim.key);
             if (animData) {
-                sprite.play(anim.key);
+                // Set initial frame from animation's first valid frame to avoid
+                // atlas sprites showing the wrong frame before animation starts
+                const firstValid = animData.frames.find(f =>
+                    this._isFrameValid(f.textureKey, f.textureFrame));
+                if (firstValid) {
+                    sprite.setTexture(firstValid.textureKey, firstValid.textureFrame);
+                }
+                // Force all animations to loop in the viewer (attack anims normally repeat: 0)
+                sprite.play({ key: anim.key, repeat: -1 });
                 if (this._paused) sprite.anims.pause();
             } else {
                 // Animation doesn't exist — show frame 0
@@ -167,11 +191,20 @@ export class SpriteViewer extends Phaser.Scene {
             }).setOrigin(0.5).setDepth(3);
             this._elements.push(frameText);
 
-            // Total frames
-            const totalFrames = animData ? animData.frames.length : '?';
-            const totalText = this.add.text(cx, spriteY + boxH / 2 + 44, `${totalFrames} frames`, {
-                fontSize: '10px', color: '#555555', fontFamily: 'monospace'
-            }).setOrigin(0.5).setDepth(3);
+            // Total frames — show valid/total with warning color if mismatched
+            const totalFrames = animData ? animData.frames.length : 0;
+            const validCount = animData ? this._countValidFrames(animData) : 0;
+            const hasMissing = validCount < totalFrames;
+            const totalText = this.add.text(cx, spriteY + boxH / 2 + 44,
+                hasMissing
+                    ? `${validCount}/${totalFrames} frames (${totalFrames - validCount} missing)`
+                    : `${totalFrames} frames`,
+                {
+                    fontSize: '10px',
+                    color: hasMissing ? '#FF4444' : '#555555',
+                    fontFamily: 'monospace'
+                }
+            ).setOrigin(0.5).setDepth(3);
             this._elements.push(totalText);
 
             this._sprites.push({ sprite, frameText, animKey: anim.key, label: anim.label });
@@ -181,7 +214,7 @@ export class SpriteViewer extends Phaser.Scene {
         this._buildFrameStrip(anims, spriteY + 100);
     }
 
-    /** Render a scrollable strip of every frame for each animation */
+    /** Render a strip of every frame for each animation */
     _buildFrameStrip(anims, startY) {
         const { width } = this.scale;
         const def = this._entries[this._index].def;
@@ -201,11 +234,18 @@ export class SpriteViewer extends Phaser.Scene {
 
             const frames = animData.frames;
             const numFrames = frames.length;
+            const validCount = this._countValidFrames(animData);
+            const hasMissing = validCount < numFrames;
 
             // Row label
-            const rowLabel = this.add.text(8, yPos, `${anim.label} (${numFrames}f):`, {
-                fontSize: '10px', color: '#AAAAAA', fontFamily: 'monospace'
-            }).setDepth(3);
+            const rowLabel = this.add.text(8, yPos,
+                `${anim.label} (${numFrames}f):${hasMissing ? ` [${numFrames - validCount} missing]` : ''}`,
+                {
+                    fontSize: '10px',
+                    color: hasMissing ? '#FF8844' : '#AAAAAA',
+                    fontFamily: 'monospace'
+                }
+            ).setDepth(3);
             this._elements.push(rowLabel);
 
             yPos += 16;
@@ -224,20 +264,31 @@ export class SpriteViewer extends Phaser.Scene {
                     const col = fi - startIdx;
                     const fx = 12 + col * (thumbW + padding) + thumbW / 2;
                     const fy = yPos + thumbH / 2;
+                    const valid = this._isFrameValid(frame.textureKey, frame.textureFrame);
 
-                    // Frame background
+                    // Frame background — red border for invalid frames
                     const bg = this.add.rectangle(fx, fy, thumbW + 2, thumbH + 2)
-                        .setStrokeStyle(1, 0x333333).setFillStyle(0x111111, 0.8).setDepth(1);
+                        .setStrokeStyle(1, valid ? 0x333333 : 0xFF4444)
+                        .setFillStyle(valid ? 0x111111 : 0x330000, 0.8)
+                        .setDepth(1);
                     this._elements.push(bg);
 
-                    // Frame sprite
-                    const thumb = this.add.sprite(fx, fy, frame.textureKey, frame.textureFrame);
-                    thumb.setScale(stripScale).setDepth(2);
-                    this._elements.push(thumb);
+                    if (valid) {
+                        // Frame sprite
+                        const thumb = this.add.sprite(fx, fy, frame.textureKey, frame.textureFrame);
+                        thumb.setScale(stripScale).setDepth(2);
+                        this._elements.push(thumb);
+                    } else {
+                        // Missing frame indicator
+                        const missingText = this.add.text(fx, fy, '?', {
+                            fontSize: '14px', color: '#FF4444', fontFamily: 'monospace'
+                        }).setOrigin(0.5).setDepth(2);
+                        this._elements.push(missingText);
+                    }
 
-                    // Frame number
+                    // Frame number — red for invalid
                     const numText = this.add.text(fx, fy + thumbH / 2 + 8, `${fi}`, {
-                        fontSize: '9px', color: '#00FF88', fontFamily: 'monospace'
+                        fontSize: '9px', color: valid ? '#00FF88' : '#FF4444', fontFamily: 'monospace'
                     }).setOrigin(0.5).setDepth(3);
                     this._elements.push(numText);
                 }
@@ -255,9 +306,9 @@ export class SpriteViewer extends Phaser.Scene {
             if (!s.sprite.anims.currentAnim) continue;
             const current = s.sprite.anims.currentFrame;
             if (current) {
-                const idx = current.index;
+                const idx = current.index + 1;
                 const total = s.sprite.anims.currentAnim.frames.length;
-                s.frameText.setText(`Frame: ${idx} / ${total - 1}`);
+                s.frameText.setText(`Frame: ${idx} / ${total}`);
             }
         }
     }

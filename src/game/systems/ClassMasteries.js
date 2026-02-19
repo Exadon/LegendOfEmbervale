@@ -376,4 +376,163 @@ export const CLASS_MASTERIES = Object.freeze({
             ]
         },
     ],
+
+    monk: [
+        {
+            id: 'monk_steel_body',
+            name: 'Steel Body',
+            description: 'Reduces enemy damage',
+            ranks: [
+                { cost: 5,  label: 'Enemy dmg -5%',  apply(mgr) { mgr.setMult('enemyDamage', 0.95); } },
+                { cost: 10, label: 'Enemy dmg -10%', apply(mgr) { mgr.setMult('enemyDamage', 0.90); } },
+                { cost: 20, label: 'Enemy dmg -15%', apply(mgr) { mgr.setMult('enemyDamage', 0.85); } },
+            ]
+        },
+        {
+            id: 'monk_swift_feet',
+            name: 'Swift Feet',
+            description: 'Increases movement speed',
+            ranks: [
+                { cost: 5,  label: 'Speed +3%',  apply(mgr) { mgr.setMult('player.speed', 1.03); } },
+                { cost: 10, label: 'Speed +5%',  apply(mgr) { mgr.setMult('player.speed', 1.05); } },
+                { cost: 20, label: 'Speed +8%',  apply(mgr) { mgr.setMult('player.speed', 1.08); } },
+            ]
+        },
+        {
+            id: 'monk_inner_peace',
+            name: 'Inner Peace',
+            description: 'Increases maximum flame',
+            ranks: [
+                { cost: 5,  label: 'Max flame +3',  apply(mgr) { mgr.addFlat('flame.maxBonus', 3); } },
+                { cost: 10, label: 'Max flame +5',  apply(mgr) { mgr.addFlat('flame.maxBonus', 5); } },
+                { cost: 20, label: 'Max flame +8',  apply(mgr) { mgr.addFlat('flame.maxBonus', 8); } },
+            ]
+        },
+        {
+            id: 'monk_pogo_mastery',
+            name: 'Pogo Mastery',
+            description: 'Staff Pogo stun extended',
+            ranks: [
+                { cost: 5,  label: 'Stun dur +10%', apply(mgr) { mgr.setMult('groundSlam.stunDuration', 1.10); } },
+                { cost: 10, label: 'Stun dur +20%', apply(mgr) { mgr.setMult('groundSlam.stunDuration', 1.20); } },
+                { cost: 20, label: 'Stun dur +30%', apply(mgr) { mgr.setMult('groundSlam.stunDuration', 1.30); } },
+            ]
+        },
+        {
+            id: 'monk_momentum',
+            name: 'Momentum',
+            description: 'Dash cooldown reduced',
+            ranks: [
+                { cost: 5,  label: 'Dash CD -5%',  apply(mgr) { mgr.setMult('flameStep.cooldown', 0.95); } },
+                { cost: 10, label: 'Dash CD -10%', apply(mgr) { mgr.setMult('flameStep.cooldown', 0.90); } },
+                { cost: 20, label: 'Dash CD -15%', apply(mgr) { mgr.setMult('flameStep.cooldown', 0.85); } },
+            ]
+        },
+    ],
+
+    duelist: [
+        {
+            id: 'duel_sharp_blade',
+            name: 'Sharp Blade',
+            description: 'Increases combo window',
+            ranks: [
+                { cost: 5,  label: 'Combo window +10%', apply(mgr) { mgr.setMult('combo.window', 1.10); } },
+                { cost: 10, label: 'Combo window +20%', apply(mgr) { mgr.setMult('combo.window', 1.20); } },
+                { cost: 20, label: 'Combo window +30%', apply(mgr) { mgr.setMult('combo.window', 1.30); } },
+            ]
+        },
+        {
+            id: 'duel_footwork',
+            name: 'Footwork',
+            description: 'Increases movement speed',
+            ranks: [
+                { cost: 5,  label: 'Speed +3%',  apply(mgr) { mgr.setMult('player.speed', 1.03); } },
+                { cost: 10, label: 'Speed +5%',  apply(mgr) { mgr.setMult('player.speed', 1.05); } },
+                { cost: 20, label: 'Speed +8%',  apply(mgr) { mgr.setMult('player.speed', 1.08); } },
+            ]
+        },
+        {
+            id: 'duel_thick_armor',
+            name: 'Thick Armor',
+            description: 'Reduces enemy damage',
+            ranks: [
+                { cost: 5,  label: 'Enemy dmg -5%',  apply(mgr) { mgr.setMult('enemyDamage', 0.95); } },
+                { cost: 10, label: 'Enemy dmg -10%', apply(mgr) { mgr.setMult('enemyDamage', 0.90); } },
+                { cost: 20, label: 'Enemy dmg -15%', apply(mgr) { mgr.setMult('enemyDamage', 0.85); } },
+            ]
+        },
+        {
+            id: 'duel_endurance',
+            name: 'Endurance',
+            description: 'Increases maximum flame',
+            ranks: [
+                { cost: 5,  label: 'Max flame +3',  apply(mgr) { mgr.addFlat('flame.maxBonus', 3); } },
+                { cost: 10, label: 'Max flame +5',  apply(mgr) { mgr.addFlat('flame.maxBonus', 5); } },
+                { cost: 20, label: 'Max flame +8',  apply(mgr) { mgr.addFlat('flame.maxBonus', 8); } },
+            ]
+        },
+        {
+            id: 'duel_quick_draw',
+            name: 'Quick Draw',
+            description: 'Q cooldown reduced',
+            ranks: [
+                { cost: 5,  label: 'Q CD -5%',  apply(mgr) { mgr.setMult('classAttack.cooldown', 0.95); } },
+                { cost: 10, label: 'Q CD -10%', apply(mgr) { mgr.setMult('classAttack.cooldown', 0.90); } },
+                { cost: 20, label: 'Q CD -15%', apply(mgr) { mgr.setMult('classAttack.cooldown', 0.85); } },
+            ]
+        },
+    ],
+
+    pyromancer: [
+        {
+            id: 'pyro_fire_affinity',
+            name: 'Fire Affinity',
+            description: 'Flame drain reduced',
+            ranks: [
+                { cost: 5,  label: 'Flame drain -5%',  apply(mgr) { mgr.setMult('flameDrain.normal', 0.95); } },
+                { cost: 10, label: 'Flame drain -10%', apply(mgr) { mgr.setMult('flameDrain.normal', 0.90); } },
+                { cost: 20, label: 'Flame drain -15%', apply(mgr) { mgr.setMult('flameDrain.normal', 0.85); } },
+            ]
+        },
+        {
+            id: 'pyro_flame_reserves',
+            name: 'Flame Reserves',
+            description: 'Increases maximum flame',
+            ranks: [
+                { cost: 5,  label: 'Max flame +3',  apply(mgr) { mgr.addFlat('flame.maxBonus', 3); } },
+                { cost: 10, label: 'Max flame +5',  apply(mgr) { mgr.addFlat('flame.maxBonus', 5); } },
+                { cost: 20, label: 'Max flame +8',  apply(mgr) { mgr.addFlat('flame.maxBonus', 8); } },
+            ]
+        },
+        {
+            id: 'pyro_agility',
+            name: 'Agility',
+            description: 'Increases movement speed',
+            ranks: [
+                { cost: 5,  label: 'Speed +3%',  apply(mgr) { mgr.setMult('player.speed', 1.03); } },
+                { cost: 10, label: 'Speed +5%',  apply(mgr) { mgr.setMult('player.speed', 1.05); } },
+                { cost: 20, label: 'Speed +8%',  apply(mgr) { mgr.setMult('player.speed', 1.08); } },
+            ]
+        },
+        {
+            id: 'pyro_scorched_earth',
+            name: 'Scorched Earth',
+            description: 'Meteor Drop area increased',
+            ranks: [
+                { cost: 5,  label: 'Meteor area +10%', apply(mgr) { mgr.setMult('meteorDrop.width', 1.10); } },
+                { cost: 10, label: 'Meteor area +20%', apply(mgr) { mgr.setMult('meteorDrop.width', 1.20); } },
+                { cost: 20, label: 'Meteor area +30%', apply(mgr) { mgr.setMult('meteorDrop.width', 1.30); } },
+            ]
+        },
+        {
+            id: 'pyro_rapid_fire',
+            name: 'Rapid Fire',
+            description: 'Q cooldown reduced',
+            ranks: [
+                { cost: 5,  label: 'Q CD -5%',  apply(mgr) { mgr.setMult('classAttack.cooldown', 0.95); } },
+                { cost: 10, label: 'Q CD -10%', apply(mgr) { mgr.setMult('classAttack.cooldown', 0.90); } },
+                { cost: 20, label: 'Q CD -15%', apply(mgr) { mgr.setMult('classAttack.cooldown', 0.85); } },
+            ]
+        },
+    ],
 });

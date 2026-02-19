@@ -1,5 +1,5 @@
 /**
- * Class Skill Trees — 7 classes × 12 nodes each = 84 total nodes.
+ * Class Skill Trees — 10 classes × 12 nodes each = 120 total nodes.
  *
  * Each tree has 4 tiers × 3 nodes:
  *   Tier 0: always available
@@ -237,10 +237,11 @@ const WIZARD_TREE = [
     {
         id: 'wiz_archmage', name: 'Archmage', tier: 3, position: 1,
         color: 0x4488FF,
-        description: 'Q cooldown reduced 1s per enemy banished in blast.',
+        description: 'Q cooldown reduced 1s per enemy banished in blast (max 3s).',
         apply(mgr) {
             mgr.setFlag('archmage.cdRefund');
             mgr.addFlat('archmage.cdRefundPerKill', 1000);
+            mgr.addFlat('archmage.maxRefund', 3000);
         }
     },
     {
@@ -716,10 +717,10 @@ const ASSASSIN_TREE = [
     {
         id: 'asin_phantom_dance', name: 'Phantom Dance', tier: 3, position: 1,
         color: 0xAA44FF,
-        description: 'Q blink resets on banish within 2s. +5 flame per blink-banish.',
+        description: 'Q blink resets on banish within 1.5s. +5 flame per blink-banish.',
         apply(mgr) {
             mgr.setFlag('phantomDance.resetOnBanish');
-            mgr.addFlat('phantomDance.windowMs', 2000);
+            mgr.addFlat('phantomDance.windowMs', 1500);
             mgr.addFlat('phantomDance.flameRestore', 5);
         }
     },
@@ -852,6 +853,346 @@ const ADVENTURER_TREE = [
     },
 ];
 
+// ── Monk (0x44DD66) — Martial arts, counter-attacks, mobility ──
+
+const MONK_TREE = [
+    // Tier 0
+    {
+        id: 'monk_iron_body', name: 'Iron Body', tier: 0, position: 0,
+        color: 0x44DD66,
+        description: 'Enemy damage -20%.',
+        apply(mgr) {
+            mgr.setMult('enemyDamage', 0.8);
+        }
+    },
+    {
+        id: 'monk_staff_mastery', name: 'Staff Mastery', tier: 0, position: 1,
+        color: 0x44DD66,
+        description: 'Knockback range +30%.',
+        apply(mgr) {
+            mgr.setMult('classAttack.radius', 1.3);
+        }
+    },
+    {
+        id: 'monk_pogo_strike', name: 'Pogo Strike', tier: 0, position: 2,
+        color: 0x44DD66,
+        description: 'Staff Pogo stun duration +50%.',
+        apply(mgr) {
+            mgr.setMult('groundSlam.stunDuration', 1.5);
+        }
+    },
+    // Tier 1
+    {
+        id: 'monk_flowing_strikes', name: 'Flowing Strikes', tier: 1, position: 0,
+        color: 0x44DD66,
+        description: 'Speed +10% for 3s after Q.',
+        apply(mgr) {
+            mgr.setFlag('flowingStrikes.enabled');
+            mgr.addFlat('flowingStrikes.speedBonus', 0.1);
+            mgr.addFlat('flowingStrikes.duration', 3000);
+        }
+    },
+    {
+        id: 'monk_inner_flame', name: 'Inner Flame', tier: 1, position: 1,
+        color: 0x44DD66,
+        description: 'Q grants +8 flame.',
+        apply(mgr) {
+            mgr.addFlat('classAttack.flameRestore', 8);
+        }
+    },
+    {
+        id: 'monk_counter_stance', name: 'Counter Stance', tier: 1, position: 2,
+        color: 0x44DD66,
+        description: 'Contact damage reduced 40%.',
+        apply(mgr) {
+            mgr.setMult('enemyDamage', 0.6);
+        }
+    },
+    // Tier 2
+    {
+        id: 'monk_wind_wall', name: 'Wind Wall', tier: 2, position: 0,
+        color: 0x44DD66,
+        description: 'Q pushes projectiles back.',
+        apply(mgr) {
+            mgr.setFlag('windWall.enabled');
+        }
+    },
+    {
+        id: 'monk_chi_burst', name: 'Chi Burst', tier: 2, position: 1,
+        color: 0x44DD66,
+        description: 'Every 3rd Q hit banishes in radius.',
+        apply(mgr) {
+            mgr.setFlag('chiBurst.enabled');
+            mgr.addFlat('chiBurst.hitCount', 3);
+        }
+    },
+    {
+        id: 'monk_meditate', name: 'Meditate', tier: 2, position: 2,
+        color: 0x44DD66,
+        description: 'Standing still 2s: flame regen +3/s.',
+        apply(mgr) {
+            mgr.setFlag('meditate.enabled');
+            mgr.addFlat('meditate.regen', 3);
+        }
+    },
+    // Tier 3 (Keystones)
+    {
+        id: 'monk_fist_of_heaven', name: 'Fist of Heaven', tier: 3, position: 0,
+        color: 0x44DD66,
+        description: 'Q now also banishes nearby enemies.',
+        apply(mgr) {
+            mgr.setFlag('fistOfHeaven.banish');
+            mgr.addFlat('fistOfHeaven.radius', 100);
+        }
+    },
+    {
+        id: 'monk_serenity', name: 'Serenity', tier: 3, position: 1,
+        color: 0x44DD66,
+        description: 'Below 20% flame: immune to knockback, speed +15%.',
+        apply(mgr) {
+            mgr.setFlag('serenity.enabled');
+            mgr.addFlat('serenity.threshold', 0.2);
+            mgr.addFlat('serenity.speedBonus', 0.15);
+        }
+    },
+    {
+        id: 'monk_one_with_wind', name: 'One With Wind', tier: 3, position: 2,
+        color: 0x44DD66,
+        description: '+1 extra air jump, fall speed -20%.',
+        apply(mgr) {
+            mgr.addFlat('doubleJump.maxAirJumps', 1);
+            mgr.setMult('wallSlide.maxFallSpeed', 0.8);
+        }
+    },
+];
+
+// ── Duelist (0xFFCC00) — Precision strikes, parry, combos ──
+
+const DUELIST_TREE = [
+    // Tier 0
+    {
+        id: 'duel_precision', name: 'Precision', tier: 0, position: 0,
+        color: 0xFFCC00,
+        description: 'Q second hit always banishes mutated.',
+        apply(mgr) {
+            mgr.setFlag('dualStrike.guaranteedBanish');
+        }
+    },
+    {
+        id: 'duel_swift_blade', name: 'Swift Blade', tier: 0, position: 1,
+        color: 0xFFCC00,
+        description: 'Speed +8%.',
+        apply(mgr) {
+            mgr.setMult('player.speed', 1.08);
+        }
+    },
+    {
+        id: 'duel_parry', name: 'Parry', tier: 0, position: 2,
+        color: 0xFFCC00,
+        description: 'After Q: 1s invincibility.',
+        apply(mgr) {
+            mgr.setFlag('parry.enabled');
+            mgr.addFlat('parry.duration', 1000);
+        }
+    },
+    // Tier 1
+    {
+        id: 'duel_critical_hit', name: 'Critical Hit', tier: 1, position: 0,
+        color: 0xFFCC00,
+        description: '20% chance: Q banishes all in 60px.',
+        apply(mgr) {
+            mgr.setFlag('criticalHit.enabled');
+            mgr.addFlat('criticalHit.chance', 0.2);
+            mgr.addFlat('criticalHit.radius', 60);
+        }
+    },
+    {
+        id: 'duel_riposte', name: 'Riposte', tier: 1, position: 1,
+        color: 0xFFCC00,
+        description: 'Taking damage gives +30% speed 2s.',
+        apply(mgr) {
+            mgr.setFlag('riposte.enabled');
+            mgr.addFlat('riposte.speedBonus', 0.3);
+            mgr.addFlat('riposte.duration', 2000);
+        }
+    },
+    {
+        id: 'duel_blade_dance', name: 'Blade Dance', tier: 1, position: 2,
+        color: 0xFFCC00,
+        description: 'Dash distance +25%.',
+        apply(mgr) {
+            mgr.setMult('flameStep.duration', 1.25);
+        }
+    },
+    // Tier 2
+    {
+        id: 'duel_expose_weakness', name: 'Expose Weakness', tier: 2, position: 0,
+        color: 0xFFCC00,
+        description: 'Q-hit enemies take double damage.',
+        apply(mgr) {
+            mgr.setFlag('exposeWeakness.enabled');
+        }
+    },
+    {
+        id: 'duel_second_wind', name: 'Second Wind', tier: 2, position: 1,
+        color: 0xFFCC00,
+        description: 'Killing during combo: +3 flame each.',
+        apply(mgr) {
+            mgr.setFlag('secondWind.enabled');
+            mgr.addFlat('secondWind.flamePerKill', 3);
+        }
+    },
+    {
+        id: 'duel_feint', name: 'Feint', tier: 2, position: 2,
+        color: 0xFFCC00,
+        description: 'Q cooldown -20%.',
+        apply(mgr) {
+            mgr.setMult('classAttack.cooldown', 0.8);
+        }
+    },
+    // Tier 3 (Keystones)
+    {
+        id: 'duel_master_fencer', name: 'Master Fencer', tier: 3, position: 0,
+        color: 0xFFCC00,
+        description: 'Q hits 3 times instead of 2.',
+        apply(mgr) {
+            mgr.setFlag('masterFencer.tripleStrike');
+        }
+    },
+    {
+        id: 'duel_death_blossom', name: 'Death Blossom', tier: 3, position: 1,
+        color: 0xFFCC00,
+        description: 'At combo x5+: Q hits full 360° radius.',
+        apply(mgr) {
+            mgr.setFlag('deathBlossom.enabled');
+            mgr.addFlat('deathBlossom.comboThreshold', 5);
+        }
+    },
+    {
+        id: 'duel_steel_resolve', name: 'Steel Resolve', tier: 3, position: 2,
+        color: 0xFFCC00,
+        description: '+5 max flame, enemy dmg -15%.',
+        apply(mgr) {
+            mgr.addFlat('flame.maxBonus', 5);
+            mgr.setMult('enemyDamage', 0.85);
+        }
+    },
+];
+
+// ── Pyromancer (0xFF6600) — Fire damage, burn zones, fireballs ──
+
+const PYROMANCER_TREE = [
+    // Tier 0
+    {
+        id: 'pyro_ignite', name: 'Ignite', tier: 0, position: 0,
+        color: 0xFF6600,
+        description: 'Q fireball leaves burn for 2s.',
+        apply(mgr) {
+            mgr.setFlag('ignite.enabled');
+            mgr.addFlat('ignite.duration', 2000);
+        }
+    },
+    {
+        id: 'pyro_heat_shield', name: 'Heat Shield', tier: 0, position: 1,
+        color: 0xFF6600,
+        description: 'Fire areas grant 50% damage reduction.',
+        apply(mgr) {
+            mgr.setFlag('heatShield.enabled');
+            mgr.addFlat('heatShield.reduction', 0.5);
+        }
+    },
+    {
+        id: 'pyro_ember_trail', name: 'Ember Trail', tier: 0, position: 2,
+        color: 0xFF6600,
+        description: 'Dash leaves fire trail 1.5s.',
+        apply(mgr) {
+            mgr.setFlag('emberTrail.enabled');
+            mgr.addFlat('emberTrail.duration', 1500);
+        }
+    },
+    // Tier 1
+    {
+        id: 'pyro_fire_mastery', name: 'Fire Mastery', tier: 1, position: 0,
+        color: 0xFF6600,
+        description: 'Burn duration +50%.',
+        apply(mgr) {
+            mgr.setMult('ignite.duration', 1.5);
+        }
+    },
+    {
+        id: 'pyro_flame_armor', name: 'Flame Armor', tier: 1, position: 1,
+        color: 0xFF6600,
+        description: 'Enemy damage -25%.',
+        apply(mgr) {
+            mgr.setMult('enemyDamage', 0.75);
+        }
+    },
+    {
+        id: 'pyro_chain_fire', name: 'Chain Fire', tier: 1, position: 2,
+        color: 0xFF6600,
+        description: 'Fireball bounces to 1 nearby enemy.',
+        apply(mgr) {
+            mgr.setFlag('chainFire.enabled');
+            mgr.addFlat('chainFire.bounces', 1);
+        }
+    },
+    // Tier 2
+    {
+        id: 'pyro_inferno', name: 'Inferno', tier: 2, position: 0,
+        color: 0xFF6600,
+        description: 'Meteor Drop area +50%, duration +2s.',
+        apply(mgr) {
+            mgr.setMult('meteorDrop.width', 1.5);
+            mgr.addFlat('meteorDrop.bonusDuration', 2000);
+        }
+    },
+    {
+        id: 'pyro_phoenix_spark', name: 'Phoenix Spark', tier: 2, position: 1,
+        color: 0xFF6600,
+        description: '+10 flame when entering own fire zone.',
+        apply(mgr) {
+            mgr.setFlag('phoenixSpark.enabled');
+            mgr.addFlat('phoenixSpark.flameRestore', 10);
+        }
+    },
+    {
+        id: 'pyro_combustion', name: 'Combustion', tier: 2, position: 2,
+        color: 0xFF6600,
+        description: 'Q cooldown -20%.',
+        apply(mgr) {
+            mgr.setMult('classAttack.cooldown', 0.8);
+        }
+    },
+    // Tier 3 (Keystones)
+    {
+        id: 'pyro_firestorm', name: 'Firestorm', tier: 3, position: 0,
+        color: 0xFF6600,
+        description: 'Q launches 3 fireballs spread.',
+        apply(mgr) {
+            mgr.setFlag('firestorm.enabled');
+            mgr.addFlat('firestorm.count', 3);
+        }
+    },
+    {
+        id: 'pyro_eternal_flame', name: 'Eternal Flame', tier: 3, position: 1,
+        color: 0xFF6600,
+        description: 'Fire zones restore +3 flame/s.',
+        apply(mgr) {
+            mgr.setFlag('eternalFlame.enabled');
+            mgr.addFlat('eternalFlame.regen', 3);
+        }
+    },
+    {
+        id: 'pyro_volcanic_might', name: 'Volcanic Might', tier: 3, position: 2,
+        color: 0xFF6600,
+        description: '+8 max flame, Meteor Drop stuns 3s.',
+        apply(mgr) {
+            mgr.addFlat('flame.maxBonus', 8);
+            mgr.addFlat('meteorDrop.stunDuration', 3000);
+        }
+    },
+];
+
 // ── Export all trees keyed by class ID ──
 
 export const CLASS_SKILL_TREES = Object.freeze({
@@ -862,4 +1203,7 @@ export const CLASS_SKILL_TREES = Object.freeze({
     tank:       TANK_TREE,
     healer:     HEALER_TREE,
     assassin:   ASSASSIN_TREE,
+    monk:       MONK_TREE,
+    duelist:    DUELIST_TREE,
+    pyromancer: PYROMANCER_TREE,
 });

@@ -1,4 +1,4 @@
-import { WORLD, GENERATION, ELIXIR, LORE_ENTRIES, LORE_SCROLL, FLAME_SHRINE, ENEMIES, DECORATION, CRUMBLING_PLATFORM, SURVIVOR, CHALLENGE_SHRINE, CINDER_VESSEL, CRAFTSPERSON, OBELISK, DEADLY_SHROUD } from '../constants.js';
+import { WORLD, GENERATION, ELIXIR, LORE_ENTRIES, LORE_SCROLL, FLAME_SHRINE, ENEMIES, DECORATION, CRUMBLING_PLATFORM, SURVIVOR, CHALLENGE_SHRINE, CINDER_VESSEL, CRAFTSPERSON, OBELISK, DEADLY_SHROUD, UNDEAD_HAND } from '../constants.js';
 import { ElixirVein } from '../entities/ElixirVein.js';
 import { FlameWisp } from '../entities/FlameWisp.js';
 import { CorruptionPool } from '../entities/CorruptionPool.js';
@@ -11,6 +11,7 @@ import { ChallengeShrine as ChallengeShrineEntity } from '../entities/ChallengeS
 import { CinderVessel } from '../entities/CinderVessel.js';
 import { Craftsperson } from '../entities/Craftsperson.js';
 import { AncientObelisk } from '../entities/AncientObelisk.js';
+import { UndeadHand } from '../entities/UndeadHand.js';
 
 export class LevelGenerator {
     constructor(scene, groups, biomeManager) {
@@ -30,6 +31,7 @@ export class LevelGenerator {
         this.craftspeople = groups.craftspeople;
         this.obelisks = groups.obelisks;
         this.deadlyShroudZones = groups.deadlyShroudZones;
+        this.undeadHands = groups.undeadHands;
         this.biomeManager = biomeManager;
 
         this.generatedUpTo = 0;
@@ -141,7 +143,7 @@ export class LevelGenerator {
         // --- Flame Shrines (rare) ---
         if (rng() < biome.shrineChance) {
             const shx = segX + 150 + rng() * (WORLD.SEGMENT_WIDTH - 300);
-            const shy = WORLD.GROUND_Y - FLAME_SHRINE.HEIGHT / 2;
+            const shy = WORLD.GROUND_Y - FLAME_SHRINE.HEIGHT / 2 + 16;
             const shrine = new FlameShrine(this.scene, shx, shy);
             this.flameShrines.add(shrine);
         }
@@ -214,6 +216,13 @@ export class LevelGenerator {
             const ox = segX + 100 + rng() * (WORLD.SEGMENT_WIDTH - 200);
             const obelisk = new AncientObelisk(this.scene, ox);
             this.obelisks.add(obelisk);
+        }
+
+        // --- Undead Hands (hollow/albaneve biomes only) ---
+        if ((biome.id === 'hollow' || biome.id === 'albaneve') && rng() < UNDEAD_HAND.CHANCE && this.undeadHands) {
+            const uhx = segX + 80 + rng() * (WORLD.SEGMENT_WIDTH - 160);
+            const hand = new UndeadHand(this.scene, uhx);
+            this.undeadHands.add(hand);
         }
 
         // --- Deadly Shroud Zones (after segment 15, 3% chance) (Feature 9) ---

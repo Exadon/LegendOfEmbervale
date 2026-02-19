@@ -1,8 +1,6 @@
 import { FlameBar } from './FlameBar.js';
 import { ElixirCounter } from './ElixirCounter.js';
-import { UIWindow } from './UIWindow.js';
-import { Settings } from '../systems/Settings.js';
-import { LORE_SCROLL, WINDOW_DEFS, WORLD, BIOMES, PROGRESSION_BAR } from '../constants.js';
+import { LORE_SCROLL, WORLD, BIOMES, PROGRESSION_BAR } from '../constants.js';
 import { SkillManager } from '../systems/SkillManager.js';
 import { AchievementManager } from '../systems/AchievementManager.js';
 import { FlameAltar } from '../systems/FlameAltar.js';
@@ -13,23 +11,75 @@ export class HUD {
     constructor(scene) {
         this.scene = scene;
         const { width, height } = scene.scale;
-        const pos = Settings.data.windows;
 
-        // ─── DOM-based draggable windows ───
-        this.windows = {};
+        // ─── DOM-based fixed top bar ───
+        this._bar = document.createElement('div');
+        this._bar.id = 'hud-bar';
 
-        // --- Flame window ---
+        const layer = document.getElementById('hud-layer');
+        if (layer) layer.appendChild(this._bar);
+
+        // === Section 1: Cooldowns ===
+        const cdSection = this._makeSection();
+        cdSection.classList.add('hud-section-cooldowns');
+
+        // SHIFT dash cooldown
+        this._dashGroup = this._createCooldownBar('[SHIFT] - Flame Step', '#FFCC00');
+        cdSection.appendChild(this._dashGroup.el);
+
+        // E flame burst cooldown
+        this._burstGroup = this._createCooldownBar('[E] - Flame Burst', '#FF6600');
+        cdSection.appendChild(this._burstGroup.el);
+
+        // Q class attack cooldown
+        const qName = SkillManager.hasClassAttack() ? SkillManager.activeClass.attackName : 'Class Attack';
+        this._classGroup = this._createCooldownBar(`[Q] - ${qName}`, '#FF4444');
+        if (!SkillManager.hasClassAttack()) {
+            this._classGroup.el.style.display = 'none';
+        }
+
+        cdSection.appendChild(this._classGroup.el);
+
+        // S class ability cooldown
+        const sName = this._getSAbilityName();
+        this._sAbilityGroup = this._createCooldownBar(`[S] - ${sName}`, '#44AAFF');
+        cdSection.appendChild(this._sAbilityGroup.el);
+
+        // Active buff indicator
+        this._buffGroup = document.createElement('div');
+        this._buffGroup.className = 'hud-cd-group';
+        this._buffGroup.style.display = 'none';
+
+        const buffLabel = document.createElement('span');
+        buffLabel.className = 'hud-label';
+        buffLabel.style.fontSize = '9px';
+        this._buffLabel = buffLabel;
+
+        const buffBarBg = document.createElement('div');
+        buffBarBg.className = 'hud-bar-bg';
+        buffBarBg.style.cssText = 'width:58px;height:10px;';
+
+        this._buffFill = document.createElement('div');
+        this._buffFill.className = 'hud-bar-fill';
+        this._buffFill.style.cssText = 'width:100%;height:100%;background:#44FF44;';
+
+        buffBarBg.appendChild(this._buffFill);
+        this._buffGroup.appendChild(buffLabel);
+        this._buffGroup.appendChild(buffBarBg);
+        cdSection.appendChild(this._buffGroup);
+
+        this._bar.appendChild(cdSection);
+        this._bar.appendChild(this._makeSeparator());
+
+        // === Section 2: Flame bar + corruption ===
+        const flameSection = this._makeSection();
+        flameSection.classList.add('hud-section-flame');
+        flameSection.style.flexDirection = 'column';
+        flameSection.style.gap = '1px';
+        flameSection.style.justifyContent = 'center';
+
         this.flameBar = new FlameBar();
-        this.windows.flame = new UIWindow({
-            id: 'flame',
-            x: pos.flame.x, y: pos.flame.y,
-            w: WINDOW_DEFS.flame.w, h: WINDOW_DEFS.flame.h
-        });
-
-        // Container for flame bar + corruption bar
-        const flameContainer = document.createElement('div');
-        flameContainer.style.cssText = 'display:flex;flex-direction:column;gap:2px;width:100%;height:100%;';
-        flameContainer.appendChild(this.flameBar.el);
+        flameSection.appendChild(this.flameBar.el);
 
         // Corruption bar (hidden when 0)
         this._corruptBarWrap = document.createElement('div');
@@ -47,57 +97,16 @@ export class HUD {
         corruptBg.appendChild(this._corruptFill);
         this._corruptBarWrap.appendChild(corruptIcon);
         this._corruptBarWrap.appendChild(corruptBg);
-        flameContainer.appendChild(this._corruptBarWrap);
+        flameSection.appendChild(this._corruptBarWrap);
 
-        this.windows.flame.add(flameContainer);
+        this._bar.appendChild(flameSection);
+        this._bar.appendChild(this._makeSeparator());
 
-        // --- Cooldowns window ---
-        this.windows.cooldowns = new UIWindow({
-            id: 'cooldowns',
-            x: pos.cooldowns.x, y: pos.cooldowns.y,
-            w: WINDOW_DEFS.cooldowns.w, h: WINDOW_DEFS.cooldowns.h
-        });
-
-        const cdContainer = document.createElement('div');
-        cdContainer.style.cssText = 'display:flex;align-items:center;gap:8px;width:100%;height:100%;padding:0 2px;';
-
-        // SHIFT dash cooldown
-        this._dashGroup = this._createCooldownBar('SHIFT', '#FFCC00');
-        cdContainer.appendChild(this._dashGroup.el);
-
-        // E flame burst cooldown
-        this._burstGroup = this._createCooldownBar('E', '#FF6600');
-        cdContainer.appendChild(this._burstGroup.el);
-
-        // Q class attack cooldown (visible from start if class has Q attack)
-        this._classGroup = this._createCooldownBar('Q', '#FF4444');
-        if (!SkillManager.hasClassAttack()) {
-            this._classGroup.el.style.display = 'none';
-        }
-
-        // Class attack name label
-        this._classNameLabel = document.createElement('span');
-        this._classNameLabel.className = 'hud-label';
-        this._classNameLabel.style.cssText = 'color:#FFCC00;font-size:10px;font-weight:bold;';
-        if (SkillManager.hasClassAttack()) {
-            this._classNameLabel.textContent = SkillManager.activeClass.attackName;
-        } else {
-            this._classNameLabel.style.display = 'none';
-        }
-
-        cdContainer.appendChild(this._classGroup.el);
-        cdContainer.appendChild(this._classNameLabel);
-        this.windows.cooldowns.add(cdContainer);
-
-        // --- Stats window ---
-        this.windows.stats = new UIWindow({
-            id: 'stats',
-            x: pos.stats.x, y: pos.stats.y,
-            w: WINDOW_DEFS.stats.w, h: WINDOW_DEFS.stats.h
-        });
-
-        const statsContainer = document.createElement('div');
-        statsContainer.style.cssText = 'display:flex;flex-direction:column;gap:2px;width:100%;padding:2px;';
+        // === Section 3: Stats (elixir, level, scrolls, relics) ===
+        const statsSection = this._makeSection();
+        statsSection.style.flexDirection = 'column';
+        statsSection.style.gap = '1px';
+        statsSection.style.alignItems = 'flex-start';
 
         // Top row: elixir + level
         const statsRow1 = document.createElement('div');
@@ -109,52 +118,47 @@ export class HUD {
         this._levelText = document.createElement('span');
         this._levelText.className = 'hud-value';
         this._levelText.textContent = 'Lv.0';
-        this._levelText.style.cssText = 'color:#FFCC00;font-size:14px;';
+        this._levelText.style.cssText = 'color:#FFCC00;font-size:13px;';
         statsRow1.appendChild(this._levelText);
 
-        // Bottom row: scroll icon + count
-        const statsRow2 = document.createElement('div');
-        statsRow2.className = 'hud-stats-row';
-
+        // Scroll icon + count
         const scrollItem = document.createElement('div');
         scrollItem.className = 'hud-stats-item';
         this._scrollIcon = document.createElement('span');
         this._scrollIcon.className = 'hud-icon';
         this._scrollIcon.textContent = '\u25A3'; // ▣
-        this._scrollIcon.style.cssText = 'color:#E8D8B0;font-size:12px;';
+        this._scrollIcon.style.cssText = 'color:#E8D8B0;font-size:11px;';
         this._scrollText = document.createElement('span');
         this._scrollText.className = 'hud-value';
         this._scrollText.textContent = '0';
-        this._scrollText.style.cssText = 'color:#E8D8B0;font-size:12px;';
+        this._scrollText.style.cssText = 'color:#E8D8B0;font-size:11px;';
         scrollItem.appendChild(this._scrollIcon);
         scrollItem.appendChild(this._scrollText);
-        statsRow2.appendChild(scrollItem);
+        statsRow1.appendChild(scrollItem);
 
         this.scrollCount = 0;
 
-        // Relic icon row
-        const relicRow = document.createElement('div');
-        relicRow.className = 'hud-stats-row';
-        relicRow.style.gap = '4px';
-        this._relicRow = relicRow;
+        // Relic icons
+        this._relicRow = document.createElement('div');
+        this._relicRow.className = 'hud-stats-row';
+        this._relicRow.style.gap = '4px';
 
-        statsContainer.appendChild(statsRow1);
-        statsContainer.appendChild(statsRow2);
-        statsContainer.appendChild(relicRow);
-        this.windows.stats.add(statsContainer);
+        statsSection.appendChild(statsRow1);
+        statsSection.appendChild(this._relicRow);
 
-        // --- Distance window ---
-        this.windows.distance = new UIWindow({
-            id: 'distance',
-            x: pos.distance.x, y: pos.distance.y,
-            w: WINDOW_DEFS.distance.w, h: WINDOW_DEFS.distance.h
-        });
+        this._bar.appendChild(statsSection);
+        this._bar.appendChild(this._makeSeparator());
+
+        // === Section 4: Distance ===
+        const distSection = this._makeSection();
 
         this._distText = document.createElement('span');
         this._distText.className = 'hud-value';
         this._distText.textContent = '0m';
-        this._distText.style.cssText = 'color:#999;font-size:13px;width:100%;text-align:center;';
-        this.windows.distance.add(this._distText);
+        this._distText.style.cssText = 'color:#999;font-size:13px;';
+        distSection.appendChild(this._distText);
+
+        this._bar.appendChild(distSection);
 
         // ─── Transient Phaser overlays (stay in-canvas) ───
         const u = (sx, sy) => this._uiXY(sx, sy);
@@ -210,36 +214,13 @@ export class HUD {
 
         this._survivorTimer = null;
 
-        // Active buff indicator (DOM, in cooldowns window area)
-        this._buffGroup = document.createElement('div');
-        this._buffGroup.className = 'hud-cd-group';
-        this._buffGroup.style.display = 'none';
-
-        const buffLabel = document.createElement('span');
-        buffLabel.className = 'hud-label';
-        buffLabel.style.fontSize = '9px';
-        this._buffLabel = buffLabel;
-
-        const buffBarBg = document.createElement('div');
-        buffBarBg.className = 'hud-bar-bg';
-        buffBarBg.style.cssText = 'width:58px;height:10px;';
-
-        this._buffFill = document.createElement('div');
-        this._buffFill.className = 'hud-bar-fill';
-        this._buffFill.style.cssText = 'width:100%;height:100%;background:#44FF44;';
-
-        buffBarBg.appendChild(this._buffFill);
-        this._buffGroup.appendChild(buffLabel);
-        this._buffGroup.appendChild(buffBarBg);
-        cdContainer.appendChild(this._buffGroup);
-
         // Game over overlay — elements created dynamically in showGameOver
         this._gameOverElements = [];
 
         // Controls hint
         const ch = u(width / 2, height - 20);
         this.controlsHint = scene.add.text(ch.x, ch.y,
-            '[WASD] Move  [SPACE] Jump  [SHIFT] Dash  [S] Slam  [E] Burst  [Q] Class  [ESC] Pause  Stand on Wells to mine', {
+            '[WASD] Move  [SPACE] Jump  [SHIFT] Dash  [S] Air Ability  [E] Burst  [Q] Class  [ESC] Pause  Stand on Wells to mine', {
             fontSize: '12px', color: '#AAAAAA', fontFamily: 'monospace',
             backgroundColor: '#00000088', padding: { x: 12, y: 4 },
             stroke: '#000000', strokeThickness: 2
@@ -274,6 +255,36 @@ export class HUD {
         return { x: (sx - cx) / z + cx, y: (sy - cy) / z + cy };
     }
 
+    _makeSection() {
+        const el = document.createElement('div');
+        el.className = 'hud-section';
+        return el;
+    }
+
+    _makeSeparator() {
+        const el = document.createElement('div');
+        el.className = 'hud-separator';
+        return el;
+    }
+
+    _getSAbilityName() {
+        const cls = SkillManager.activeClass;
+        if (!cls || !cls.sAbility) return 'Ground Slam';
+        const names = {
+            ground_slam: 'Ground Slam',
+            earthshatter: 'Earthshatter',
+            arcane_mine: 'Arcane Mine',
+            arrow_rain: 'Arrow Rain',
+            fortress_drop: 'Fortress Drop',
+            purifying_landing: 'Purify Landing',
+            shadow_dive: 'Shadow Dive',
+            staff_pogo: 'Staff Pogo',
+            piercing_thrust: 'Piercing Thrust',
+            meteor_drop: 'Meteor Drop',
+        };
+        return names[cls.sAbility.type] || cls.sAbility.type;
+    }
+
     // ─── Helper: create a cooldown bar group (label + bar) ───
 
     _createCooldownBar(label, readyColor) {
@@ -283,11 +294,11 @@ export class HUD {
         const labelEl = document.createElement('span');
         labelEl.className = 'hud-label';
         labelEl.textContent = label;
-        labelEl.style.fontSize = '9px';
+        labelEl.style.cssText = 'font-size:9px;color:#ccc;';
 
         const barBg = document.createElement('div');
         barBg.className = 'hud-bar-bg';
-        barBg.style.cssText = 'width:58px;height:10px;';
+        barBg.style.cssText = 'width:68px;height:8px;';
 
         const barFill = document.createElement('div');
         barFill.className = 'hud-bar-fill';
@@ -297,19 +308,7 @@ export class HUD {
         el.appendChild(labelEl);
         el.appendChild(barBg);
 
-        return { el, barFill, readyColor };
-    }
-
-    // ─── Public: reposition all windows from Settings ───
-
-    repositionAllWindows() {
-        const pos = Settings.data.windows;
-        for (const [id, win] of Object.entries(this.windows)) {
-            win.screenX = pos[id].x;
-            win.screenY = pos[id].y;
-            win.el.style.left = `${pos[id].x}px`;
-            win.el.style.top = `${pos[id].y}px`;
-        }
+        return { el, labelEl, barFill, readyColor };
     }
 
     // ─── Update ───
@@ -335,6 +334,11 @@ export class HUD {
                 this._classGroup.barFill.style.width = `${(classPct * 100).toFixed(1)}%`;
                 this._classGroup.barFill.style.background = classPct >= 1 ? '#FF4444' : '#444';
             }
+
+            // S ability cooldown
+            const sPct = player.sAbilityCooldownPct;
+            this._sAbilityGroup.barFill.style.width = `${(sPct * 100).toFixed(1)}%`;
+            this._sAbilityGroup.barFill.style.background = sPct >= 1 ? '#44AAFF' : '#444';
         }
 
         if (distanceMeters !== undefined) {
@@ -412,7 +416,7 @@ export class HUD {
             return;
         }
         this._buffGroup.style.display = '';
-        const names = { flame_regen: 'REGEN', speed: 'SWIFT', shroud_slow: 'WARD' };
+        const names = { flame_regen: 'REGEN', speed: 'SWIFT', shroud_slow: 'WARD', rescue: 'RESCUE' };
         this._buffLabel.textContent = names[buffType] || 'BUFF';
         const pct = Math.max(0, remaining / total) * 100;
         this._buffFill.style.width = `${pct.toFixed(1)}%`;
@@ -662,12 +666,13 @@ export class HUD {
         if (SkillManager.hasClassAttack()) {
             const cls = SkillManager.activeClass;
             this._classGroup.el.style.display = '';
-            this._classNameLabel.style.display = '';
-            this._classNameLabel.textContent = cls.attackName;
+            this._classGroup.labelEl.textContent = `[Q] - ${cls.attackName}`;
         } else {
             this._classGroup.el.style.display = 'none';
-            this._classNameLabel.style.display = 'none';
         }
+
+        // Update S ability label
+        this._sAbilityGroup.labelEl.textContent = `[S] - ${this._getSAbilityName()}`;
     }
 
     popElixir() {
@@ -776,8 +781,8 @@ export class HUD {
     // ─── Cleanup DOM on scene shutdown/restart ───
 
     destroy() {
-        for (const win of Object.values(this.windows)) {
-            win.destroy();
+        if (this._bar && this._bar.parentNode) {
+            this._bar.parentNode.removeChild(this._bar);
         }
     }
 }

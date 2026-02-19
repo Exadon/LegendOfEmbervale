@@ -2,10 +2,11 @@ import Phaser from 'phaser';
 import { CLASS_DEFS } from '../systems/ClassDefs.js';
 import { MetaProgression, ALL_CLASS_IDS } from '../systems/MetaProgression.js';
 import { SkillManager } from '../systems/SkillManager.js';
+import { FlameAltar } from '../systems/FlameAltar.js';
 
 /**
  * ClassSelect — player picks a class before starting a run.
- * 3×2 grid + 1 centered at bottom for the 7th class, with keyboard navigation.
+ * 5×2 grid for 10 classes, with keyboard navigation.
  */
 export class ClassSelect extends Phaser.Scene {
     constructor() {
@@ -33,11 +34,11 @@ export class ClassSelect extends Phaser.Scene {
             fontSize: '12px', color: '#88DDFF', fontFamily: 'monospace'
         }).setOrigin(0.5);
 
-        // Build panel grid — 3 columns × 2 rows + 1 centered
-        const cols = 3;
-        const panelW = Math.min(200, Math.floor((width - 80) / 3));
+        // Build panel grid — 5 columns × 2 rows
+        const cols = 5;
+        const panelW = Math.min(160, Math.floor((width - 80) / cols));
         const panelH = 130;
-        const gapX = 16;
+        const gapX = 10;
         const gapY = 10;
         const totalW = cols * panelW + (cols - 1) * gapX;
         const startX = (width - totalW) / 2 + panelW / 2;
@@ -48,15 +49,8 @@ export class ClassSelect extends Phaser.Scene {
             const classDef = CLASS_DEFS[classId];
             const unlocked = MetaProgression.isClassUnlocked(classId);
 
-            let col, row;
-            if (i < 6) {
-                col = i % cols;
-                row = Math.floor(i / cols);
-            } else {
-                // 7th class centered below
-                col = 1;
-                row = 2;
-            }
+            const col = i % cols;
+            const row = Math.floor(i / cols);
             const px = startX + col * (panelW + gapX);
             const py = startY + row * (panelH + gapY);
 
@@ -67,30 +61,41 @@ export class ClassSelect extends Phaser.Scene {
         // Select first panel
         this._updateSelection();
 
-        // Description area (below panels)
+        // Large sprite preview (below panels, above description)
         const footerY = startY + 2 * (panelH + gapY) + panelH / 2 + 16;
-        this._descText = this.add.text(width / 2, footerY, '', {
+        this._previewSprite = null;
+        this._previewY = footerY + 30;
+
+        // Description area (below preview)
+        this._descText = this.add.text(width / 2, footerY + 70, '', {
             fontSize: '12px', color: '#CCCCCC', fontFamily: 'monospace',
             wordWrap: { width: 500 }, align: 'center'
         }).setOrigin(0.5, 0);
 
         // Unlock cost display
-        this._unlockText = this.add.text(width / 2, footerY + 20, '', {
+        this._unlockText = this.add.text(width / 2, footerY + 90, '', {
             fontSize: '12px', color: '#FF8800', fontFamily: 'monospace'
         }).setOrigin(0.5, 0);
 
+        // Dev mode indicator (hidden by default)
+        this._devMode = false;
+        this._devText = this.add.text(width - 8, 8, '', {
+            fontSize: '11px', color: '#FF4444', fontFamily: 'monospace'
+        }).setOrigin(1, 0);
+
         // Controls hint
-        this.add.text(width / 2, height - 16, '[1-7] Select   [U] Unlock   [M] Masteries   [SPACE] Confirm   [ESC] Back', {
-            fontSize: '11px', color: '#555555', fontFamily: 'monospace'
+        this.add.text(width / 2, height - 16, '[WASD/Arrows] Navigate   [1-0] Select   [U] Unlock   [M] Masteries   [SPACE] Confirm   [ESC] Back', {
+            fontSize: '10px', color: '#555555', fontFamily: 'monospace'
         }).setOrigin(0.5);
 
         this._updateDescription();
 
-        // Keyboard input
+        // Keyboard input (with 100ms debounce on navigation)
+        this._navDebounce = 0;
         this.input.keyboard.on('keydown', (event) => {
             const key = event.key;
-            // Number keys 1-7
-            if (key >= '1' && key <= '7') {
+            // Number keys 1-9, 0=10th
+            if (key >= '1' && key <= '9') {
                 const idx = parseInt(key) - 1;
                 if (idx < ALL_CLASS_IDS.length) {
                     this._selectedIdx = idx;
@@ -99,24 +104,48 @@ export class ClassSelect extends Phaser.Scene {
                 }
                 return;
             }
+            if (key === '0' && ALL_CLASS_IDS.length >= 10) {
+                this._selectedIdx = 9;
+                this._updateSelection();
+                this._updateDescription();
+                return;
+            }
+            // Dev mode toggle
+            if (event.code === 'Backquote') {
+                this._toggleDevMode();
+                return;
+            }
+            const now = this.time.now;
             switch (event.code) {
                 case 'ArrowLeft':
+                case 'KeyA':
+                    if (now - this._navDebounce < 100) break;
+                    this._navDebounce = now;
                     this._selectedIdx = Math.max(0, this._selectedIdx - 1);
                     this._updateSelection();
                     this._updateDescription();
                     break;
                 case 'ArrowRight':
+                case 'KeyD':
+                    if (now - this._navDebounce < 100) break;
+                    this._navDebounce = now;
                     this._selectedIdx = Math.min(ALL_CLASS_IDS.length - 1, this._selectedIdx + 1);
                     this._updateSelection();
                     this._updateDescription();
                     break;
                 case 'ArrowUp':
-                    this._selectedIdx = Math.max(0, this._selectedIdx - 3);
+                case 'KeyW':
+                    if (now - this._navDebounce < 100) break;
+                    this._navDebounce = now;
+                    this._selectedIdx = Math.max(0, this._selectedIdx - 5);
                     this._updateSelection();
                     this._updateDescription();
                     break;
                 case 'ArrowDown':
-                    this._selectedIdx = Math.min(ALL_CLASS_IDS.length - 1, this._selectedIdx + 3);
+                case 'KeyS':
+                    if (now - this._navDebounce < 100) break;
+                    this._navDebounce = now;
+                    this._selectedIdx = Math.min(ALL_CLASS_IDS.length - 1, this._selectedIdx + 5);
                     this._updateSelection();
                     this._updateDescription();
                     break;
@@ -161,11 +190,17 @@ export class ClassSelect extends Phaser.Scene {
         const spriteY = y + 10;
         if (unlocked) {
             if (this.textures.exists(classDef.spriteKey)) {
-                spritePreview = this.add.sprite(x, spriteY, classDef.spriteKey);
-                const fh = classDef.frameHeight || classDef.frameSize;
-                // Cap sprite to 50px tall max within panel
-                const maxDisplay = 50;
-                const scale = Math.min(maxDisplay / classDef.frameSize, maxDisplay / fh);
+                // Use same scale formula as Player.js (displaySize / fw)
+                const fw = classDef.frameSize;
+                const fh = classDef.frameHeight || fw;
+                const displaySize = classDef.displaySize || Math.max(48, Math.round(fw * 0.75));
+                const scale = displaySize / fw;
+                const displayH = fh * scale;
+                // Shift sprite up so character feet align consistently
+                // (matches Player.js feetRatio body-offset logic)
+                const feetRatio = classDef.feetRatio || ((fh - 2) / fh);
+                const feetBelowCenter = (feetRatio - 0.5) * displayH;
+                spritePreview = this.add.sprite(x, spriteY - feetBelowCenter, classDef.spriteKey);
                 spritePreview.setScale(scale);
                 if (classDef.idleAnim && this.anims.exists(classDef.idleAnim)) {
                     spritePreview.play(classDef.idleAnim);
@@ -223,6 +258,29 @@ export class ClassSelect extends Phaser.Scene {
         const classDef = panel.classDef;
         const unlocked = MetaProgression.isClassUnlocked(panel.classId);
 
+        // Update large sprite preview
+        if (this._previewSprite) {
+            this._previewSprite.destroy();
+            this._previewSprite = null;
+        }
+        const { width } = this.scale;
+        if (unlocked && this.textures.exists(classDef.spriteKey)) {
+            // Use same scale formula as Player.js (displaySize / fw), then 2x for preview
+            const fw = classDef.frameSize;
+            const fh = classDef.frameHeight || fw;
+            const displaySize = classDef.displaySize || Math.max(48, Math.round(fw * 0.75));
+            const scale = (displaySize / fw) * 2;
+            const displayH = fh * scale;
+            // Shift sprite up so character feet align consistently
+            const feetRatio = classDef.feetRatio || ((fh - 2) / fh);
+            const feetBelowCenter = (feetRatio - 0.5) * displayH;
+            this._previewSprite = this.add.sprite(width / 2, this._previewY - feetBelowCenter, classDef.spriteKey);
+            this._previewSprite.setScale(scale);
+            if (classDef.idleAnim && this.anims.exists(classDef.idleAnim)) {
+                this._previewSprite.play(classDef.idleAnim);
+            }
+        }
+
         if (unlocked) {
             this._descText.setText(`${classDef.className}: ${classDef.description}`);
             this._unlockText.setText('');
@@ -259,6 +317,22 @@ export class ClassSelect extends Phaser.Scene {
         if (!MetaProgression.isClassUnlocked(panel.classId)) return;
         this.input.keyboard.removeAllListeners();
         this.scene.start('ClassMasteryScene', { classId: panel.classId });
+    }
+
+    _toggleDevMode() {
+        this._devMode = !this._devMode;
+        if (this._devMode) {
+            // Grant 9999 elixir for testing
+            FlameAltar.addElixir(9999);
+            FlameAltar._save();
+            this._devText.setText('DEV MODE: +9999 Elixir');
+            this._elixirText.setText(`Available Elixir: ${MetaProgression.getAvailableElixir()}`);
+            this._elixirText.setColor('#FF4444');
+            this._updateDescription();
+        } else {
+            this._devText.setText('');
+            this._elixirText.setColor('#88DDFF');
+        }
     }
 
     _confirmSelection() {

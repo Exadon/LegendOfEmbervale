@@ -9,10 +9,10 @@ import { CLASS_MASTERIES, MASTERY_RANK_COSTS } from './ClassMasteries.js';
 const STORAGE_KEY = 'elixirs-shadow-meta-progression';
 
 /** Escalating unlock costs (index = how many non-free classes already unlocked) */
-const UNLOCK_COSTS = [10, 25, 50, 80, 120];
+const UNLOCK_COSTS = [10, 25, 50, 80, 120, 160, 200, 250, 300];
 
 /** All class IDs in display order */
-export const ALL_CLASS_IDS = ['adventurer', 'barbarian', 'wizard', 'ranger', 'tank', 'healer', 'assassin'];
+export const ALL_CLASS_IDS = ['adventurer', 'barbarian', 'wizard', 'ranger', 'tank', 'healer', 'assassin', 'monk', 'duelist', 'pyromancer'];
 
 class _MetaProgression {
     constructor() {

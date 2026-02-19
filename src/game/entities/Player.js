@@ -50,8 +50,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.isWallSliding = false;
         this.wallSideRight = false;
 
-        // Ground slam
+        // Ground slam / S ability
         this.isSlamming = false;
+        this.sAbilityCooldownTimer = 0;
 
         // Coyote time (brief forgiveness window after leaving ground)
         this.coyoteTimer = 0;
@@ -112,6 +113,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         if (this.classAttackCooldownTimer <= 0) return 1;
         const cd = this._classDef.attackCooldown || 1;
         return 1 - (this.classAttackCooldownTimer / cd);
+    }
+
+    get sAbilityCooldownPct() {
+        if (this.sAbilityCooldownTimer <= 0) return 1;
+        return 1 - (this.sAbilityCooldownTimer / 3000);
     }
 
     swapClassSprite(classDef) {
@@ -177,6 +183,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         if (this.classAttackCooldownTimer > 0) {
             this.classAttackCooldownTimer -= delta;
         }
+        if (this.sAbilityCooldownTimer > 0) {
+            this.sAbilityCooldownTimer -= delta;
+        }
         if (this.hitInvincibleTimer > 0) {
             this.hitInvincibleTimer -= delta;
         }
@@ -208,10 +217,17 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
                     this.scene.events.emit('jump');
                 }
             }
-            // Land from slam
+            // Land from slam / class S ability
             if (this.isSlamming) {
                 this.isSlamming = false;
-                this.scene.events.emit('groundSlam', this.x, this.y);
+                this.sAbilityCooldownTimer = 3000;
+                const sType = this._sAbilityType || 'ground_slam';
+                this._sAbilityType = null;
+                // Clear shadow dive state
+                if (sType === 'shadow_dive') {
+                    this.setAlpha(1);
+                }
+                this.scene.events.emit('groundSlam', this.x, this.y, sType);
             }
         }
         this._wasOnFloor = onFloor;
@@ -309,11 +325,36 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             }
         }
 
-        // Ground slam: S while airborne
-        if (input.downJustPressed && !onFloor && !this.isSlamming) {
+        // Class S ability: S while airborne
+        if (input.downJustPressed && !onFloor && !this.isSlamming && this.sAbilityCooldownTimer <= 0) {
+            const sType = this._classDef.sAbility ? this._classDef.sAbility.type : 'ground_slam';
             this.isSlamming = true;
-            this.setVelocityX(0);
-            this.setVelocityY(SkillManager.getValue('groundSlam.velocity', GROUND_SLAM.VELOCITY));
+            this._sAbilityType = sType;
+
+            if (sType === 'shadow_dive') {
+                // Phase through enemies during descent
+                this.isInvincible = true;
+                this.invincibleTimer = 5000; // cleared on landing
+                this.setAlpha(0.3);
+                this.setVelocityX(0);
+                this.setVelocityY(SkillManager.getValue('groundSlam.velocity', GROUND_SLAM.VELOCITY));
+            } else if (sType === 'arcane_mine') {
+                // Drop mine at current position, then fall normally
+                this.scene.events.emit('arcaneMine', this.x, this.y, this._classDef.sAbility);
+                this.isSlamming = false; // don't lock movement, mine is placed
+                this._sAbilityType = null;
+            } else if (sType === 'piercing_thrust') {
+                // Fast diagonal dive
+                const dir = this.facingRight ? 1 : -1;
+                this.setVelocityX(dir * 350);
+                this.setVelocityY(SkillManager.getValue('groundSlam.velocity', GROUND_SLAM.VELOCITY) * 1.2);
+                this.isInvincible = true;
+                this.invincibleTimer = 500;
+            } else {
+                // Default slam downward
+                this.setVelocityX(0);
+                this.setVelocityY(SkillManager.getValue('groundSlam.velocity', GROUND_SLAM.VELOCITY));
+            }
         }
 
         // Flame burst: E

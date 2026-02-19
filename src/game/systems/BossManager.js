@@ -22,10 +22,12 @@ export class BossManager {
 
         const def = BOSS[biomeId];
         const playerX = this.scene.player.x;
+        const surfaceY = this.scene.player.body.bottom;
 
         this.active = true;
-        this.boss = new Boss(this.scene, playerX + 300, def);
+        this.boss = new Boss(this.scene, playerX + 300, def, surfaceY);
         this.scene.physics.add.collider(this.boss, this.scene.ground);
+        this.scene.physics.add.collider(this.boss, this.scene.platforms);
 
         // Pause shroud
         this.scene.events.emit('bossFightStart');
@@ -99,6 +101,9 @@ export class BossManager {
                 this.scene.cameras.main.shake(200, 0.008);
                 player.hitInvincibleTimer = 500;
                 this.scene._flashPlayer();
+                // Knockback player away from boss
+                const knockDir = player.x > this.boss.x ? 1 : -1;
+                player.setVelocity(knockDir * 200, -150);
             }
         }
     }

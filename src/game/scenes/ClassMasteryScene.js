@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { CLASS_DEFS } from '../systems/ClassDefs.js';
 import { CLASS_MASTERIES, MASTERY_RANK_COSTS } from '../systems/ClassMasteries.js';
-import { MetaProgression } from '../systems/MetaProgression.js';
+import { MetaProgression, ALL_CLASS_IDS } from '../systems/MetaProgression.js';
 
 const MAX_RANK = MASTERY_RANK_COSTS.length; // 3
 
@@ -38,23 +38,58 @@ export class ClassMasteryScene extends Phaser.Scene {
         this.add.rectangle(0, 0, width, height, 0x0A0A1E).setOrigin(0, 0);
 
         // Title
-        this.add.text(width / 2, 18, `${classDef.className.toUpperCase()} MASTERIES`, {
+        this.add.text(width / 2, 14, `${classDef.className.toUpperCase()} MASTERIES`, {
             fontSize: '20px', color: colorStr, fontFamily: 'monospace', fontStyle: 'bold'
         }).setOrigin(0.5);
 
         // Elixir display
-        this._elixirText = this.add.text(width / 2, 40, '', {
+        this._elixirText = this.add.text(width / 2, 34, '', {
             fontSize: '12px', color: '#88DDFF', fontFamily: 'monospace'
         }).setOrigin(0.5);
 
         // Total mastery ranks
-        this._totalText = this.add.text(width / 2, 54, '', {
+        this._totalText = this.add.text(width / 2, 48, '', {
             fontSize: '11px', color: '#888800', fontFamily: 'monospace'
         }).setOrigin(0.5);
 
+        // ─── Class Attacks Info (two boxes) ───
+        const attackY = 62;
+        const boxW = 220;
+        const boxH = 36;
+        const boxGap = 16;
+        const qInfo = this._getQAttackParts(classDef);
+        const sInfo = this._getSAbilityParts(classDef);
+
+        // Q attack box (left)
+        const qBoxX = width / 2 - boxW / 2 - boxGap / 2;
+        this.add.rectangle(qBoxX, attackY + boxH / 2, boxW, boxH, 0x1A1A2E)
+            .setStrokeStyle(1, 0x444466);
+        this.add.text(qBoxX, attackY + 4, `[Q]  ${qInfo.name}`, {
+            fontSize: '12px', color: '#FF4444', fontFamily: 'monospace', fontStyle: 'bold'
+        }).setOrigin(0.5, 0);
+        this.add.text(qBoxX, attackY + 20, qInfo.desc, {
+            fontSize: '10px', color: '#AAAAAA', fontFamily: 'monospace'
+        }).setOrigin(0.5, 0);
+
+        // S ability box (right)
+        const sBoxX = width / 2 + boxW / 2 + boxGap / 2;
+        this.add.rectangle(sBoxX, attackY + boxH / 2, boxW, boxH, 0x1A1A2E)
+            .setStrokeStyle(1, 0x444466);
+        this.add.text(sBoxX, attackY + 4, `[S]  ${sInfo.name}`, {
+            fontSize: '12px', color: '#44AAFF', fontFamily: 'monospace', fontStyle: 'bold'
+        }).setOrigin(0.5, 0);
+        this.add.text(sBoxX, attackY + 20, sInfo.desc, {
+            fontSize: '10px', color: '#AAAAAA', fontFamily: 'monospace'
+        }).setOrigin(0.5, 0);
+
+        // A/D class nav hint
+        this.add.text(width / 2, attackY + boxH + 6, `\u25C0 [A] Prev Class     [D] Next Class \u25B6`, {
+            fontSize: '9px', color: '#555555', fontFamily: 'monospace'
+        }).setOrigin(0.5);
+
         // Build mastery rows
-        const startY = 78;
-        const rowH = 82;
+        const startY = attackY + boxH + 22;
+        const rowH = 76;
         const rowW = Math.min(600, width - 40);
         const leftX = (width - rowW) / 2;
 
@@ -82,17 +117,17 @@ export class ClassMasteryScene extends Phaser.Scene {
             });
 
             // Description
-            const descText = this.add.text(leftX + 24, y + 20, mastery.description, {
+            const descText = this.add.text(leftX + 24, y + 18, mastery.description, {
                 fontSize: '10px', color: '#888888', fontFamily: 'monospace'
             });
 
             // Current effect
-            const effectText = this.add.text(leftX + 24, y + 36, '', {
+            const effectText = this.add.text(leftX + 24, y + 32, '', {
                 fontSize: '11px', color: '#AADDAA', fontFamily: 'monospace'
             });
 
             // Next rank info (cost + effect)
-            const nextText = this.add.text(leftX + 24, y + 52, '', {
+            const nextText = this.add.text(leftX + 24, y + 46, '', {
                 fontSize: '11px', color: '#FF8800', fontFamily: 'monospace'
             });
 
@@ -105,8 +140,8 @@ export class ClassMasteryScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         // Controls hint
-        this.add.text(width / 2, height - 16, '[1-5] Select   [U] Upgrade   [ESC] Back', {
-            fontSize: '11px', color: '#555555', fontFamily: 'monospace'
+        this.add.text(width / 2, height - 16, '[W/S] Navigate   [1-5] Select   [U] Upgrade   [A/D] Switch Class   [ESC] Back', {
+            fontSize: '10px', color: '#555555', fontFamily: 'monospace'
         }).setOrigin(0.5);
 
         this._refreshAll();
@@ -124,12 +159,22 @@ export class ClassMasteryScene extends Phaser.Scene {
             }
             switch (event.code) {
                 case 'ArrowUp':
+                case 'KeyW':
                     this._selectedIdx = Math.max(0, this._selectedIdx - 1);
                     this._updateSelection();
                     break;
                 case 'ArrowDown':
+                case 'KeyS':
                     this._selectedIdx = Math.min(this._masteries.length - 1, this._selectedIdx + 1);
                     this._updateSelection();
+                    break;
+                case 'ArrowLeft':
+                case 'KeyA':
+                    this._switchClass(-1);
+                    break;
+                case 'ArrowRight':
+                case 'KeyD':
+                    this._switchClass(1);
                     break;
                 case 'KeyU':
                     this._tryUpgrade();
@@ -140,6 +185,85 @@ export class ClassMasteryScene extends Phaser.Scene {
                     break;
             }
         });
+    }
+
+    // ─── Attack Info Helpers ───
+
+    _getQAttackParts(classDef) {
+        if (!classDef.attackType) return { name: 'None', desc: 'No Q attack' };
+        const cd = (classDef.attackCooldown / 1000).toFixed(0) + 's CD';
+        const name = classDef.attackName || 'Attack';
+        switch (classDef.attackType) {
+            case 'aoe_banish':
+                return { name, desc: `AoE banish ${classDef.attackRadius}px (${cd})` };
+            case 'frontal_banish':
+                return { name, desc: `Frontal banish ${classDef.attackRadius}px (${cd})` };
+            case 'knockback':
+                return { name, desc: `Knockback ${classDef.pushDistance}px (${cd})` };
+            case 'shield':
+                return { name, desc: `Shield ${(classDef.shieldDuration / 1000).toFixed(0)}s (${cd})` };
+            case 'heal':
+                return { name, desc: `Heal +${classDef.healAmount} flame (${cd})` };
+            case 'melee_banish':
+                return { name, desc: `Melee banish ${classDef.attackRadius || 100}px (${cd})` };
+            case 'screen_stun':
+                return { name, desc: `Stun all on-screen (${cd})` };
+            case 'blink':
+                return { name, desc: `Blink ${classDef.blinkDistance}px (${cd})` };
+            case 'dual_strike':
+                return { name, desc: `Two-hit frontal ${classDef.attackRadius}px (${cd})` };
+            case 'flame_projectile':
+                return { name, desc: `Fireball ${classDef.projectileRadius}px (${cd})` };
+            default:
+                return { name, desc: `${cd}` };
+        }
+    }
+
+    _getSAbilityParts(classDef) {
+        const sa = classDef.sAbility;
+        if (!sa) return { name: 'Ground Slam', desc: 'Stun nearby enemies' };
+        switch (sa.type) {
+            case 'ground_slam':
+                return { name: 'Ground Slam', desc: 'Stun nearby enemies' };
+            case 'earthshatter':
+                return { name: 'Earthshatter', desc: `Knockback ${sa.radius}px` };
+            case 'arcane_mine':
+                return { name: 'Arcane Mine', desc: `Delayed AoE ${sa.radius}px` };
+            case 'arrow_rain':
+                return { name: 'Arrow Rain', desc: `Stun ${sa.width}px wide` };
+            case 'fortress_drop':
+                return { name: 'Fortress Drop', desc: `Barrier ${(sa.barrierDuration / 1000).toFixed(1)}s` };
+            case 'purifying_landing':
+                return { name: 'Purifying Landing', desc: `Heal ${sa.healPerSec}/s for ${(sa.duration / 1000).toFixed(0)}s` };
+            case 'shadow_dive':
+                return { name: 'Shadow Dive', desc: `Invis ${(sa.invisDuration / 1000).toFixed(1)}s` };
+            case 'staff_pogo':
+                return { name: 'Staff Pogo', desc: `Bounce + stun ${(sa.stunDuration / 1000).toFixed(1)}s` };
+            case 'piercing_thrust':
+                return { name: 'Piercing Thrust', desc: `Stun ${(sa.stunDuration / 1000).toFixed(1)}s` };
+            case 'meteor_drop':
+                return { name: 'Meteor Drop', desc: `Fire zone ${sa.width}px, ${(sa.duration / 1000).toFixed(1)}s` };
+            default:
+                return { name: sa.type, desc: '' };
+        }
+    }
+
+    // ─── Class Switching ───
+
+    _switchClass(dir) {
+        // Build list of unlocked class IDs
+        const unlocked = ALL_CLASS_IDS.filter(id => MetaProgression.isClassUnlocked(id));
+        if (unlocked.length <= 1) return;
+
+        const curIdx = unlocked.indexOf(this._classId);
+        if (curIdx < 0) return;
+
+        let nextIdx = curIdx + dir;
+        if (nextIdx < 0) nextIdx = unlocked.length - 1;
+        if (nextIdx >= unlocked.length) nextIdx = 0;
+
+        this.input.keyboard.removeAllListeners();
+        this.scene.restart({ classId: unlocked[nextIdx] });
     }
 
     _refreshAll() {

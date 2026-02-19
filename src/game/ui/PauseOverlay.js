@@ -235,31 +235,8 @@ export class PauseOverlay {
         }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301).setScale(s);
         this._elements.push(this._resText);
 
-        // Grid snap toggle
-        const snapLabelP = this._uiXY(width / 2 - 140, Math.round(height * 0.75));
-        const snapLabel = this.scene.add.text(snapLabelP.x, snapLabelP.y, '[N]  Grid Snap:', {
-            fontSize: '13px', color: '#CCCCCC', fontFamily: 'monospace'
-        }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301).setScale(s);
-        this._elements.push(snapLabel);
-
-        const snapValP = this._uiXY(width / 2 + 60, Math.round(height * 0.75));
-        this._snapText = this.scene.add.text(snapValP.x, snapValP.y,
-            Settings.data.gridSnap ? 'ON' : 'OFF', {
-            fontSize: '13px',
-            color: Settings.data.gridSnap ? '#44FF44' : '#FF4444',
-            fontFamily: 'monospace', fontStyle: 'bold'
-        }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301).setScale(s);
-        this._elements.push(this._snapText);
-
-        // Reset HUD positions
-        const resetLabelP = this._uiXY(width / 2 - 140, Math.round(height * 0.79));
-        const resetLabel = this.scene.add.text(resetLabelP.x, resetLabelP.y, '[P]  Reset HUD Positions', {
-            fontSize: '13px', color: '#CCCCCC', fontFamily: 'monospace'
-        }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301).setScale(s);
-        this._elements.push(resetLabel);
-
         // Lore Compendium
-        const loreLabelP = this._uiXY(width / 2 - 140, Math.round(height * 0.83));
+        const loreLabelP = this._uiXY(width / 2 - 140, Math.round(height * 0.75));
         const loreLabel = this.scene.add.text(loreLabelP.x, loreLabelP.y, '[J]  Lore Compendium', {
             fontSize: '13px', color: '#CCCCCC', fontFamily: 'monospace'
         }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301).setScale(s);
@@ -304,10 +281,6 @@ export class PauseOverlay {
                 this._toggleSound();
             } else if (event.key === 'r' || event.key === 'R') {
                 this._toggleResolution();
-            } else if (event.key === 'n' || event.key === 'N') {
-                this._toggleGridSnap();
-            } else if (event.key === 'p' || event.key === 'P') {
-                this._resetHUDPositions();
             } else if (event.key === 'l' || event.key === 'L') {
                 this._forceLevelUp();
             } else if (event.key === 'g' || event.key === 'G') {
@@ -366,22 +339,6 @@ export class PauseOverlay {
         this.scene.scene.restart();
     }
 
-    _toggleGridSnap() {
-        Settings.data.gridSnap = !Settings.data.gridSnap;
-        Settings.save();
-        if (this._snapText) {
-            this._snapText.setText(Settings.data.gridSnap ? 'ON' : 'OFF');
-            this._snapText.setColor(Settings.data.gridSnap ? '#44FF44' : '#FF4444');
-        }
-    }
-
-    _resetHUDPositions() {
-        Settings.reset();
-        if (this.scene.hud && this.scene.hud.repositionAllWindows) {
-            this.scene.hud.repositionAllWindows();
-        }
-    }
-
     _openGuide() {
         this.hide();
         this.scene.scene.pause('Level1');
@@ -429,7 +386,6 @@ export class PauseOverlay {
         }
         this._soundText = null;
         this._resText = null;
-        this._snapText = null;
         this._devLine = null;
 
         // Kill tweens and destroy all elements

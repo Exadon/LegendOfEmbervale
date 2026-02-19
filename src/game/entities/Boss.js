@@ -5,8 +5,11 @@ import { Enemy } from './Enemy.js';
 const AI_STATE = { IDLE: 0, TELEGRAPH: 1, ATTACK: 2, STUNNED: 3 };
 
 export class Boss extends Phaser.Physics.Arcade.Sprite {
-    constructor(scene, x, def) {
-        const y = WORLD.GROUND_Y - 60;
+    constructor(scene, x, def, surfaceY) {
+        const displayW = 48 * def.scale;
+        const displayH = 48 * def.scale;
+        // Spawn at the player's surface level so the boss appears on the same ground
+        const y = (surfaceY || WORLD.GROUND_Y) - displayH / 2;
         super(scene, x, y, def.spriteKey);
         scene.add.existing(this);
         scene.physics.add.existing(this);
@@ -21,13 +24,21 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         this.stunTimer = 0;
         this.alive = true;
 
-        const displayH = 48 * def.scale;
-        this.setDisplaySize(48 * def.scale, displayH);
+        this.setDisplaySize(displayW, displayH);
         this.setDepth(10);
-        this.body.setSize(40, 60);
-        // Put physics body at the bottom of the display so the sprite
-        // sits ON the ground instead of sinking into it
-        this.body.setOffset((48 * def.scale - 40) / 2, displayH - 60);
+
+        // Calculate body in source-frame coordinates so that non-uniform
+        // scaling (setDisplaySize on non-square sprites) produces correct
+        // world-space body dimensions (~40x60 px) at the sprite's feet
+        const fw = this.frame.width;
+        const fh = this.frame.height;
+        const scaleX = displayW / fw;
+        const scaleY = displayH / fh;
+        const srcBodyW = Math.min(40 / scaleX, fw);
+        const srcBodyH = Math.min(60 / scaleY, fh);
+        this.body.setSize(srcBodyW, srcBodyH, false);
+        this.body.setOffset((fw - srcBodyW) / 2, fh - srcBodyH);
+
         this.body.setAllowGravity(true);
         this.setCollideWorldBounds(false);
 
@@ -71,6 +82,34 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         this.setVelocityX(0);
     }
 
+    _startTelegraph(playerX) {
+        this.aiState = AI_STATE.TELEGRAPH;
+        this.stateTimer = 300;
+        this.setVelocityX(0);
+        // Flash white + red ground marker
+        this.setTintFill(0xFF4444);
+        const dir = playerX > this.x ? 1 : -1;
+        this._telegraphMarker = this.scene.add.rectangle(
+            this.x + dir * 60, this.y + 20, 100, 6, 0xFF0000, 0.5
+        ).setDepth(54);
+        this.scene.tweens.add({
+            targets: this._telegraphMarker,
+            alpha: { from: 0.2, to: 0.8 },
+            duration: 100, yoyo: true, repeat: 1
+        });
+        // Play attack anim during telegraph
+        this._playAttackAnim();
+    }
+
+    _endTelegraph() {
+        if (this.def.tint) this.setTint(this.def.tint);
+        else this.clearTint();
+        if (this._telegraphMarker && this._telegraphMarker.active) {
+            this._telegraphMarker.destroy();
+            this._telegraphMarker = null;
+        }
+    }
+
     update(delta, playerX, playerY) {
         if (!this.alive) return;
 
@@ -81,6 +120,17 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             this.stunTimer -= delta;
             if (this.stunTimer <= 0) {
                 this.aiState = AI_STATE.IDLE;
+            }
+            return;
+        }
+
+        // Telegraph (pre-attack warning)
+        if (this.aiState === AI_STATE.TELEGRAPH) {
+            this.stateTimer -= delta;
+            if (this.stateTimer <= 0) {
+                this._endTelegraph();
+                this.aiState = AI_STATE.IDLE;
+                this.attackTimer = -1; // force immediate attack on next check
             }
             return;
         }
@@ -155,16 +205,25 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
 
             if (this.attackTimer >= interval) {
                 this.attackTimer = 0;
-                if (Math.abs(dx) < 250) {
-                    // Charge
+                if (Math.abs(dx) < 250 || Math.abs(dx) < 150) {
+                    // Telegraph before attack
+                    this._pendingAttack = Math.abs(dx) < 150 ? 'ground_pound' : 'charge';
+                    this._startTelegraph(playerX);
+                }
+            }
+
+            // Execute pending attack after telegraph
+            if (this.attackTimer === -1) {
+                this.attackTimer = 0;
+                if (this._pendingAttack === 'charge') {
                     this.aiState = AI_STATE.ATTACK;
                     this.stateTimer = 800;
                     const chargeDir = dx > 0 ? 1 : -1;
                     this.setVelocityX(chargeDir * this.def.chargeSpeed * speedMult);
-                } else if (Math.abs(dx) < 150) {
-                    // Ground pound
+                } else {
                     this.scene.events.emit('bossGroundPound', this.x, this.def.groundPoundRadius);
                 }
+                this._pendingAttack = null;
             }
         } else if (this.aiState === AI_STATE.ATTACK) {
             this.stateTimer -= delta;

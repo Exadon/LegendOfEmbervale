@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { WORLD, PLAYER, FLAME, FLAME_WISP, FLAME_SHRINE, WRAITH, SHROUD, GROUND_SLAM, FLAME_BURST, COMBO, PROGRESSION_BAR, LORE_ENTRIES, SHRINE_INSCRIPTIONS, NEAR_DEATH, SURVIVOR, CHALLENGE_SHRINE, RELIC, ENEMIES, CINDER_VESSEL, ELIXIR_CORRUPTION, CRAFTSPERSON, OBELISK, DEADLY_SHROUD } from '../constants.js';
+import { WORLD, PLAYER, FLAME, FLAME_WISP, FLAME_SHRINE, WRAITH, SHROUD, GROUND_SLAM, FLAME_BURST, COMBO, PROGRESSION_BAR, LORE_ENTRIES, SHRINE_INSCRIPTIONS, NEAR_DEATH, SURVIVOR, CHALLENGE_SHRINE, RELIC, ENEMIES, CINDER_VESSEL, ELIXIR_CORRUPTION, CRAFTSPERSON, OBELISK, DEADLY_SHROUD, DOUBLE_JUMP, UNDEAD_HAND } from '../constants.js';
 import { GlobalState } from '../GlobalState.js';
 import { SkillManager } from '../systems/SkillManager.js';
 import { Player } from '../entities/Player.js';
@@ -29,6 +29,9 @@ import { ChallengeArena } from '../systems/ChallengeArena.js';
 import { BossManager } from '../systems/BossManager.js';
 import { FlameAltar } from '../systems/FlameAltar.js';
 import { MusicManager } from '../systems/MusicManager.js';
+import { CombatSystem } from '../systems/CombatSystem.js';
+import { MiningSystem } from '../systems/MiningSystem.js';
+import { InteractionSystem } from '../systems/InteractionSystem.js';
 
 export class Level1 extends Phaser.Scene {
     constructor() {
@@ -78,6 +81,7 @@ export class Level1 extends Phaser.Scene {
         this.craftspeopleGroup = this.add.group();
         this.obeliskGroup = this.add.group();
         this.deadlyShroudZoneGroup = this.add.group();
+        this.undeadHandGroup = this.add.group();
 
         // Player
         this.player = new Player(this, PLAYER.START_X, PLAYER.START_Y);
@@ -91,6 +95,8 @@ export class Level1 extends Phaser.Scene {
                 platform.setPlayerOnTop();
             }
         });
+        this.physics.add.collider(this.enemyGroup, this.ground);
+        this.physics.add.collider(this.enemyGroup, this.platforms);
 
         // Shroud
         this.shroud = new Shroud(this);
@@ -126,6 +132,7 @@ export class Level1 extends Phaser.Scene {
             craftspeople: this.craftspeopleGroup,
             obelisks: this.obeliskGroup,
             deadlyShroudZones: this.deadlyShroudZoneGroup,
+            undeadHands: this.undeadHandGroup,
         }, this.biomeManager);
 
         this.levelGen.generateAhead(this.cameras.main.scrollX + this.scale.width);
@@ -184,46 +191,24 @@ export class Level1 extends Phaser.Scene {
         // Boss manager
         this.bossManager = new BossManager(this);
 
+        // Extracted subsystems
+        this.combatSystem = new CombatSystem(this);
+        this.miningSystem = new MiningSystem(this);
+        this.interactionSystem = new InteractionSystem(this);
+
         // State
         this.isGameOver = false;
         this.playerInShroud = false;
-        this.currentMiningVein = null;
         this.flameCrackleTimer = 0;
         this.closeShroudWarningTimer = 0;
         this.footstepTimer = 0;
         this.lastDiffTier = 0;
-        this.loreScrollsCollected = 0;
-
-        // Combo system
-        this.comboCount = 0;
-        this.comboTimer = 0;
 
         // Near-death slow-mo
         this._nearDeathCooldown = 0;
 
-        // Survivor buff
-        this._survivorBuffTimer = 0;
-        this._survivorBuffType = null;
-
-        // Skill state
-        this.shrineDrainBuffTimer = 0;
-        this.companionTimer = 0;
-        this.companionSprite = null;
-
-        // Cinder Vessel (Feature 1)
-        this._hasCinderVessel = FlameAltar.startsWithVessel();
-
-        // Corruption meter (Feature 5)
-        this._corruptionOverlay = null;
-
-        // Craftsperson rescue state (Feature 6)
-        this._activeRescue = null;
-
         // Deadly tendril zones from mutations (Feature 2)
         this._deadlyTendrilZones = [];
-
-        // Bard blessing timer (Feature 6)
-        this._bardBlessingTimer = 0;
 
         // Per-run stats for achievements
         this.runStats = {
@@ -278,10 +263,11 @@ export class Level1 extends Phaser.Scene {
         // Listen for player events
         this.events.on('playerLanded', (x, y) => { this.particles.landingDust(x, y); this.audio.playLand(); });
         this.events.on('doubleJump', (x, y) => { this.particles.doubleJump(x, y); this.audio.playJump(); });
-        this.events.on('groundSlam', (x, y) => { this.runStats.slamCount++; this._handleGroundSlam(x, y); });
-        this.events.on('flameBurst', (x, y) => { this.runStats.burstCount++; this._handleFlameBurst(x, y); });
-        this.events.on('classAttack', (x, y) => { this.runStats.classAttackCount++; this._handleClassAttack(x, y); });
-        this.events.on('skillAcquired', (skillId) => { this.runStats.skillsAcquired++; this._onSkillAcquired(skillId); });
+        this.events.on('groundSlam', (x, y, sType) => { this.runStats.slamCount++; this.combatSystem.handleClassSAbility(sType || 'ground_slam', x, y); });
+        this.events.on('arcaneMine', (x, y, cfg) => { this.combatSystem.handleArcaneMine(x, y, cfg); });
+        this.events.on('flameBurst', (x, y) => { this.runStats.burstCount++; this.combatSystem.handleFlameBurst(x, y); });
+        this.events.on('classAttack', (x, y) => { this.runStats.classAttackCount++; this.combatSystem.handleClassAttack(x, y); });
+        this.events.on('skillAcquired', () => { this.runStats.skillsAcquired++; });
         this.events.on('wallJump', () => { this.runStats.wallJumpCount++; this.audio.playJump(); });
         this.events.on('jump', () => this.audio.playJump());
         this.events.on('achievementUnlocked', () => this._showNextAchievementToast());
@@ -312,8 +298,11 @@ export class Level1 extends Phaser.Scene {
         // Challenge arena events
         this.events.on('challengeArenaStart', () => {
             this.shroud.speedMultiplier = 0;
+            this._arenaWalls = this._createArenaWalls(this.challengeArena.arenaX, 700, 0xAA44FF);
         });
         this.events.on('challengeArenaEnd', (success) => {
+            this._destroyArenaWalls(this._arenaWalls);
+            this._arenaWalls = null;
             this.shroud.speedMultiplier = 1.0;
             if (success) {
                 GlobalState.flame = Math.min(GlobalState.flame + CHALLENGE_SHRINE.REWARDS.flame, GlobalState.maxFlame);
@@ -333,10 +322,14 @@ export class Level1 extends Phaser.Scene {
         this.events.on('bossFightStart', () => {
             this.shroud.speedMultiplier = 0;
             MusicManager.playBoss();
+            const arenaCenter = this.player.x + 150;
+            this._arenaWalls = this._createArenaWalls(arenaCenter, 800, 0xFF4422);
         });
         this.events.on('bossFightEnd', () => {
             this.shroud.speedMultiplier = 1.0;
             MusicManager.stopBoss();
+            this._destroyArenaWalls(this._arenaWalls);
+            this._arenaWalls = null;
         });
         this.events.on('bossVineSweep', (bx, sweepW) => {
             // Create brief damage zone
@@ -513,7 +506,7 @@ export class Level1 extends Phaser.Scene {
 
         // Apply speed multipliers from relics + survivor buff + Flame Altar + corruption
         let speedMult = this.relicManager.getMult('moveSpeedMult') * FlameAltar.getSpeedMult();
-        if (this._survivorBuffTimer > 0 && this._survivorBuffType === 'speed') {
+        if (this.interactionSystem.survivorBuffTimer > 0 && this.interactionSystem.survivorBuffType === 'speed') {
             speedMult *= (1 + SURVIVOR.BUFFS.find(b => b.id === 'speed').value);
         }
         // Corruption speed bonus (Feature 5)
@@ -521,9 +514,9 @@ export class Level1 extends Phaser.Scene {
             speedMult *= (1 + ELIXIR_CORRUPTION.SPEED_BONUS);
         }
         // Frost fell freeze aura effect
-        if (this._freezeSlowTimer > 0) {
+        if (this.combatSystem.freezeSlowTimer > 0) {
             speedMult *= 0.7;
-            this._freezeSlowTimer -= delta;
+            this.combatSystem.freezeSlowTimer -= delta;
         }
         if (speedMult !== 1 && !this.player.isDashing) {
             this.player.body.velocity.x *= speedMult;
@@ -611,8 +604,8 @@ export class Level1 extends Phaser.Scene {
             drainRate = SkillManager.getValue('flameDrain.normal', FLAME.DRAIN_NORMAL);
         }
         // Shrine drain buff (Healer): halve drain for duration
-        if (this.shrineDrainBuffTimer > 0) {
-            this.shrineDrainBuffTimer -= delta;
+        if (this.interactionSystem.shrineDrainBuffTimer > 0) {
+            this.interactionSystem.shrineDrainBuffTimer -= delta;
             drainRate *= 0.5;
         }
         // Relic flame drain multiplier
@@ -627,14 +620,14 @@ export class Level1 extends Phaser.Scene {
             drainRate += currentBiome.coldDrain;
         }
         // Survivor flame_regen buff
-        if (this._survivorBuffTimer > 0 && this._survivorBuffType === 'flame_regen') {
+        if (this.interactionSystem.survivorBuffTimer > 0 && this.interactionSystem.survivorBuffType === 'flame_regen') {
             const regenRate = SURVIVOR.BUFFS.find(b => b.id === 'flame_regen').value;
             GlobalState.flame = Math.min(GlobalState.flame + regenRate * (delta / 1000), GlobalState.maxFlame);
         }
         // Bard blessing flame regen (Feature 6)
-        if (this._bardBlessingTimer > 0) {
+        if (this.interactionSystem.bardBlessingTimer > 0) {
             GlobalState.flame = Math.min(GlobalState.flame + 3 * (delta / 1000), GlobalState.maxFlame);
-            this._bardBlessingTimer -= delta;
+            this.interactionSystem.bardBlessingTimer -= delta;
         }
 
         // --- Deadly Shroud Zones drain multiplier (Feature 9) ---
@@ -683,10 +676,10 @@ export class Level1 extends Phaser.Scene {
         }
 
         // --- Cinder Vessel death save (Feature 1) ---
-        if (GlobalState.flame <= 0 && this._hasCinderVessel) {
+        if (GlobalState.flame <= 0 && this.interactionSystem.hasCinderVessel) {
             GlobalState._gameOver = false;
             GlobalState.flame = CINDER_VESSEL.RESTORE;
-            this._hasCinderVessel = false;
+            this.interactionSystem.hasCinderVessel = false;
             this.player.isInvincible = true;
             this.player.invincibleTimer = CINDER_VESSEL.INVINCIBLE_MS;
             this.player.setTint(0xFFCC00);
@@ -705,7 +698,7 @@ export class Level1 extends Phaser.Scene {
 
         // --- Corruption decay (Feature 5) ---
         GlobalState.decayCorruption(ELIXIR_CORRUPTION.DECAY_RATE * (delta / 1000));
-        this._updateCorruptionVisuals();
+        this.miningSystem.updateCorruptionVisuals();
 
         // --- Near-death slow-mo ---
         this._nearDeathCooldown = Math.max(0, this._nearDeathCooldown - delta);
@@ -719,7 +712,7 @@ export class Level1 extends Phaser.Scene {
             const redFlash = this.add.rectangle(width / 2, height / 2, width, height, 0xFF0000, 0.15)
                 .setScrollFactor(0).setDepth(198);
             this.tweens.add({ targets: redFlash, alpha: 0, duration: 600, onComplete: () => redFlash.destroy() });
-            setTimeout(() => { if (this.time) this.time.timeScale = 1.0; }, NEAR_DEATH.SLOWMO_DURATION);
+            this.time.delayedCall(NEAR_DEATH.SLOWMO_DURATION, () => { this.time.timeScale = 1.0; });
         }
 
         // Close call popup
@@ -763,40 +756,43 @@ export class Level1 extends Phaser.Scene {
         }
 
         // --- Mining ---
-        this._updateMining(delta);
+        this.miningSystem.update(delta);
 
         // --- Flame Wisps ---
-        this._updateWisps();
+        this.interactionSystem.updateWisps();
 
         // --- Flame Shrines ---
-        this._updateShrines();
+        this.interactionSystem.updateShrines();
 
         // --- Lore Scrolls ---
-        this._updateScrolls();
+        this.interactionSystem.updateScrolls();
 
         // --- Corruption Pools ---
-        this._updateCorruption(delta);
+        this.miningSystem.updateCorruption(delta);
 
         // --- Enemies ---
-        this._updateEnemies(delta);
+        this.combatSystem.updateEnemies(delta);
+
+        // --- Undead Hands ---
+        this.combatSystem.updateUndeadHands(delta);
 
         // --- Crumbling Platforms ---
         this._updateCrumblingPlatforms(delta);
 
         // --- Survivors ---
-        this._updateSurvivors(delta);
+        this.interactionSystem.updateSurvivors(delta);
 
         // --- Challenge Shrines ---
-        this._updateChallengeShrines();
+        this.interactionSystem.updateChallengeShrines();
 
         // --- Cinder Vessels (Feature 1) ---
-        this._updateCinderVessels();
+        this.interactionSystem.updateCinderVessels();
 
         // --- Craftspeople (Feature 6) ---
-        this._updateCraftspeople(delta);
+        this.interactionSystem.updateCraftspeople(delta);
 
         // --- Ancient Obelisks (Feature 7) ---
-        this._updateObelisks();
+        this.interactionSystem.updateObelisks();
 
         // --- Challenge Arena ---
         this.challengeArena.update(delta);
@@ -810,12 +806,12 @@ export class Level1 extends Phaser.Scene {
             // Flame Altar shroud slow
             this.shroud.speedMultiplier *= FlameAltar.getShroudSlowMult();
             // Survivor shroud_slow buff
-            if (this._survivorBuffTimer > 0 && this._survivorBuffType === 'shroud_slow') {
+            if (this.interactionSystem.survivorBuffTimer > 0 && this.interactionSystem.survivorBuffType === 'shroud_slow') {
                 const slowVal = SURVIVOR.BUFFS.find(b => b.id === 'shroud_slow').value;
                 this.shroud.speedMultiplier *= (1 - slowVal);
             }
             // Bard blessing shroud slow (Feature 6)
-            if (this._bardBlessingTimer > 0) {
+            if (this.interactionSystem.bardBlessingTimer > 0) {
                 this.shroud.speedMultiplier *= 0.5;
             }
             // Mutation speed surge
@@ -831,21 +827,21 @@ export class Level1 extends Phaser.Scene {
         this.ghostRun.update(delta, this.player.x, this.player.y, !this.player.facingRight);
 
         // --- Survivor buff timer ---
-        if (this._survivorBuffTimer > 0) {
-            this._survivorBuffTimer -= delta;
-            this.hud.updateBuff(this._survivorBuffType, this._survivorBuffTimer, SURVIVOR.BUFF_DURATION);
-            if (this._survivorBuffTimer <= 0) {
-                this._survivorBuffType = null;
+        if (this.interactionSystem.survivorBuffTimer > 0) {
+            this.interactionSystem.survivorBuffTimer -= delta;
+            this.hud.updateBuff(this.interactionSystem.survivorBuffType, this.interactionSystem.survivorBuffTimer, SURVIVOR.BUFF_DURATION);
+            if (this.interactionSystem.survivorBuffTimer <= 0) {
+                this.interactionSystem.survivorBuffType = null;
                 this.hud.updateBuff(null, 0, 0);
                 this.popups.show(this.player.x, this.player.y - 40, 'BUFF EXPIRED', '#888888', '11px');
             }
         }
 
         // --- Combo timer ---
-        if (this.comboCount > 0) {
-            this.comboTimer -= delta;
-            if (this.comboTimer <= 0) {
-                this.comboCount = 0;
+        if (this.combatSystem.comboCount > 0) {
+            this.combatSystem.comboTimer -= delta;
+            if (this.combatSystem.comboTimer <= 0) {
+                this.combatSystem.comboCount = 0;
             }
         }
 
@@ -855,7 +851,7 @@ export class Level1 extends Phaser.Scene {
         }
 
         // --- Companion (Beast Master) ---
-        this._updateCompanion(delta);
+        this.combatSystem.updateCompanion(delta);
 
         // --- HUD ---
         const distMeters = Math.max(0, (this.player.x - PLAYER.START_X) / 10);
@@ -864,8 +860,8 @@ export class Level1 extends Phaser.Scene {
         // --- Achievement stats ---
         this.runStats.distanceMeters = distMeters;
         this.runStats.survivalTime += delta / 1000;
-        if (this.comboCount > this.runStats.maxCombo) {
-            this.runStats.maxCombo = this.comboCount;
+        if (this.combatSystem.comboCount > this.runStats.maxCombo) {
+            this.runStats.maxCombo = this.combatSystem.comboCount;
         }
         // Track flame low recovery
         if (GlobalState.flame <= 10) {
@@ -915,241 +911,6 @@ export class Level1 extends Phaser.Scene {
         }
     }
 
-    // ─── Mining ───
-
-    _updateMining(delta) {
-        const PROXIMITY_RANGE = 60;
-        let overlappingVein = null;
-
-        for (const vein of this.elixirVeins.getChildren()) {
-            if (!vein.active || vein.depleted) continue;
-            if (this.physics.overlap(this.player, vein)) {
-                overlappingVein = vein;
-                vein.hidePrompt();
-            } else {
-                const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, vein.x, vein.y);
-                if (dist < PROXIMITY_RANGE) vein.showPrompt();
-                else vein.hidePrompt();
-            }
-        }
-
-        if (overlappingVein) {
-            if (this.currentMiningVein !== overlappingVein) {
-                if (this.currentMiningVein) {
-                    this.currentMiningVein.stopMining();
-                    this.particles.miningSparkles(0, 0, false);
-                }
-                this.currentMiningVein = overlappingVein;
-                overlappingVein.startMining();
-            }
-            this.particles.miningSparkles(overlappingVein.x, overlappingVein.y - 10, true);
-            const complete = overlappingVein.updateMining(delta);
-            if (complete) {
-                this.particles.miningSparkles(0, 0, false);
-                this.runStats.elixirMined++;
-                GlobalState.addElixir(1);
-                this.shroud.surge();
-                this.hud.popElixir();
-                this.audio.playMineComplete();
-                this.popups.elixirMined(overlappingVein.x, overlappingVein.y);
-                this.particles.mineComplete(overlappingVein.x, overlappingVein.y);
-                this.cameras.main.shake(200, 0.005);
-
-                // Corruption from mining (Feature 5)
-                GlobalState.addCorruption(ELIXIR_CORRUPTION.PER_MINE);
-
-                // Arcane Archer: stun enemies near veins on mine complete
-                if (SkillManager.getFlag('mining.stunOnComplete')) {
-                    const stunR = SkillManager.getValue('mining.stunRadius', 150);
-                    const stunD = SkillManager.getValue('mining.stunDuration', 3000);
-                    for (const enemy of this.enemyGroup.getChildren()) {
-                        if (!enemy.active || !enemy.alive) continue;
-                        const d = Phaser.Math.Distance.Between(overlappingVein.x, overlappingVein.y, enemy.x, enemy.y);
-                        if (d < stunR) {
-                            enemy.stun(stunD);
-                        }
-                    }
-                }
-
-                this.currentMiningVein = null;
-            }
-        } else {
-            if (this.currentMiningVein) {
-                this.currentMiningVein.stopMining();
-                this.particles.miningSparkles(0, 0, false);
-                this.currentMiningVein = null;
-            }
-        }
-    }
-
-    // ─── Flame Wisps ───
-
-    _updateWisps() {
-        for (const wisp of this.flameWisps.getChildren()) {
-            if (!wisp.active || wisp.collected) continue;
-            // Magnet: pull wisp toward player when close
-            const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, wisp.x, wisp.y);
-            if (dist < FLAME_WISP.MAGNET_RANGE && dist > 5) {
-                wisp.magnetTo(this.player.x, this.player.y);
-            }
-            if (this.physics.overlap(this.player, wisp)) {
-                if (wisp.collect()) {
-                    this.runStats.wispsCollected++;
-                    const restore = SkillManager.getValue('wisp.restoreAmount', FLAME_WISP.RESTORE)
-                        * this.relicManager.getMult('wispRestoreMult')
-                        * FlameAltar.getWispBonus();
-                    GlobalState.flame = GlobalState.flame + restore;
-                    this.popups.flameRestored(wisp.x, wisp.y, Math.round(restore));
-                    this.particles.wispCollect(wisp.x, wisp.y);
-                    this.audio.playWispCollect();
-                }
-            }
-        }
-    }
-
-    // ─── Flame Shrines ───
-
-    _updateShrines() {
-        for (const shrine of this.flameShrines.getChildren()) {
-            if (!shrine.active || shrine.used) continue;
-            if (this.physics.overlap(this.player, shrine)) {
-                if (shrine.activate()) {
-                    this.runStats.shrinesUsed++;
-                    GlobalState.flame = GlobalState.flame + FLAME_SHRINE.RESTORE;
-                    this.popups.flameRestored(shrine.x, shrine.y, FLAME_SHRINE.RESTORE);
-                    this.popups.show(shrine.x, shrine.y - 50, 'FLAME SHRINE', '#FF8833', '14px');
-                    this.particles.wispCollect(shrine.x, shrine.y); // reuse warm burst
-                    this.audio.playWispCollect();
-                    this.cameras.main.flash(300, 255, 136, 51, false, null, this);
-
-                    // Show a shrine inscription
-                    const inscription = SHRINE_INSCRIPTIONS[Math.floor(Math.random() * SHRINE_INSCRIPTIONS.length)];
-                    this.hud.showLoreScroll({ author: 'Flame Shrine Inscription', text: inscription });
-
-                    // Healer: shrine drain buff
-                    if (SkillManager.getFlag('shrine.drainBuff')) {
-                        const dur = SkillManager.getValue('shrine.drainBuffDuration', 0);
-                        this.shrineDrainBuffTimer = dur;
-                        this.popups.show(shrine.x, shrine.y - 70, 'DRAIN HALVED', '#4488FF', '12px');
-                    }
-
-                    // Relic drop chance from shrine
-                    if (this.relicManager.canDrop() && Math.random() < RELIC.SHRINE_DROP_CHANCE) {
-                        this.time.delayedCall(500, () => this.relicOverlay.show());
-                    }
-                }
-            }
-        }
-    }
-
-    // ─── Lore Scrolls ───
-
-    _updateScrolls() {
-        for (const scroll of this.loreScrolls.getChildren()) {
-            if (!scroll.active || scroll.collected) continue;
-            if (this.physics.overlap(this.player, scroll)) {
-                const entry = scroll.collect();
-                if (entry) {
-                    this.loreScrollsCollected++;
-                    this.runStats.loreScrollsFound++;
-                    this.hud.showLoreScroll(entry);
-                    this.audio.playMineComplete(); // reuse chime
-
-                    // Persist to lifetime lore collection
-                    const idx = LORE_ENTRIES.indexOf(entry);
-                    if (idx >= 0) {
-                        LoreCompendium.addCollected(idx);
-                    }
-                }
-            }
-        }
-    }
-
-    // ─── Corruption Pools ───
-
-    _updateCorruption(delta) {
-        let inCorruption = false;
-        for (const pool of this.corruptionPools.getChildren()) {
-            if (!pool.active) continue;
-            if (this.physics.overlap(this.player, pool)) {
-                inCorruption = true;
-                this.particles.corruptionBubbles(pool.x, pool.y - 6, true);
-            }
-        }
-        if (inCorruption) {
-            // Survivor: corruption pools no longer slow
-            if (!SkillManager.getFlag('corruption.immuneSlow')) {
-                this.player.inCorruption = true;
-            }
-            GlobalState.drainFlame(FLAME.DRAIN_CORRUPTION * (delta / 1000));
-        }
-    }
-
-    // ─── Enemies (biome-specific, data-driven) ───
-
-    _updateEnemies(delta) {
-        // Initialize freeze slow timer if needed
-        if (this._freezeSlowTimer === undefined) this._freezeSlowTimer = 0;
-
-        for (const enemy of this.enemyGroup.getChildren()) {
-            if (!enemy.active || !enemy.alive) continue;
-
-            enemy.chasePlayer(this.player.x, this.player.y, delta);
-
-            // Warrior: dash auto-banish enemies near path
-            if (this.player.isDashing && SkillManager.getFlag('dash.autoBanish')) {
-                const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, enemy.x, enemy.y);
-                const radius = SkillManager.getValue('dash.autoBanishRadius', 50);
-                if (dist < radius) {
-                    this.particles.wraithBanish(enemy.x, enemy.y);
-                    this.popups.wraithBanished(enemy.x, enemy.y);
-                    this.audio.playWraithBanish();
-                    this.cameras.main.shake(100, 0.004);
-                    enemy.banish();
-                    this._onEnemyBanished(enemy.x, enemy.y, true);
-                    continue;
-                }
-            }
-
-            if (this.physics.overlap(this.player, enemy)) {
-                if (this.player.isDashing || this.player.isInvincible) {
-                    this.particles.wraithBanish(enemy.x, enemy.y);
-                    this.popups.wraithBanished(enemy.x, enemy.y);
-                    this.audio.playWraithBanish();
-                    this.cameras.main.shake(100, 0.004);
-                    enemy.banish();
-                    this._onEnemyBanished(enemy.x, enemy.y, this.player.isDashing);
-                } else if (this.player.hitInvincibleTimer <= 0) {
-                    // Tank: reduced enemy damage, + relic multiplier
-                    const dmg = SkillManager.getValue('enemyDamage', enemy.def.damage) * this.relicManager.getMult('enemyDamageMult');
-                    GlobalState.drainFlame(dmg);
-                    this.audio.playWraithHit();
-                    this.cameras.main.shake(200, 0.008);
-                    enemy.banish();
-
-                    // Frost fell freeze aura (Feature 10)
-                    if (enemy.def.freezeAura) {
-                        this._freezeSlowTimer = 2000;
-                        this.player.setTint(0x88BBFF);
-                        this.time.delayedCall(2000, () => {
-                            if (this.player.active) this.player.clearTint();
-                        });
-                        this.popups.show(this.player.x, this.player.y - 40, 'FROZEN!', '#88BBFF', '12px');
-                    }
-
-                    // Post-hit invincibility with flash
-                    this.player.hitInvincibleTimer = 500;
-                    this._flashPlayer();
-                }
-            }
-
-            // Destroy enemies that fall behind the shroud
-            if (enemy.x < this.shroud.getLeadingX() - 100) {
-                enemy.destroy();
-            }
-        }
-    }
-
     // ─── Crumbling Platforms ───
 
     _updateCrumblingPlatforms(delta) {
@@ -1161,712 +922,6 @@ export class Level1 extends Phaser.Scene {
                 plat._emitDust = false;
                 if (Math.random() < 0.3) { // throttle particle rate
                     this.particles.landingDust(plat.x, plat.y - 5);
-                }
-            }
-        }
-    }
-
-    // ─── Cinder Vessels (Feature 1) ───
-
-    _updateCinderVessels() {
-        if (this._hasCinderVessel) return; // already have one
-        for (const vessel of this.cinderVesselGroup.getChildren()) {
-            if (!vessel.active || vessel.collected) continue;
-            if (this.physics.overlap(this.player, vessel)) {
-                if (vessel.collect()) {
-                    this._hasCinderVessel = true;
-                    this.popups.show(vessel.x, vessel.y - 60, 'CINDER VESSEL', '#FFCC00', '16px');
-                    this.popups.show(vessel.x, vessel.y - 40, 'Death save acquired', '#D4A04A', '11px');
-                    this.audio.playWispCollect();
-                    this.cameras.main.flash(200, 255, 200, 0);
-                }
-            }
-        }
-    }
-
-    // ─── Craftspeople (Feature 6) ───
-
-    _updateCraftspeople(delta) {
-        // Handle active rescue timer
-        if (this._activeRescue) {
-            this._activeRescue.timer -= delta;
-            // Count alive rescue enemies
-            let aliveCount = 0;
-            for (const e of this._activeRescue.enemies) {
-                if (e.active && e.alive) aliveCount++;
-            }
-            if (aliveCount === 0) {
-                // Success!
-                this._completeRescue(this._activeRescue.craftsperson);
-                this._activeRescue = null;
-            } else if (this._activeRescue.timer <= 0) {
-                // Failure
-                this.popups.show(this._activeRescue.craftsperson.x, this._activeRescue.craftsperson.y - 60,
-                    'CONSUMED BY SHROUD', '#FF4444', '14px');
-                this._activeRescue.craftsperson.failed = true;
-                this.tweens.add({
-                    targets: this._activeRescue.craftsperson,
-                    alpha: 0,
-                    duration: 500,
-                });
-                this._activeRescue = null;
-            }
-            return;
-        }
-
-        for (const cp of this.craftspeopleGroup.getChildren()) {
-            if (!cp.active || cp.rescued || cp.failed || cp.rescueActive) continue;
-            const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, cp.x, cp.y);
-            if (dist < CRAFTSPERSON.RESCUE_RADIUS) {
-                cp.showPrompt();
-                if (Phaser.Input.Keyboard.JustDown(this.interactKey)) {
-                    this._startRescue(cp);
-                }
-            } else {
-                cp.hidePrompt();
-            }
-        }
-    }
-
-    _startRescue(craftsperson) {
-        craftsperson.rescueActive = true;
-        craftsperson.hidePrompt();
-
-        // Spawn 3 enemies nearby
-        const biome = this.biomeManager.getCurrentBiome();
-        const rescueEnemies = [];
-        for (let i = 0; i < 3; i++) {
-            const typeId = biome.enemies.length > 0
-                ? biome.enemies[Math.floor(Math.random() * biome.enemies.length)]
-                : 'fell_critter';
-            const def = ENEMIES[typeId];
-            if (def) {
-                const ex = craftsperson.x + (i - 1) * 80;
-                const ey = WORLD.GROUND_Y - def.height / 2;
-                const enemy = new Enemy(this, ex, ey, typeId);
-                this.enemyGroup.add(enemy);
-                rescueEnemies.push(enemy);
-            }
-        }
-
-        this._activeRescue = {
-            craftsperson,
-            timer: CRAFTSPERSON.RESCUE_TIME,
-            enemies: rescueEnemies,
-        };
-
-        this.popups.show(craftsperson.x, craftsperson.y - 70, `RESCUE: ${craftsperson.craftType.name}`, '#FFCC00', '14px');
-        this.popups.show(craftsperson.x, craftsperson.y - 50, 'Banish all enemies!', '#CCCCCC', '11px');
-        this.cameras.main.shake(200, 0.005);
-    }
-
-    _completeRescue(craftsperson) {
-        craftsperson.rescued = true;
-        const type = craftsperson.craftType;
-
-        this.popups.show(craftsperson.x, craftsperson.y - 70, `${type.name} RESCUED!`, '#44FF44', '16px');
-        this.popups.show(craftsperson.x, craftsperson.y - 50, type.desc, '#CCCCCC', '11px');
-        this.audio.playLevelUp();
-        this.cameras.main.flash(300, 100, 255, 100);
-
-        switch (type.reward) {
-            case 'dash_damage':
-                // Permanent +10% dash damage — stored as flag
-                this._blacksmithBuff = true;
-                break;
-            case 'full_flame':
-                GlobalState.flame = GlobalState.maxFlame;
-                this.player.isInvincible = true;
-                this.player.invincibleTimer = 5000;
-                this.player.setTint(0x44FF44);
-                this.time.delayedCall(5000, () => {
-                    if (this.player.active) this.player.clearTint();
-                });
-                break;
-            case 'banish_all': {
-                const camLeft = this.cameras.main.scrollX;
-                const camRight = camLeft + this.scale.width;
-                for (const enemy of this.enemyGroup.getChildren()) {
-                    if (!enemy.active || !enemy.alive) continue;
-                    if (enemy.x > camLeft && enemy.x < camRight) {
-                        this.particles.wraithBanish(enemy.x, enemy.y);
-                        enemy.banish();
-                        this._onEnemyBanished(enemy.x, enemy.y, false);
-                    }
-                }
-                break;
-            }
-            case 'bard_blessing':
-                this._bardBlessingTimer = 30000;
-                this.popups.show(craftsperson.x, craftsperson.y - 30, 'Bard\'s Blessing: 30s', '#AA6688', '11px');
-                break;
-        }
-    }
-
-    // ─── Ancient Obelisks (Feature 7) ───
-
-    _updateObelisks() {
-        if (this.obeliskOverlay.active) return;
-        for (const obelisk of this.obeliskGroup.getChildren()) {
-            if (!obelisk.active || obelisk.used) continue;
-            if (this.physics.overlap(this.player, obelisk)) {
-                if (obelisk.activate()) {
-                    this.obeliskOverlay.show();
-                    this.audio.playMineComplete();
-                }
-            }
-        }
-    }
-
-    // ─── Corruption Visuals (Feature 5) ───
-
-    _updateCorruptionVisuals() {
-        const c = GlobalState.corruption;
-        if (c >= ELIXIR_CORRUPTION.THRESHOLD_MEDIUM && !this._corruptionOverlay) {
-            const { width, height } = this.scale;
-            this._corruptionOverlay = this.add.rectangle(width / 2, height / 2, width, height, 0x5500AA, 0)
-                .setScrollFactor(0).setDepth(97);
-        }
-        if (this._corruptionOverlay) {
-            if (c < ELIXIR_CORRUPTION.THRESHOLD_MEDIUM) {
-                this._corruptionOverlay.setAlpha(0);
-            } else if (c < ELIXIR_CORRUPTION.THRESHOLD_HIGH) {
-                this._corruptionOverlay.setAlpha(0.05);
-            } else {
-                this._corruptionOverlay.setAlpha(0.1);
-            }
-        }
-        // Update HUD corruption bar
-        if (this.hud.updateCorruption) {
-            this.hud.updateCorruption(c);
-        }
-    }
-
-    // ─── Ground Slam Handler ───
-
-    _handleGroundSlam(x, y) {
-        this.particles.groundSlam(x, y);
-        this.cameras.main.shake(300, 0.012);
-        this.audio.playSlamImpact();
-        this._hitFreeze(50);
-
-        const stunRadius = SkillManager.getValue('groundSlam.stunRadius', GROUND_SLAM.STUN_RADIUS);
-        const stunDuration = SkillManager.getValue('groundSlam.stunDuration', GROUND_SLAM.STUN_DURATION);
-
-        // Stun enemies in radius
-        for (const enemy of this.enemyGroup.getChildren()) {
-            if (!enemy.active || !enemy.alive) continue;
-            const dist = Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y);
-            if (dist < stunRadius) {
-                enemy.stun(stunDuration);
-            }
-        }
-    }
-
-    // ─── Flame Burst Handler ───
-
-    _handleFlameBurst(x, y) {
-        const radius = SkillManager.getValue('flameBurst.radius', FLAME_BURST.RADIUS);
-        const banishRadius = SkillManager.getValue('flameBurst.banishRadius', FLAME_BURST.BANISH_RADIUS);
-
-        this.audio.playFlameBurst();
-        this.cameras.main.shake(200, 0.006);
-
-        // Visual ring effect
-        const ring = this.add.circle(x, y, 10, 0xFF6600, 0.4).setDepth(60);
-        this.tweens.add({
-            targets: ring,
-            radius: radius,
-            alpha: 0,
-            duration: 400,
-            onUpdate: () => {
-                ring.setRadius(ring.radius);
-            },
-            onComplete: () => ring.destroy()
-        });
-
-        // Push/banish enemies in radius
-        for (const enemy of this.enemyGroup.getChildren()) {
-            if (!enemy.active || !enemy.alive) continue;
-            const dist = Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y);
-            if (dist < banishRadius) {
-                // Close enemies get banished
-                this.particles.wraithBanish(enemy.x, enemy.y);
-                this.popups.wraithBanished(enemy.x, enemy.y);
-                this.audio.playWraithBanish();
-                enemy.banish();
-                this._onEnemyBanished(enemy.x, enemy.y, false);
-            } else if (dist < radius) {
-                // Farther enemies get pushed
-                const angle = Phaser.Math.Angle.Between(x, y, enemy.x, enemy.y);
-                enemy.setVelocity(
-                    Math.cos(angle) * FLAME_BURST.PUSH_FORCE,
-                    Math.sin(angle) * FLAME_BURST.PUSH_FORCE
-                );
-                enemy.stun(1000);
-            }
-        }
-
-        // Battlemage: grant invincibility after burst
-        if (SkillManager.getFlag('flameBurst.grantInvincibility')) {
-            const invMs = SkillManager.getValue('flameBurst.invincibilityMs', 0);
-            this.player.isInvincible = true;
-            this.player.invincibleTimer = invMs;
-            this.player.setTint(0x4488FF);
-            this.time.delayedCall(invMs, () => {
-                if (this.player.active) this.player.clearTint();
-            });
-        }
-    }
-
-    // ─── Combo System ───
-
-    _onEnemyBanished(x, y, duringDash = false) {
-        this.runStats.enemiesBanished++;
-        this.comboCount++;
-        this.comboTimer = SkillManager.getValue('combo.window', COMBO.WINDOW) * this.relicManager.getMult('comboWindowMult');
-
-        // Kill streak audio escalation
-        this.audio.playBanishCombo(this.comboCount);
-
-        // Hit freeze + shake on every banish
-        this.cameras.main.shake(100, 0.004);
-        this._hitFreeze(50);
-
-        // Relic: banish flame restore
-        const banishFlame = this.relicManager.getFlat('banishFlameFlat', 0);
-        if (banishFlame > 0) {
-            GlobalState.flame = Math.min(GlobalState.flame + banishFlame, GlobalState.maxFlame);
-            this.popups.show(x, y - 40, `+${banishFlame} FLAME`, '#FF6600', '11px');
-        }
-
-        // Relic drop chance on banish
-        if (this.relicManager.canDrop() && Math.random() < RELIC.BANISH_DROP_CHANCE) {
-            this.time.delayedCall(300, () => this.relicOverlay.show());
-        }
-
-        // Challenge arena kill tracking
-        if (this.challengeArena.active) {
-            this.challengeArena.onEnemyKilled();
-        }
-
-        if (this.comboCount >= 2) {
-            // Scale text size and effects with combo count
-            const size = Math.min(16 + this.comboCount * 2, 30);
-            this.popups.show(x, y - 60, `x${this.comboCount} COMBO!`, '#FFCC00', `${size}px`);
-            if (this.comboCount >= 3) {
-                this.cameras.main.shake(150, 0.003 + this.comboCount * 0.001);
-                this.audio.playComboMilestone();
-            }
-            if (this.comboCount >= 4) {
-                this.cameras.main.flash(100, 255, 200, 0, false, null, this);
-            }
-        }
-
-        const threshold = SkillManager.getValue('combo.bonusThreshold', COMBO.BONUS_ELIXIR_THRESHOLD);
-        if (this.comboCount >= threshold) {
-            GlobalState.addElixir(1);
-            this.hud.popElixir();
-            this.popups.show(x, y - 80, '+1 ELIXIR BONUS', '#00FFCC', '18px');
-            // Corruption from combo elixir bonus (Feature 5)
-            GlobalState.addCorruption(ELIXIR_CORRUPTION.PER_ELIXIR_BONUS);
-        }
-
-        // Trickster: flame restore on dash banish
-        if (duringDash && SkillManager.getFlag('dash.flameRestore')) {
-            const restore = SkillManager.getValue('dash.flameRestoreAmount', 0);
-            GlobalState.flame = GlobalState.flame + restore;
-            this.popups.show(x, y - 40, `+${restore} FLAME`, '#FF6600', '12px');
-        }
-    }
-
-    // ─── Companion (Beast Master) ───
-
-    _updateCompanion(delta) {
-        if (!SkillManager.getFlag('companion.enabled')) return;
-
-        // Create companion sprite if needed
-        if (!this.companionSprite) {
-            this.companionSprite = this.add.circle(0, 0, 6, 0xFFAA33, 0.9).setDepth(50);
-        }
-
-        // Orbit around player
-        this.companionTimer += delta;
-        const angle = (this.companionTimer / 1000) * 2;
-        this.companionSprite.setPosition(
-            this.player.x + Math.cos(angle) * 40,
-            this.player.y + Math.sin(angle) * 30
-        );
-
-        // Auto-banish on interval
-        const interval = SkillManager.getValue('companion.interval', 8000);
-        if (this.companionTimer >= interval) {
-            this.companionTimer -= interval;
-
-            // Find closest enemy
-            let closest = null;
-            let closestDist = 200; // max range
-            for (const enemy of this.enemyGroup.getChildren()) {
-                if (!enemy.active || !enemy.alive) continue;
-                const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, enemy.x, enemy.y);
-                if (d < closestDist) {
-                    closestDist = d;
-                    closest = enemy;
-                }
-            }
-
-            if (closest) {
-                this.particles.wraithBanish(closest.x, closest.y);
-                this.popups.show(closest.x, closest.y - 30, 'SPIRIT BANISH', '#FFAA33', '11px');
-                this.audio.playWraithBanish();
-                closest.banish();
-                this._onEnemyBanished(closest.x, closest.y, false);
-
-                const flameRestore = SkillManager.getValue('companion.flameRestore', 3);
-                GlobalState.flame = GlobalState.flame + flameRestore;
-            }
-        }
-    }
-
-    // ─── Skill Acquired ───
-
-    _onSkillAcquired(_nodeId) {
-        // Class is chosen pre-run, no sprite swap needed during level-up
-    }
-
-    // ─── Class Attack Dispatcher ───
-
-    _handleClassAttack(x, y) {
-        const cls = SkillManager.activeClass;
-        if (!cls || !cls.attackType) return;
-
-        switch (cls.attackType) {
-            case 'aoe_banish':
-                this._classAoeBanish(x, y, cls);
-                break;
-            case 'frontal_banish':
-                this._classFrontalBanish(x, y, cls);
-                break;
-            case 'knockback':
-                this._classKnockback(x, y, cls);
-                break;
-            case 'shield':
-                this._classShield(cls);
-                break;
-            case 'heal':
-                this._classHeal(x, y, cls);
-                break;
-            case 'melee_banish':
-                this._classMeleeBanish(x, y);
-                break;
-            case 'projectile':
-                this._classProjectile(x, y, cls);
-                break;
-            case 'screen_stun':
-                this._classScreenStun(x, y, cls);
-                break;
-            case 'blink':
-                this._classBlink(x, y, cls);
-                break;
-        }
-    }
-
-    // AOE banish (Barbarian, Wizard, Battlemage)
-    _classAoeBanish(x, y, cls) {
-        const banishR = cls.attackRadius;
-        const stunR = cls.stunRadius || 0;
-        const stunD = cls.stunDuration || 0;
-
-        // Visual ring
-        const ring = this.add.circle(x, y, 10, 0xFF4444, 0.4).setDepth(60);
-        this.tweens.add({
-            targets: ring,
-            radius: banishR,
-            alpha: 0,
-            duration: 400,
-            onUpdate: () => ring.setRadius(ring.radius),
-            onComplete: () => ring.destroy()
-        });
-
-        // Blast VFX for Wizard
-        if (cls.useBlastVFX) {
-            const blast = this.add.sprite(x, y, 'fx_blast').setDepth(61).setDisplaySize(200, 200);
-            blast.play('fx_blast_anim');
-            blast.once('animationcomplete', () => blast.destroy());
-        }
-
-        this.cameras.main.shake(300, 0.008);
-
-        for (const enemy of this.enemyGroup.getChildren()) {
-            if (!enemy.active || !enemy.alive) continue;
-            const dist = Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y);
-            if (dist < banishR) {
-                this.particles.wraithBanish(enemy.x, enemy.y);
-                this.popups.wraithBanished(enemy.x, enemy.y);
-                this.audio.playWraithBanish();
-                enemy.banish();
-                this._onEnemyBanished(enemy.x, enemy.y, false);
-            } else if (stunR > 0 && dist < stunR) {
-                enemy.stun(stunD);
-            }
-        }
-    }
-
-    // Frontal banish (Warrior)
-    _classFrontalBanish(x, y, cls) {
-        const radius = cls.attackRadius;
-        const dir = this.player.facingRight ? 1 : -1;
-
-        this.cameras.main.shake(200, 0.005);
-
-        for (const enemy of this.enemyGroup.getChildren()) {
-            if (!enemy.active || !enemy.alive) continue;
-            const dx = enemy.x - x;
-            const dy = enemy.y - y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            // Only enemies in front of player within arc
-            if (dist < radius && dx * dir > 0) {
-                this.particles.wraithBanish(enemy.x, enemy.y);
-                this.popups.wraithBanished(enemy.x, enemy.y);
-                this.audio.playWraithBanish();
-                enemy.banish();
-                this._onEnemyBanished(enemy.x, enemy.y, false);
-            }
-        }
-    }
-
-    // Knockback (Athlete/Monk)
-    _classKnockback(x, y, cls) {
-        const radius = cls.attackRadius;
-        const pushDist = cls.pushDistance;
-        const stunD = cls.stunDuration;
-
-        this.cameras.main.shake(250, 0.006);
-
-        for (const enemy of this.enemyGroup.getChildren()) {
-            if (!enemy.active || !enemy.alive) continue;
-            const dist = Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y);
-            if (dist < radius) {
-                const angle = Phaser.Math.Angle.Between(x, y, enemy.x, enemy.y);
-                enemy.setVelocity(
-                    Math.cos(angle) * pushDist * 2,
-                    Math.sin(angle) * pushDist
-                );
-                enemy.stun(stunD);
-                this.popups.show(enemy.x, enemy.y - 20, 'PUSHED', '#44DD66', '11px');
-            }
-        }
-    }
-
-    // Shield (Tank)
-    _classShield(cls) {
-        const dur = cls.shieldDuration;
-        this.player.isInvincible = true;
-        this.player.invincibleTimer = dur;
-        this.player.setTint(0x4488FF);
-        this.popups.show(this.player.x, this.player.y - 40, 'SHIELD UP', '#4488FF', '14px');
-        this.time.delayedCall(dur, () => {
-            if (this.player.active) this.player.clearTint();
-        });
-    }
-
-    // Heal (Healer)
-    _classHeal(x, y, cls) {
-        GlobalState.flame = Math.min(GlobalState.flame + cls.healAmount, GlobalState.maxFlame);
-        this.popups.show(x, y - 40, `+${cls.healAmount} FLAME`, '#FF8833', '14px');
-
-        // Drain reduction buff
-        this.shrineDrainBuffTimer = cls.drainReductionDuration;
-        this.popups.show(x, y - 60, 'DRAIN HALVED', '#4488FF', '12px');
-
-        // Healing visual
-        const ring = this.add.circle(x, y, 10, 0xFF8833, 0.3).setDepth(60);
-        this.tweens.add({
-            targets: ring,
-            radius: 60,
-            alpha: 0,
-            duration: 500,
-            onUpdate: () => ring.setRadius(ring.radius),
-            onComplete: () => ring.destroy()
-        });
-    }
-
-    // Melee banish (Trickster) — banish closest + reset dash CD
-    _classMeleeBanish(x, y) {
-        let closest = null;
-        let closestDist = 100;
-        for (const enemy of this.enemyGroup.getChildren()) {
-            if (!enemy.active || !enemy.alive) continue;
-            const d = Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y);
-            if (d < closestDist) {
-                closestDist = d;
-                closest = enemy;
-            }
-        }
-        if (closest) {
-            this.particles.wraithBanish(closest.x, closest.y);
-            this.popups.wraithBanished(closest.x, closest.y);
-            this.audio.playWraithBanish();
-            closest.banish();
-            this._onEnemyBanished(closest.x, closest.y, false);
-        }
-        // Reset dash cooldown
-        this.player.dashCooldownTimer = 0;
-        this.popups.show(x, y - 40, 'DASH RESET', '#FFCC00', '11px');
-    }
-
-    // Projectile (Arcane Archer, Beast Master)
-    _classProjectile(x, y, cls) {
-        const dir = this.player.facingRight ? 1 : -1;
-        const speed = cls.projectileSpeed;
-        const range = cls.projectileRange;
-
-        // Determine projectile texture
-        const projKey = cls.grantsElixir ? 'fx_spell_proj' : 'fx_fireball';
-        const projAnim = cls.grantsElixir ? 'fx_spell_proj_anim' : 'fx_fireball_anim';
-
-        const proj = this.add.sprite(x + dir * 20, y, projKey).setDepth(55);
-        proj.setDisplaySize(24, 24);
-        proj.setFlipX(dir < 0);
-        proj.play(projAnim);
-
-        const startX = proj.x;
-        const scene = this;
-
-        this.tweens.add({
-            targets: proj,
-            x: x + dir * range,
-            duration: (range / speed) * 1000,
-            onUpdate: () => {
-                // Check collision with enemies
-                for (const enemy of scene.enemyGroup.getChildren()) {
-                    if (!enemy.active || !enemy.alive) continue;
-                    const d = Phaser.Math.Distance.Between(proj.x, proj.y, enemy.x, enemy.y);
-                    if (d < 30) {
-                        scene.particles.wraithBanish(enemy.x, enemy.y);
-                        scene.popups.wraithBanished(enemy.x, enemy.y);
-                        scene.audio.playWraithBanish();
-                        enemy.banish();
-                        scene._onEnemyBanished(enemy.x, enemy.y, false);
-
-                        if (cls.grantsElixir) {
-                            GlobalState.addElixir(1);
-                            scene.hud.popElixir();
-                            scene.popups.show(enemy.x, enemy.y - 40, '+1 ELIXIR', '#00FFCC', '12px');
-                        }
-                        if (cls.flameRestore) {
-                            GlobalState.flame = GlobalState.flame + cls.flameRestore;
-                            scene.popups.show(enemy.x, enemy.y - 20, `+${cls.flameRestore} FLAME`, '#FF6600', '11px');
-                        }
-
-                        proj.destroy();
-                        return;
-                    }
-                }
-            },
-            onComplete: () => {
-                if (proj.active) proj.destroy();
-            }
-        });
-    }
-
-    // Screen stun (Ranger)
-    _classScreenStun(x, y, cls) {
-        const stunD = cls.stunDuration;
-        const camLeft = this.cameras.main.scrollX;
-        const camRight = camLeft + this.scale.width;
-
-        this.cameras.main.flash(200, 100, 200, 255);
-        this.popups.show(x, y - 40, 'ARROW RAIN', '#44DD66', '14px');
-
-        for (const enemy of this.enemyGroup.getChildren()) {
-            if (!enemy.active || !enemy.alive) continue;
-            if (enemy.x > camLeft && enemy.x < camRight) {
-                enemy.stun(stunD);
-            }
-        }
-    }
-
-    // Blink (Assassin) — teleport forward, banish enemies in path
-    _classBlink(x, y, cls) {
-        const dir = this.player.facingRight ? 1 : -1;
-        const dist = cls.blinkDistance;
-        const targetX = x + dir * dist;
-
-        // Banish enemies along the path
-        for (const enemy of this.enemyGroup.getChildren()) {
-            if (!enemy.active || !enemy.alive) continue;
-            const ex = enemy.x;
-            const ey = enemy.y;
-            // Check if enemy is roughly in the blink path
-            const inXRange = dir > 0 ? (ex > x && ex < targetX) : (ex < x && ex > targetX);
-            const inYRange = Math.abs(ey - y) < 40;
-            if (inXRange && inYRange) {
-                this.particles.wraithBanish(enemy.x, enemy.y);
-                this.popups.wraithBanished(enemy.x, enemy.y);
-                this.audio.playWraithBanish();
-                enemy.banish();
-                this._onEnemyBanished(enemy.x, enemy.y, false);
-            }
-        }
-
-        // Teleport player
-        this.player.setPosition(targetX, y);
-        this.player.setTint(0x44DD66);
-        this.time.delayedCall(200, () => {
-            if (this.player.active) this.player.clearTint();
-        });
-
-        // VFX: after-image at origin
-        const ghost = this.add.rectangle(x, y, 48, 48, 0x44DD66, 0.5).setDepth(55);
-        this.tweens.add({
-            targets: ghost,
-            alpha: 0,
-            duration: 400,
-            onComplete: () => ghost.destroy()
-        });
-    }
-
-    // ─── Survivors ───
-
-    _updateSurvivors(delta) {
-        for (const survivor of this.survivorGroup.getChildren()) {
-            if (!survivor.active || survivor.interacted) continue;
-            const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, survivor.x, survivor.y);
-            if (dist < SURVIVOR.INTERACTION_RANGE) {
-                survivor.showPrompt();
-                if (Phaser.Input.Keyboard.JustDown(this.interactKey)) {
-                    const result = survivor.interact();
-                    if (result) {
-                        this._survivorBuffType = result.buff.id;
-                        this._survivorBuffTimer = SURVIVOR.BUFF_DURATION;
-                        this.hud.showSurvivorDialogue(result.dialogue, result.buff);
-                        this.audio.playWispCollect();
-                        // Fade survivor away after dialogue dismisses
-                        this.time.delayedCall(4000, () => {
-                            if (survivor.active) survivor.fadeAway();
-                        });
-                    }
-                }
-            } else {
-                survivor.hidePrompt();
-            }
-        }
-    }
-
-    // ─── Challenge Shrines ───
-
-    _updateChallengeShrines() {
-        if (this.challengeArena.active) return;
-        for (const shrine of this.challengeShrineGroup.getChildren()) {
-            if (!shrine.active || shrine.used) continue;
-            if (this.physics.overlap(this.player, shrine)) {
-                if (shrine.activate()) {
-                    const types = CHALLENGE_SHRINE.TYPES;
-                    const challenge = types[Math.floor(Math.random() * types.length)];
-                    this.challengeArena.start(challenge, shrine.x);
-                    this.popups.show(shrine.x, shrine.y - 60, challenge.name, '#FF4488', '16px');
-                    this.cameras.main.shake(200, 0.005);
                 }
             }
         }
@@ -2098,15 +1153,61 @@ export class Level1 extends Phaser.Scene {
         });
     }
 
-    // ─── Game Over ───
+    // ─── Arena Walls ───
 
-    _hitFreeze(duration = 50) {
-        if (this.isGameOver) return;
-        this.time.timeScale = 0.1;
-        setTimeout(() => {
-            if (this.time) this.time.timeScale = 1.0;
-        }, duration);
+    _createArenaWalls(centerX, width, color) {
+        const wallH = 300;
+        const wallW = 6;
+        const wallY = WORLD.GROUND_Y - wallH / 2 + 20;
+        const leftX = centerX - width / 2;
+        const rightX = centerX + width / 2;
+
+        // Visual bars
+        const leftBar = this.add.rectangle(leftX, wallY, wallW, wallH, color, 0.7)
+            .setDepth(55).setAlpha(0);
+        const rightBar = this.add.rectangle(rightX, wallY, wallW, wallH, color, 0.7)
+            .setDepth(55).setAlpha(0);
+
+        // Static physics bodies (invisible, slightly wider for reliable collision)
+        const leftBody = this.add.rectangle(leftX, wallY, 12, wallH, 0x000000, 0);
+        this.physics.add.existing(leftBody, true);
+        const rightBody = this.add.rectangle(rightX, wallY, 12, wallH, 0x000000, 0);
+        this.physics.add.existing(rightBody, true);
+
+        // Collide player only
+        const colliderL = this.physics.add.collider(this.player, leftBody);
+        const colliderR = this.physics.add.collider(this.player, rightBody);
+
+        // Fade in
+        this.tweens.add({ targets: [leftBar, rightBar], alpha: 0.7, duration: 300 });
+
+        // Pulsing glow
+        const pulse = this.tweens.add({
+            targets: [leftBar, rightBar],
+            alpha: { from: 0.5, to: 0.9 },
+            duration: 800, yoyo: true, repeat: -1
+        });
+
+        return { leftBar, rightBar, leftBody, rightBody, colliderL, colliderR, pulse };
     }
+
+    _destroyArenaWalls(walls) {
+        if (!walls) return;
+        walls.pulse.stop();
+        this.tweens.add({
+            targets: [walls.leftBar, walls.rightBar],
+            alpha: 0, duration: 500,
+            onComplete: () => {
+                for (const el of [walls.leftBar, walls.rightBar, walls.leftBody, walls.rightBody]) {
+                    if (el && el.active) el.destroy();
+                }
+                walls.colliderL.destroy();
+                walls.colliderR.destroy();
+            }
+        });
+    }
+
+    // ─── Game Over ───
 
     _triggerGameOver(distMeters) {
         this.isGameOver = true;
@@ -2116,6 +1217,8 @@ export class Level1 extends Phaser.Scene {
         this.player.body.enable = false;
         this.particles.stopDashTrail();
         this.audio.stopShroudWarning();
+        this._destroyArenaWalls(this._arenaWalls);
+        this._arenaWalls = null;
 
         // Save tombstone
         Tombstone.saveDeath(this.player.x, distMeters);
@@ -2134,14 +1237,16 @@ export class Level1 extends Phaser.Scene {
         MusicManager.playGameOver();
 
         // Player rapid flicker (8 cycles, 50ms each)
-        let flickerCount = 0;
-        const flickerInterval = setInterval(() => {
-            if (this.player.active) {
-                this.player.setAlpha(flickerCount % 2 === 0 ? 0 : 1);
+        this.time.addEvent({
+            delay: 50,
+            repeat: 15,
+            callback: (_args, event) => {
+                if (this.player.active) {
+                    const count = 16 - event.repeatCount;
+                    this.player.setAlpha(count % 2 === 0 ? 0 : 1);
+                }
             }
-            flickerCount++;
-            if (flickerCount >= 16) clearInterval(flickerInterval);
-        }, 50);
+        });
 
         // Red vignette overlay
         const { width, height } = this.scale;
@@ -2149,14 +1254,14 @@ export class Level1 extends Phaser.Scene {
             .setScrollFactor(0).setDepth(199);
         this.tweens.add({ targets: vignette, fillAlpha: 0.25, duration: 800 });
 
-        // Phase 2: after 1.5s real time, restore timeScale, show stats
-        setTimeout(() => {
-            if (this.time) this.time.timeScale = 1.0;
+        // Phase 2: restore timeScale + show stats
+        this.time.delayedCall(1500, () => {
+            this.time.timeScale = 1.0;
             if (this.player.active) {
                 this.player.setAlpha(0);
             }
-            this.hud.showGameOver(GlobalState.elixir, distMeters || 0, this.loreScrollsCollected, this.runStats);
-        }, 1500);
+            this.hud.showGameOver(GlobalState.elixir, distMeters || 0, this.interactionSystem.loreScrollsCollected, this.runStats);
+        });
     }
 
     shutdown() {

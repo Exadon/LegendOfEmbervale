@@ -103,7 +103,7 @@ export const BIOMES = Object.freeze([
         groundTint: 0x6A5030,
         platformTint: 0x8A7050,
         treeTint: 0x5A4A20,
-        enemies: ['fell_ranger', 'vukah_warrior', 'scavenger_pyreblade', 'vukah_shaman'],
+        enemies: ['fell_ranger', 'vukah_warrior', 'scavenger_pyreblade', 'vukah_shaman', 'skullflame'],
         scrollChance: 0.18,
         shrineChance: 0.04,
     },
@@ -116,7 +116,7 @@ export const BIOMES = Object.freeze([
         groundTint: 0x2A2A3A,
         platformTint: 0x4A4A5A,
         treeTint: 0x3A3A4A,
-        enemies: ['hollow_skeleton', 'hollow_mage', 'hollow_reaper'],
+        enemies: ['hollow_skeleton', 'hollow_mage', 'hollow_reaper', 'skullflame'],
         scrollChance: 0.18,
         shrineChance: 0.03,
     },
@@ -129,7 +129,7 @@ export const BIOMES = Object.freeze([
         groundTint: 0x8899AA,
         platformTint: 0x99AABB,
         treeTint: 0x6688AA,
-        enemies: ['frost_fell', 'frost_scavenger', 'hollow_reaper'],
+        enemies: ['frost_fell', 'frost_scavenger', 'hollow_reaper', 'skullflame'],
         scrollChance: 0.2,
         shrineChance: 0.03,
         coldDrain: 1,
@@ -330,6 +330,18 @@ export const ENEMIES = Object.freeze({
         texture: 'frost_scavenger',
         flying: false,
     },
+    skullflame: {
+        name: 'Skullflame',
+        speed: 120,
+        damage: 18,
+        width: 32,
+        height: 32,
+        texture: 'skullflame',
+        flying: false,
+        elite: true,
+        hitsToKill: 2,
+        elixirDrop: true,
+    },
 });
 
 // ─── Enemy Sprites (reuse Elthen character sprites with tints) ───
@@ -374,7 +386,7 @@ export const ENEMY_SPRITES = Object.freeze({
         displaySize: 36,
         tint: 0xBB6644,
     },
-    scav_pyreblade: {
+    scavenger_pyreblade: {
         spriteKey: 'pyromancer',
         isAtlas: false,
         idleAnim: 'pyromancer_idle',
@@ -437,6 +449,14 @@ export const ENEMY_SPRITES = Object.freeze({
         moveAnim: 'rotting_soldier_move',
         displaySize: 36,
         tint: 0x88CCFF,
+    },
+    skullflame: {
+        spriteKey: 'skullflame',
+        isAtlas: false,
+        idleAnim: 'skullflame_idle',
+        moveAnim: 'skullflame_idle',
+        displaySize: 48,
+        tint: null,
     },
 });
 
@@ -508,7 +528,7 @@ export const GLIDER = Object.freeze({
 
 export const GROUND_SLAM = Object.freeze({
     VELOCITY: 800,
-    STUN_RADIUS: 150,
+    STUN_RADIUS: 180,
     STUN_DURATION: 2000,
 });
 
@@ -530,17 +550,6 @@ export const CRUMBLING_PLATFORM = Object.freeze({
     REGEN_TIME: 8000,
     SHAKE_THRESHOLD: 0.5,
     CHANCE: 0.15,
-});
-
-export const WINDOW_DEFS = Object.freeze({
-    flame:     { w: 256, h: 24 },
-    cooldowns: { w: 220, h: 34 },
-    stats:     { w: 170, h: 50 },
-    distance:  { w: 80,  h: 22 },
-});
-
-export const GRID = Object.freeze({
-    DEFAULT_SIZE: 8,
 });
 
 export const ENEMY_AI = Object.freeze({
@@ -615,6 +624,51 @@ export const OBELISK = Object.freeze({
             correct: 'The Mysterious Wanderer',
             wrong: ['Balthazar', 'Queen Jezmina'],
         },
+        {
+            question: 'What did the Ancients leave behind when they expired?',
+            correct: 'A Spark',
+            wrong: ['An Elixir Well', 'A Cinder Vessel'],
+        },
+        {
+            question: 'Who is flame-touched and has walked the Hollow Halls for centuries?',
+            correct: 'Alden Crowley',
+            wrong: ['Athalan Skree', 'Balthazar'],
+        },
+        {
+            question: 'What was the first Elixir Well built to create?',
+            correct: 'Salvation',
+            wrong: ['Weapons', 'The Shroud'],
+        },
+        {
+            question: 'How long did the first Elixir Well take to construct?',
+            correct: 'Seven years',
+            wrong: ['Three years', 'One year'],
+        },
+        {
+            question: 'Where does the Cinder Vault lie?',
+            correct: 'Beneath the Pillars of Creation',
+            wrong: ['In the Springlands', 'Atop Albaneve'],
+        },
+        {
+            question: 'What happened to Pikemead\'s Reach?',
+            correct: 'It has fallen',
+            wrong: ['It was rebuilt', 'It still stands'],
+        },
+        {
+            question: 'Who renounced all authority and called himself Sameth?',
+            correct: 'Samuel the Thief',
+            wrong: ['Vorgoth', 'Alden Crowley'],
+        },
+        {
+            question: 'What did the Drak call humans?',
+            correct: 'Soft ones with weak skulls',
+            wrong: ['Fire walkers', 'Stone breakers'],
+        },
+        {
+            question: 'Who cried out and was answered by the Void?',
+            correct: 'Sorcerer Ikora',
+            wrong: ['Queen Jezmina', 'Balthazar'],
+        },
     ],
 });
 
@@ -639,6 +693,15 @@ export const DEADLY_SHROUD = Object.freeze({
     WIDTH: 80,
     HEIGHT: 60,
     DURATION: 12000,
+});
+
+export const UNDEAD_HAND = Object.freeze({
+    CHANCE: 0.04,
+    WIDTH: 32,
+    HEIGHT: 32,
+    GRAB_DURATION: 1500,
+    SLOW_MULT: 0.3,
+    FLAME_DRAIN: 5,
 });
 
 export const PROGRESSION_BAR = Object.freeze({
