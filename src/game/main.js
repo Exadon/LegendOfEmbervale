@@ -8,6 +8,7 @@ import { ClassMasteryScene } from './scenes/ClassMasteryScene.js';
 import { Level1 } from './scenes/Level1.js';
 import { DevGuide } from './scenes/DevGuide.js';
 import { SpriteViewer } from './scenes/SpriteViewer.js';
+import { BossRush } from './scenes/BossRush.js';
 
 Settings.load();
 
@@ -27,7 +28,7 @@ const config = {
             debug: false
         }
     },
-    scene: [Boot, Preloader, MainMenu, ClassSelect, ClassMasteryScene, Level1, DevGuide, SpriteViewer]
+    scene: [Boot, Preloader, MainMenu, ClassSelect, ClassMasteryScene, Level1, DevGuide, SpriteViewer, BossRush]
 };
 
 export function StartGame(containerId) {

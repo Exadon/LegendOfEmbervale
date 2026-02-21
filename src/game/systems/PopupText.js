@@ -21,6 +21,8 @@ export class PopupText {
             ease: 'Power2',
             onComplete: () => text.destroy()
         });
+
+        return text;
     }
 
     elixirMined(x, y) {

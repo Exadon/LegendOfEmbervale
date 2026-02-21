@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import { GlobalState } from '../GlobalState.js';
 import { Settings } from '../systems/Settings.js';
 import { MusicManager } from '../systems/MusicManager.js';
+import { AchievementManager } from '../systems/AchievementManager.js';
+import { RunModifier } from '../systems/RunModifier.js';
 
 export class MainMenu extends Phaser.Scene {
     constructor() {
@@ -159,7 +161,7 @@ export class MainMenu extends Phaser.Scene {
         // Resolution toggle
         const [rw, rh] = Settings.data.resolution;
         this._resText = this.add.text(width / 2, height * 0.92,
-            `[R] Resolution: ${rw}x${rh}   [V] Sprite Viewer`, {
+            `[R] Resolution: ${rw}x${rh}   [V] Sprite Viewer   [A] Achievements   [B] Boss Rush`, {
             fontSize: '12px',
             color: '#666666',
             fontFamily: 'monospace'
@@ -208,6 +210,16 @@ export class MainMenu extends Phaser.Scene {
             this.scene.start('SpriteViewer');
         });
 
+        // Sprint 10e: Achievement panel
+        this._achievePanelOpen = false;
+        this.input.keyboard.on('keydown-A', () => {
+            if (this._achievePanelOpen) {
+                this._closeAchievementPanel();
+            } else {
+                this._showAchievementPanel();
+            }
+        });
+
         // Input
         this.input.keyboard.on('keydown-SPACE', () => {
             this.input.keyboard.removeAllListeners();
@@ -217,6 +229,138 @@ export class MainMenu extends Phaser.Scene {
                 this.scene.start('ClassSelect');
             });
         });
+
+        // Boss Rush shortcut
+        this.input.keyboard.on('keydown-B', () => {
+            this.input.keyboard.removeAllListeners();
+            RunModifier.clear();
+            MusicManager.stopMenu();
+            this.cameras.main.fadeOut(800, 0, 0, 0);
+            this.cameras.main.once('camerafadeoutcomplete', () => {
+                this.scene.start('ClassSelect', { bossRush: true });
+            });
+        });
+    }
+
+    _showAchievementPanel() {
+        if (this._achievePanelOpen) return;
+        this._achievePanelOpen = true;
+        this._achieveElements = [];
+        AchievementManager.load();
+
+        const { width, height } = this.scale;
+        const all = AchievementManager.getAll();
+        const unlockedCount = all.filter(a => AchievementManager.isUnlocked(a.id)).length;
+        const pct = Math.round((unlockedCount / all.length) * 100);
+
+        // Backdrop
+        const bg = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.85)
+            .setScrollFactor(0).setDepth(200)
+            .setInteractive();
+        this._achieveElements.push(bg);
+
+        // Title
+        const title = this.add.text(width / 2, 36, `ACHIEVEMENTS  (${unlockedCount}/${all.length} — ${pct}%)`, {
+            fontSize: '18px', color: '#FFCC00', fontFamily: 'monospace', fontStyle: 'bold'
+        }).setOrigin(0.5).setDepth(201);
+        this._achieveElements.push(title);
+
+        const closeHint = this.add.text(width / 2, height - 20, '[A] or [ESC] to close', {
+            fontSize: '11px', color: '#666666', fontFamily: 'monospace'
+        }).setOrigin(0.5).setDepth(201);
+        this._achieveElements.push(closeHint);
+
+        // Group achievements by category
+        const CATEGORIES = ['Distance', 'Elixir', 'Combat', 'Collection', 'Survival', 'Lore', 'Biome', 'Skills', 'Mechanics', 'Meta'];
+        const CATEGORY_COLORS = {
+            Distance: '#AACCFF', Elixir: '#00FFCC', Combat: '#FF4444', Collection: '#FFCC00',
+            Survival: '#FF6600', Lore: '#CC88FF', Biome: '#44FF88', Skills: '#FFD700',
+            Mechanics: '#FF88CC', Meta: '#FF8866'
+        };
+
+        const colW = Math.floor(width / 2) - 20;
+        const cols = [[],[],[],[],[], [], [], [], [], []].slice(0, CATEGORIES.length);
+        // Two-column layout: 5 categories per column
+        const leftCats = CATEGORIES.slice(0, 5);
+        const rightCats = CATEGORIES.slice(5);
+
+        const startY = 70;
+        const rowH = 20;
+
+        [leftCats, rightCats].forEach((catList, colIdx) => {
+            let curY = startY;
+            const colX = colIdx === 0 ? 10 : width / 2 + 10;
+
+            catList.forEach(cat => {
+                const catAchs = all.filter(a => a.category === cat);
+                if (catAchs.length === 0) return;
+                const catColor = CATEGORY_COLORS[cat] || '#FFFFFF';
+
+                // Category header
+                const header = this.add.text(colX + colW / 2, curY, cat.toUpperCase(), {
+                    fontSize: '12px', color: catColor, fontFamily: 'monospace', fontStyle: 'bold'
+                }).setOrigin(0.5).setDepth(201);
+                this._achieveElements.push(header);
+                curY += 16;
+
+                // Achievement rows
+                catAchs.forEach(ach => {
+                    const unlocked = AchievementManager.isUnlocked(ach.id);
+                    const iconColor = unlocked ? catColor : '#333333';
+                    const nameColor = unlocked ? '#CCCCCC' : '#444444';
+
+                    const icon = this.add.text(colX + 6, curY, ach.icon || '◆', {
+                        fontSize: '11px', color: iconColor, fontFamily: 'monospace'
+                    }).setOrigin(0, 0).setDepth(201);
+                    this._achieveElements.push(icon);
+
+                    const label = this.add.text(colX + 22, curY, unlocked ? ach.name : '???', {
+                        fontSize: '11px', color: nameColor, fontFamily: 'monospace'
+                    }).setOrigin(0, 0).setDepth(201);
+                    this._achieveElements.push(label);
+
+                    if (unlocked) {
+                        // Short desc on hover (interactive zone)
+                        label.setInteractive({ useHandCursor: true });
+                        label.on('pointerover', () => {
+                            this._achTooltip && this._achTooltip.destroy();
+                            this._achTooltip = this.add.text(width / 2, height / 2, ach.description, {
+                                fontSize: '13px', color: '#FFFFFF', fontFamily: 'monospace',
+                                backgroundColor: '#222222', padding: { x: 8, y: 4 }
+                            }).setOrigin(0.5).setDepth(202);
+                        });
+                        label.on('pointerout', () => {
+                            this._achTooltip && this._achTooltip.destroy();
+                            this._achTooltip = null;
+                        });
+                    }
+
+                    curY += rowH;
+                });
+                curY += 6; // gap between categories
+            });
+        });
+
+        // ESC also closes
+        this._escHandler = (e) => {
+            if (e.keyCode === 27) this._closeAchievementPanel();
+        };
+        this.input.keyboard.on('keydown', this._escHandler);
+    }
+
+    _closeAchievementPanel() {
+        if (!this._achievePanelOpen) return;
+        this._achievePanelOpen = false;
+        this._achTooltip && this._achTooltip.destroy();
+        this._achTooltip = null;
+        for (const el of (this._achieveElements || [])) {
+            if (el && el.active) el.destroy();
+        }
+        this._achieveElements = [];
+        if (this._escHandler) {
+            this.input.keyboard.off('keydown', this._escHandler);
+            this._escHandler = null;
+        }
     }
 
     update() {

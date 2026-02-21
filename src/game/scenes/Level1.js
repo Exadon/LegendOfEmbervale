@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import { WORLD, PLAYER, FLAME, FLAME_WISP, FLAME_SHRINE, WRAITH, SHROUD, GROUND_SLAM, FLAME_BURST, COMBO, PROGRESSION_BAR, LORE_ENTRIES, SHRINE_INSCRIPTIONS, NEAR_DEATH, SURVIVOR, CHALLENGE_SHRINE, RELIC, ENEMIES, CINDER_VESSEL, ELIXIR_CORRUPTION, CRAFTSPERSON, OBELISK, DEADLY_SHROUD, DOUBLE_JUMP, UNDEAD_HAND } from '../constants.js';
+import { WORLD, PLAYER, FLAME, FLAME_WISP, FLAME_SHRINE, WRAITH, SHROUD, GROUND_SLAM, FLAME_BURST, COMBO, PROGRESSION_BAR, LORE_ENTRIES, SHRINE_INSCRIPTIONS, NEAR_DEATH, SURVIVOR, CHALLENGE_SHRINE, RELIC, RELIC_UPGRADE_COST, ENEMIES, CINDER_VESSEL, ELIXIR_CORRUPTION, CRAFTSPERSON, OBELISK, DEADLY_SHROUD, DOUBLE_JUMP, UNDEAD_HAND, ENDLESS } from '../constants.js';
+import { RunModifier } from '../systems/RunModifier.js';
 import { GlobalState } from '../GlobalState.js';
 import { SkillManager } from '../systems/SkillManager.js';
 import { Player } from '../entities/Player.js';
@@ -32,6 +33,7 @@ import { MusicManager } from '../systems/MusicManager.js';
 import { CombatSystem } from '../systems/CombatSystem.js';
 import { MiningSystem } from '../systems/MiningSystem.js';
 import { InteractionSystem } from '../systems/InteractionSystem.js';
+import { MetaProgression } from '../systems/MetaProgression.js';
 
 export class Level1 extends Phaser.Scene {
     constructor() {
@@ -101,7 +103,7 @@ export class Level1 extends Phaser.Scene {
         // Shroud
         this.shroud = new Shroud(this);
 
-        // Apply Flame Altar shroud slow
+        // Apply Flame Altar shroud slow (see also update loop — skipped if altarDisabled)
         this.shroud._baseShroudSlowMult = FlameAltar.getShroudSlowMult();
 
         // Systems
@@ -113,6 +115,19 @@ export class Level1 extends Phaser.Scene {
         this.biomeManager.onBiomeChange = (biome) => {
             this.ground.setTint(biome.groundTint);
             this.particles.setBiomeAtmosphere(biome.id);
+        };
+
+        // Endless loop callback
+        this.biomeManager.onLoop = (n) => {
+            this.loopCount = n;
+            this.runStats.loopCount = n;
+            this.levelGen.setLoop(n);
+            this.shroud.baseSpeedMult = 1 + n * ENDLESS.SHROUD_RAMP_PER_LOOP;
+            GlobalState.addElixir(ENDLESS.ELIXIR_BONUS_PER_LOOP);
+            FlameAltar.addElixir(ENDLESS.ELIXIR_BONUS_PER_LOOP);
+            this.popups.show(this.player.x, this.player.y - 80, `LOOP ${n} BEGINS`, '#FF44FF', '20px');
+            this.cameras.main.flash(600, 180, 0, 200);
+            if (this.hud && this.hud.updateLoop) this.hud.updateLoop(n);
         };
 
         // Level generator (pass all groups)
@@ -147,6 +162,7 @@ export class Level1 extends Phaser.Scene {
 
         // HUD
         this.hud = new HUD(this);
+        if (RunModifier.active) this.hud.showModifier(RunModifier.active);
 
         // Level-up overlay
         this.levelUpOverlay = new LevelUpOverlay(this);
@@ -166,6 +182,11 @@ export class Level1 extends Phaser.Scene {
         // Lore key [J]
         this.loreKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.J);
 
+        // Relic upgrade overlay [U]
+        this.input.keyboard.on('keydown-U', () => {
+            if (!this.isGameOver) this._showRelicUpgradeOverlay();
+        });
+
         // Interact key [F] for survivors
         this.interactKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F);
 
@@ -184,6 +205,13 @@ export class Level1 extends Phaser.Scene {
         // Relic system
         this.relicManager = new RelicManager();
         this.relicOverlay = new RelicOverlay(this, this.relicManager);
+        // Sprint 10d: Synergy notification
+        this.relicManager.onSynergyActivated((synergies) => {
+            this.runStats.relicSynergyTriggered = true;
+            for (const syn of this.relicManager.getSynergyDefs()) {
+                this.popups.show(this.player.x, this.player.y - 60, `SYNERGY: ${syn.name}!`, '#FFD700', '14px');
+            }
+        });
 
         // Challenge arena
         this.challengeArena = new ChallengeArena(this);
@@ -198,6 +226,7 @@ export class Level1 extends Phaser.Scene {
 
         // State
         this.isGameOver = false;
+        this.loopCount = 0;
         this.playerInShroud = false;
         this.flameCrackleTimer = 0;
         this.closeShroudWarningTimer = 0;
@@ -213,6 +242,7 @@ export class Level1 extends Phaser.Scene {
         // Per-run stats for achievements
         this.runStats = {
             distanceMeters: 0,
+            loopCount: 0,
             elixirMined: 0,
             enemiesBanished: 0,
             wispsCollected: 0,
@@ -231,6 +261,27 @@ export class Level1 extends Phaser.Scene {
             hasDied: false,
             biomesReached: new Set(['springlands']),
         };
+
+        // ─── Run Modifier (Phase A2) ───
+        this._modFlameDrainMult = 1;
+        this._altarDisabled = false;
+        this._modWispRestoreMult = null; // null means use normal relicManager value
+        this._slowStartActive = false;
+        {
+            const mod = RunModifier.active;
+            if (mod) {
+                if (mod.apply.flameDrainMult)   this._modFlameDrainMult = mod.apply.flameDrainMult;
+                if (mod.apply.altarDisabled)    this._altarDisabled = true;
+                if (mod.apply.dashDisabled)     this.player._modifierNoDash = true;
+                if (mod.apply.shroudSpeedMult)  this.shroud.speedMultiplier *= mod.apply.shroudSpeedMult;
+                if (mod.apply.eliteSpawnMult)   this.levelGen.setEliteSpawnMult(mod.apply.eliteSpawnMult);
+                if (mod.apply.relicsBossOnly)   this.relicManager._banishDropChance = 0;
+                if (mod.apply.maxFlameCap)      GlobalState.maxFlame = mod.apply.maxFlameCap;
+                if (mod.apply.wispRestoreMult !== undefined) this._modWispRestoreMult = mod.apply.wispRestoreMult;
+                if (mod.apply.slowStartDist)    this._slowStartActive = true;
+                // Show badge in HUD (added after HUD is created)
+            }
+        }
 
         // Achievement system
         AchievementManager.load();
@@ -288,10 +339,26 @@ export class Level1 extends Phaser.Scene {
         this.events.on('relicAcquired', (relic) => {
             this.hud.updateRelics(this.relicManager);
             this.popups.show(this.player.x, this.player.y - 60, `RELIC: ${relic.name}`, '#FFCC00', '14px');
+            MetaProgression.recordRelic(relic.id);
+            // Show tier2 upgrade indicator in popup if this relic can be upgraded
+            if (!MetaProgression.hasUpgrade(relic.id)) {
+                this.time.delayedCall(800, () => {
+                    this.popups.show(this.player.x, this.player.y - 80, 'Upgrade at Flame Altar!', '#FFAA44', '11px');
+                });
+            }
         });
         this.events.on('bossRelicDrop', () => {
+            if (this.relicManager.canDrop() && Math.random() < 0.15) {
+                // Sprint 11: 15% chance for legendary relic from boss
+                this.time.delayedCall(1000, () => this.relicOverlay.show(true));
+            } else if (this.relicManager.canDrop()) {
+                this.time.delayedCall(1000, () => this.relicOverlay.show(false));
+            }
+        });
+        // Sprint 8: challenge relic drop
+        this.events.on('challengeRelicDrop', () => {
             if (this.relicManager.canDrop()) {
-                this.time.delayedCall(1000, () => this.relicOverlay.show());
+                this.time.delayedCall(600, () => this.relicOverlay.show());
             }
         });
 
@@ -300,17 +367,31 @@ export class Level1 extends Phaser.Scene {
             this.shroud.speedMultiplier = 0;
             this._arenaWalls = this._createArenaWalls(this.challengeArena.arenaX, 700, 0xAA44FF);
         });
-        this.events.on('challengeArenaEnd', (success) => {
+        this.events.on('challengeArenaEnd', (success, rewardData) => {
             this._destroyArenaWalls(this._arenaWalls);
             this._arenaWalls = null;
             this.shroud.speedMultiplier = 1.0;
             if (success) {
-                GlobalState.flame = Math.min(GlobalState.flame + CHALLENGE_SHRINE.REWARDS.flame, GlobalState.maxFlame);
-                GlobalState.addElixir(CHALLENGE_SHRINE.REWARDS.elixir);
+                // Sprint 8b: Tiered rewards
+                const tier = (rewardData && rewardData.tier) || CHALLENGE_SHRINE.REWARD_TIERS.easy;
+                const elixirBonus = (rewardData && rewardData.elixirBonus) || 0;
+                const totalElixir = tier.elixir + elixirBonus;
+                GlobalState.flame = Math.min(GlobalState.flame + tier.flame, GlobalState.maxFlame);
+                GlobalState.addElixir(totalElixir);
                 this.hud.popElixir();
-                this.popups.show(this.player.x, this.player.y - 60, 'CHALLENGE COMPLETE!', '#44FF44', '16px');
-                this.popups.show(this.player.x, this.player.y - 40, `+${CHALLENGE_SHRINE.REWARDS.flame} FLAME +${CHALLENGE_SHRINE.REWARDS.elixir} ELIXIR`, '#00FFCC', '12px');
+                const cursedBadge = (rewardData && rewardData.isCursed) ? ' [CURSED BONUS]' : '';
+                this.popups.show(this.player.x, this.player.y - 60, `CHALLENGE COMPLETE!${cursedBadge}`, '#44FF44', '16px');
+                this.popups.show(this.player.x, this.player.y - 40, `+${tier.flame} FLAME +${totalElixir} ELIXIR`, '#00FFCC', '12px');
                 this.audio.playLevelUp();
+                // Relic drop chance
+                if (tier.relicChance > 0 && Math.random() < tier.relicChance) {
+                    this.events.emit('challengeRelicDrop', this.player.x, this.player.y);
+                }
+                // Achievement tracking
+                if (this.runStats) {
+                    this.runStats.challengesCompleted = (this.runStats.challengesCompleted || 0) + 1;
+                    if (rewardData && rewardData.isCursed) this.runStats.cursedChallengeCompleted = true;
+                }
             } else {
                 this.popups.show(this.player.x, this.player.y - 60, 'CHALLENGE FAILED', '#FF4444', '16px');
                 this.shroud.surge();
@@ -324,12 +405,17 @@ export class Level1 extends Phaser.Scene {
             MusicManager.playBoss();
             const arenaCenter = this.player.x + 150;
             this._arenaWalls = this._createArenaWalls(arenaCenter, 800, 0xFF4422);
+            // Sprint 7f: spawn arena hazards
+            const biome = this.biomeManager.getCurrentBiome();
+            if (biome) this._spawnBossHazards(biome.id, arenaCenter);
         });
         this.events.on('bossFightEnd', () => {
             this.shroud.speedMultiplier = 1.0;
             MusicManager.stopBoss();
             this._destroyArenaWalls(this._arenaWalls);
             this._arenaWalls = null;
+            // Clean up hazards
+            this._destroyBossHazards();
         });
         this.events.on('bossVineSweep', (bx, sweepW) => {
             // Create brief damage zone
@@ -355,6 +441,27 @@ export class Level1 extends Phaser.Scene {
                     this._flashPlayer();
                 }
             }
+            // Sprint 7f: Chieftain spike eruption — spikes erupt 800ms after ground pound
+            if (this._hazardType === 'spike_eruption') {
+                this.time.delayedCall(800, () => {
+                    if (!this.bossManager.active) return;
+                    const numSpikes = 3;
+                    for (let i = 0; i < numSpikes; i++) {
+                        const sx = bx + (Math.random() - 0.5) * 200;
+                        const spike = this.add.triangle(
+                            sx, WORLD.GROUND_Y, 0, 40, 20, 0, 40, 40, 0xCC8800, 0.9
+                        ).setDepth(8);
+                        this.time.delayedCall(50, () => {
+                            if (Math.abs(this.player.x - sx) < 25 && this.player.hitInvincibleTimer <= 0) {
+                                GlobalState.drainFlame(8);
+                                this.player.hitInvincibleTimer = 400;
+                                this._flashPlayer();
+                            }
+                        });
+                        this.time.delayedCall(600, () => { if (spike.active) spike.destroy(); });
+                    }
+                });
+            }
         });
         this.events.on('bossProjectile', (bx, by, dir, speed) => {
             const proj = this.add.circle(bx, by, 6, 0xFF4422, 0.8).setDepth(55);
@@ -373,6 +480,203 @@ export class Level1 extends Phaser.Scene {
                     }
                 },
                 onComplete: () => { if (proj.active) proj.destroy(); }
+            });
+        });
+
+        // ─── Sprint 7c: New boss attack handlers ───
+
+        // VineBomb: spread projectiles toward player
+        this.events.on('bossVineBomb', (bx, by, px, py, angleOffset) => {
+            const baseAngle = Math.atan2(py - by, px - bx);
+            const angle = baseAngle + (angleOffset * Math.PI / 180);
+            const speed = 250;
+            const proj = this.add.circle(bx, by, 5, 0x44AA22, 0.9).setDepth(55);
+            const vx = Math.cos(angle) * speed;
+            const vy = Math.sin(angle) * speed;
+            this.tweens.add({
+                targets: proj,
+                x: bx + vx * 2,
+                y: by + vy * 2,
+                duration: 2000,
+                onUpdate: () => {
+                    if (!proj.active) return;
+                    if (Phaser.Math.Distance.Between(proj.x, proj.y, this.player.x, this.player.y) < 18) {
+                        if (this.player.hitInvincibleTimer <= 0 && !this.player.isDashing) {
+                            GlobalState.drainFlame(8);
+                            this.player.hitInvincibleTimer = 500;
+                            this._flashPlayer();
+                        }
+                        proj.destroy();
+                    }
+                },
+                onComplete: () => { if (proj.active) proj.destroy(); }
+            });
+        });
+
+        // WarCry: 800ms buff indicator
+        this.events.on('bossWarCry', (bx) => {
+            this.cameras.main.shake(200, 0.006);
+            this.popups.show(bx, WORLD.GROUND_Y - 80, 'WAR CRY!', '#FFDD00', '14px');
+        });
+
+        // FlamePillar: 3 stationary fire zones
+        this.events.on('bossFlamePillar', (bx, count) => {
+            const arenaHalfW = 350;
+            for (let i = 0; i < count; i++) {
+                const px = bx + (Math.random() - 0.5) * arenaHalfW * 2;
+                const pillar = this.add.rectangle(px, WORLD.GROUND_Y - 30, 60, 60, 0xFF4400, 0.6).setDepth(8);
+                // Damage player if standing on it
+                const iv = this.time.addEvent({
+                    delay: 200,
+                    repeat: 9, // 2s total
+                    callback: () => {
+                        if (!pillar.active) { iv.destroy(); return; }
+                        if (Math.abs(this.player.x - px) < 35 && Math.abs(this.player.y - WORLD.GROUND_Y) < 50) {
+                            if (this.player.hitInvincibleTimer <= 0 && !this.player.isDashing) {
+                                GlobalState.drainFlame(5);
+                                this.player.hitInvincibleTimer = 300;
+                                this._flashPlayer();
+                            }
+                        }
+                    }
+                });
+                this.time.delayedCall(2000, () => { if (pillar.active) pillar.destroy(); });
+            }
+        });
+
+        // EyeBeam: sweep across arena floor
+        this.events.on('bossEyeBeam', (bx, beamW) => {
+            const arenaL = bx - 350;
+            const beam = this.add.rectangle(arenaL, WORLD.GROUND_Y - 20, beamW, 40, 0x44FFFF, 0.5).setDepth(8);
+            let elapsed = 0;
+            const sweepDur = 2000;
+            const sweepDist = 700;
+            const iv = this.time.addEvent({
+                delay: 50,
+                repeat: sweepDur / 50 - 1,
+                callback: () => {
+                    elapsed += 50;
+                    if (!beam.active) { iv.destroy(); return; }
+                    beam.x = arenaL + (sweepDist * elapsed / sweepDur);
+                    if (Math.abs(this.player.x - beam.x) < beamW / 2 && Math.abs(this.player.y - WORLD.GROUND_Y) < 50) {
+                        if (this.player.hitInvincibleTimer <= 0 && !this.player.isDashing) {
+                            GlobalState.drainFlame(8);
+                            this.player.hitInvincibleTimer = 400;
+                            this._flashPlayer();
+                        }
+                    }
+                }
+            });
+            this.time.delayedCall(sweepDur, () => { if (beam.active) beam.destroy(); });
+        });
+
+        // IceRain: projectiles from above
+        this.events.on('bossIceRain', (bx, count) => {
+            for (let i = 0; i < count; i++) {
+                this.time.delayedCall(i * 300, () => {
+                    if (!this.scene.isActive()) return;
+                    const px = bx + (Math.random() - 0.5) * 600;
+                    const drop = this.add.circle(px, 0, 8, 0x88CCFF, 0.8).setDepth(55);
+                    this.tweens.add({
+                        targets: drop,
+                        y: WORLD.GROUND_Y,
+                        duration: 800,
+                        ease: 'Power1',
+                        onUpdate: () => {
+                            if (!drop.active) return;
+                            if (Phaser.Math.Distance.Between(drop.x, drop.y, this.player.x, this.player.y) < 22) {
+                                if (this.player.hitInvincibleTimer <= 0 && !this.player.isDashing) {
+                                    GlobalState.drainFlame(10);
+                                    this.player.hitInvincibleTimer = 500;
+                                    this._flashPlayer();
+                                }
+                                drop.destroy();
+                            }
+                        },
+                        onComplete: () => {
+                            if (drop.active) drop.destroy();
+                        }
+                    });
+                });
+            }
+        });
+
+        // Sprint 11: Corrupted Sentinel attacks
+
+        // ShroudPulse: expanding ring of damage
+        this.events.on('bossShroudPulse', (bx, by, radius) => {
+            this.cameras.main.shake(300, 0.008);
+            const ring = this.add.circle(bx, by, 10, 0x880088, 0).setDepth(8);
+            ring.setStrokeStyle(3, 0xAA44FF, 1);
+            this.tweens.add({
+                targets: ring,
+                displayWidth: radius * 2,
+                displayHeight: radius * 2,
+                alpha: 0,
+                duration: 600,
+                ease: 'Power1',
+                onUpdate: () => {
+                    if (!ring.active) return;
+                    const r = ring.displayWidth / 2;
+                    const dist = Phaser.Math.Distance.Between(bx, by, this.player.x, this.player.y);
+                    if (dist < r && dist > r - 40) {
+                        if (this.player.hitInvincibleTimer <= 0 && !this.player.isDashing) {
+                            GlobalState.drainFlame(12);
+                            this.player.hitInvincibleTimer = 600;
+                            this._flashPlayer();
+                        }
+                    }
+                },
+                onComplete: () => { if (ring.active) ring.destroy(); }
+            });
+        });
+
+        // CorruptionTether: links player to boss for 2s
+        this.events.on('bossCorruptionTether', (bx, by, dur) => {
+            let elapsed = 0;
+            const SWEET_SPOT_MIN = 80;
+            const SWEET_SPOT_MAX = 160;
+            const tetherText = this.add.text(this.player.x, this.player.y - 50, 'TETHERED!', {
+                fontSize: '12px', color: '#AA44FF', fontFamily: 'monospace',
+                stroke: '#000000', strokeThickness: 2
+            }).setDepth(260).setScrollFactor(0);
+            const iv = this.time.addEvent({
+                delay: 100,
+                repeat: dur / 100 - 1,
+                callback: () => {
+                    elapsed += 100;
+                    if (!this.bossManager.boss || !this.bossManager.boss.active) { iv.destroy(); if (tetherText.active) tetherText.destroy(); return; }
+                    const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, bx, by);
+                    if (dist < SWEET_SPOT_MIN || dist > SWEET_SPOT_MAX) {
+                        if (this.player.hitInvincibleTimer <= 0) {
+                            GlobalState.drainFlame(3);
+                        }
+                    }
+                    if (elapsed >= dur && tetherText.active) tetherText.destroy();
+                }
+            });
+        });
+
+        // CloneStrike: boss creates 2 decoys for 3s
+        this.events.on('bossCloneStrike', (bx, by) => {
+            const decoys = [];
+            const bossRef = this.bossManager.boss;
+            if (!bossRef) return;
+            for (let i = 0; i < 2; i++) {
+                const dx = bx + (i === 0 ? -150 : 150);
+                const decoy = this.add.rectangle(dx, by, 40, 60, bossRef.def.tint || 0x8844AA, 0.6).setDepth(9);
+                decoys.push(decoy);
+            }
+            // Real boss flickers
+            const flickerIv = this.time.addEvent({
+                delay: 150, repeat: 19,
+                callback: () => {
+                    if (bossRef.active) bossRef.setAlpha(bossRef.alpha === 1 ? 0.4 : 1);
+                }
+            });
+            this.time.delayedCall(3000, () => {
+                decoys.forEach(d => { if (d.active) d.destroy(); });
+                if (bossRef.active) { bossRef.setAlpha(1); flickerIv.destroy(); }
             });
         });
 
@@ -485,8 +789,11 @@ export class Level1 extends Phaser.Scene {
         }
         if (this.pauseOverlay.active) return;
 
-        // --- Lore compendium toggle [J] ---
-        if (Phaser.Input.Keyboard.JustDown(this.loreKey) && !this.loreCompendium.active && !this.levelUpOverlay.active && !this.relicOverlay.active && !this.obeliskOverlay.active) {
+        // Update input manager (gamepad just-pressed state)
+        this.inputManager.update();
+
+        // --- Lore compendium toggle [J] / Gamepad Select ---
+        if ((Phaser.Input.Keyboard.JustDown(this.loreKey) || this.inputManager.lore) && !this.loreCompendium.active && !this.levelUpOverlay.active && !this.relicOverlay.active && !this.obeliskOverlay.active) {
             this.loreCompendium.show();
         }
         if (this.loreCompendium.active) return;
@@ -505,7 +812,8 @@ export class Level1 extends Phaser.Scene {
         this.player.handleInput(this.inputManager, delta);
 
         // Apply speed multipliers from relics + survivor buff + Flame Altar + corruption
-        let speedMult = this.relicManager.getMult('moveSpeedMult') * FlameAltar.getSpeedMult();
+        const _altarSpeedMult = this._altarDisabled ? 1 : FlameAltar.getSpeedMult();
+        let speedMult = this.relicManager.getMult('moveSpeedMult') * _altarSpeedMult;
         if (this.interactionSystem.survivorBuffTimer > 0 && this.interactionSystem.survivorBuffType === 'speed') {
             speedMult *= (1 + SURVIVOR.BUFFS.find(b => b.id === 'speed').value);
         }
@@ -517,6 +825,19 @@ export class Level1 extends Phaser.Scene {
         if (this.combatSystem.freezeSlowTimer > 0) {
             speedMult *= 0.7;
             this.combatSystem.freezeSlowTimer -= delta;
+        }
+        // Sprint 7f: Vine patch hazard slow
+        if (this.player._vinePatchSpeedMult && this.player._vinePatchSpeedMult < 1) {
+            speedMult *= this.player._vinePatchSpeedMult;
+        }
+        // Slow Start modifier: -20% speed for first 1000m
+        if (this._slowStartActive) {
+            const distMetersNow = (this.player.x - PLAYER.START_X) / 10;
+            if (distMetersNow < 1000) {
+                speedMult *= 0.8;
+            } else {
+                this._slowStartActive = false;
+            }
         }
         if (speedMult !== 1 && !this.player.isDashing) {
             this.player.body.velocity.x *= speedMult;
@@ -610,6 +931,15 @@ export class Level1 extends Phaser.Scene {
         }
         // Relic flame drain multiplier
         drainRate *= this.relicManager.getMult('flameDrainMult');
+        // Run modifier flame drain multiplier
+        drainRate *= this._modFlameDrainMult;
+
+        // Sprint 11: Shroud Heart legendary — heals in shroud
+        const shroudHeal = this.relicManager.getFlat('shroudHeal', 0);
+        if (shroudHeal > 0 && this.playerInShroud) {
+            GlobalState.flame = Math.min(GlobalState.flame + shroudHeal * (delta / 1000), GlobalState.maxFlame);
+            drainRate = 0; // Override — relic negates drain
+        }
         // Corruption drain penalty (Feature 5)
         if (GlobalState.corruption >= ELIXIR_CORRUPTION.THRESHOLD_HIGH) {
             drainRate *= (1 + ELIXIR_CORRUPTION.DRAIN_PENALTY);
@@ -803,8 +1133,8 @@ export class Level1 extends Phaser.Scene {
         // --- Shroud relic speed multiplier (reapply each frame) ---
         if (!this.bossManager.active && !this.challengeArena.active) {
             this.shroud.speedMultiplier = this.relicManager.getMult('shroudSpeedMult');
-            // Flame Altar shroud slow
-            this.shroud.speedMultiplier *= FlameAltar.getShroudSlowMult();
+            // Flame Altar shroud slow (disabled if no_altar modifier active)
+            if (!this._altarDisabled) this.shroud.speedMultiplier *= FlameAltar.getShroudSlowMult();
             // Survivor shroud_slow buff
             if (this.interactionSystem.survivorBuffTimer > 0 && this.interactionSystem.survivorBuffType === 'shroud_slow') {
                 const slowVal = SURVIVOR.BUFFS.find(b => b.id === 'shroud_slow').value;
@@ -822,6 +1152,7 @@ export class Level1 extends Phaser.Scene {
 
         // --- Boss ---
         this.bossManager.update(delta);
+        this._updateBossHazards(delta);
 
         // --- Ghost Run ---
         this.ghostRun.update(delta, this.player.x, this.player.y, !this.player.facingRight);
@@ -842,6 +1173,7 @@ export class Level1 extends Phaser.Scene {
             this.combatSystem.comboTimer -= delta;
             if (this.combatSystem.comboTimer <= 0) {
                 this.combatSystem.comboCount = 0;
+                if (this.hud && this.hud.updateCombo) this.hud.updateCombo(0);
             }
         }
 
@@ -1156,9 +1488,10 @@ export class Level1 extends Phaser.Scene {
     // ─── Arena Walls ───
 
     _createArenaWalls(centerX, width, color) {
-        const wallH = 300;
+        // Sprint 7a: Full-height walls prevent aerial escape
+        const wallH = WORLD.HEIGHT;
         const wallW = 6;
-        const wallY = WORLD.GROUND_Y - wallH / 2 + 20;
+        const wallY = WORLD.HEIGHT / 2;
         const leftX = centerX - width / 2;
         const rightX = centerX + width / 2;
 
@@ -1207,11 +1540,181 @@ export class Level1 extends Phaser.Scene {
         });
     }
 
+    // ─── Sprint 7f: Boss Arena Hazards ───
+
+    _spawnBossHazards(bossId, arenaX) {
+        this._bossHazards = [];
+        const arenaW = 700;
+
+        if (bossId === 'revelwood') {
+            // Vine patches: player moves 40% slower inside them
+            for (let i = 0; i < 3; i++) {
+                const px = arenaX + (Math.random() - 0.5) * arenaW;
+                const patch = this.add.rectangle(px, WORLD.GROUND_Y - 15, 80, 30, 0x226622, 0.35).setDepth(7);
+                patch._hazardType = 'vine_slow';
+                patch._x = px;
+                this._bossHazards.push(patch);
+            }
+        } else if (bossId === 'nomad_highlands') {
+            // Spike eruptions after ground pound — handled reactively in bossGroundPound
+            // No persistent hazard; marker to indicate active hazard set
+            this._hazardType = 'spike_eruption';
+        } else if (bossId === 'kindlewastes') {
+            // Burning floor strips: 3 zones dealing 2 flame/s
+            for (let i = 0; i < 3; i++) {
+                const px = arenaX + (i - 1) * 200;
+                const strip = this.add.rectangle(px, WORLD.GROUND_Y - 10, 120, 20, 0xFF3300, 0.3).setDepth(7);
+                strip._hazardType = 'burning_floor';
+                strip._x = px;
+                strip._damageTimer = 0;
+                this._bossHazards.push(strip);
+            }
+        } else if (bossId === 'hollow') {
+            // Gravity well: pulls player toward boss X
+            this._gravityWellActive = true;
+            this._gravityWellX = arenaX;
+        } else if (bossId === 'albaneve') {
+            // Icy floor: applied via update
+            this._icyFloorActive = true;
+        }
+    }
+
+    _destroyBossHazards() {
+        if (this._bossHazards) {
+            for (const h of this._bossHazards) {
+                if (h && h.active) h.destroy();
+            }
+            this._bossHazards = null;
+        }
+        this._hazardType = null;
+        this._gravityWellActive = false;
+        this._icyFloorActive = false;
+    }
+
+    _updateBossHazards(delta) {
+        if (!this._bossHazards && !this._gravityWellActive && !this._icyFloorActive) return;
+
+        // Vine slow patches
+        if (this._bossHazards) {
+            for (const h of this._bossHazards) {
+                if (!h || !h.active) continue;
+                if (h._hazardType === 'vine_slow') {
+                    const inPatch = Math.abs(this.player.x - h._x) < 45;
+                    if (inPatch && !this.player._inVinePatch) {
+                        this.player._inVinePatch = true;
+                        this.player._vinePatchSpeedMult = 0.6;
+                    } else if (!inPatch && this.player._inVinePatch) {
+                        this.player._inVinePatch = false;
+                        this.player._vinePatchSpeedMult = 1.0;
+                    }
+                } else if (h._hazardType === 'burning_floor') {
+                    const onStrip = Math.abs(this.player.x - h._x) < 65 && Math.abs(this.player.y - WORLD.GROUND_Y) < 40;
+                    if (onStrip) {
+                        h._damageTimer = (h._damageTimer || 0) + delta;
+                        if (h._damageTimer >= 500) {
+                            h._damageTimer = 0;
+                            if (this.player.hitInvincibleTimer <= 0) {
+                                GlobalState.drainFlame(1); // ~2/s
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Gravity well
+        if (this._gravityWellActive && this.bossManager.boss && this.bossManager.boss.active) {
+            const dx = this.bossManager.boss.x - this.player.x;
+            const pullSpeed = 60;
+            const dir = dx > 0 ? 1 : -1;
+            if (Math.abs(dx) > 30) {
+                this.player.body.velocity.x += dir * pullSpeed * (delta / 1000);
+            }
+        }
+
+        // Icy floor: reduce friction (clamp horizontal velocity change)
+        if (this._icyFloorActive && this.player.body.blocked.down) {
+            this.player.body.velocity.x *= 0.98; // sliding effect
+        }
+    }
+
+    // ─── Relic Upgrade Overlay (Phase A3) ───
+
+    _showRelicUpgradeOverlay() {
+        if (this._relicUpgradeOpen) return;
+        this._relicUpgradeOpen = true;
+        this.physics.world.pause();
+
+        const { width, height } = this.scale;
+        const elems = [];
+
+        const bg = this.add.rectangle(width / 2, height / 2, 420, 320, 0x000000, 0.9)
+            .setScrollFactor(0).setDepth(310).setStrokeStyle(2, 0xFF8833);
+        elems.push(bg);
+
+        const title = this.add.text(width / 2, height / 2 - 140, 'RELIC UPGRADES  [20 Elixir each]', {
+            fontSize: '14px', color: '#FF8833', fontFamily: 'monospace', fontStyle: 'bold'
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(311);
+        elems.push(title);
+
+        const avail = MetaProgression.getAvailableElixir();
+        const availText = this.add.text(width / 2, height / 2 - 120, `Available Elixir: ${avail}`, {
+            fontSize: '11px', color: '#88DDFF', fontFamily: 'monospace'
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(311);
+        elems.push(availText);
+
+        const seen = MetaProgression.seenRelics;
+        if (seen.length === 0) {
+            const none = this.add.text(width / 2, height / 2, 'Acquire relics in runs to unlock upgrades', {
+                fontSize: '12px', color: '#666666', fontFamily: 'monospace'
+            }).setOrigin(0.5).setScrollFactor(0).setDepth(311);
+            elems.push(none);
+        } else {
+            for (let i = 0; i < seen.length; i++) {
+                const relicId = seen[i];
+                const def = RELIC.DEFINITIONS.find(r => r.id === relicId);
+                if (!def) continue;
+                const upgraded = MetaProgression.hasUpgrade(relicId);
+                const canAfford = MetaProgression.canUpgradeRelic(relicId);
+                const color = upgraded ? '#FFCC00' : (canAfford ? '#FFFFFF' : '#666666');
+                const statusStr = upgraded ? '\u2713 UPGRADED' : (canAfford ? '[U] Upgrade' : 'Need elixir');
+                const rowY = height / 2 - 90 + i * 28;
+                const row = this.add.text(width / 2, rowY,
+                    `${def.icon} ${def.name}  ${statusStr}`, {
+                    fontSize: '12px', color, fontFamily: 'monospace'
+                }).setOrigin(0.5).setScrollFactor(0).setDepth(311);
+                elems.push(row);
+            }
+        }
+
+        const hint = this.add.text(width / 2, height / 2 + 130, '[ESC] Close', {
+            fontSize: '11px', color: '#555555', fontFamily: 'monospace'
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(311);
+        elems.push(hint);
+
+        const close = () => {
+            this._relicUpgradeOpen = false;
+            for (const el of elems) { if (el.active) el.destroy(); }
+            this.physics.world.resume();
+            this.input.keyboard.removeListener('keydown-ESC', close);
+        };
+        this.input.keyboard.once('keydown-ESC', close);
+    }
+
     // ─── Game Over ───
 
     _triggerGameOver(distMeters) {
         this.isGameOver = true;
         this.runStats.hasDied = true;
+
+        // Run modifier reward (if died past 500m with an active modifier)
+        const activeMod = RunModifier.active;
+        if (activeMod && (distMeters || 0) > 500) {
+            FlameAltar.addElixir(activeMod.reward);
+            this.popups.show(this.player.x, this.player.y - 60, `+${activeMod.reward} ELIXIR (Modifier Bonus)`, '#00FFCC', '13px');
+        }
+        RunModifier.clear();
+
         AchievementManager.update();
         this.player.setVelocity(0, 0);
         this.player.body.enable = false;
@@ -1225,6 +1728,14 @@ export class Level1 extends Phaser.Scene {
 
         // Save ghost run
         this.ghostRun.saveIfBest();
+
+        // Sprint 10: Save run history
+        MetaProgression.saveRunHistory({
+            ...this.runStats,
+            distanceMeters: distMeters || this.runStats.distanceMeters,
+            className: this.runStats.className || (this.activeClass && this.activeClass.id) || 'adventurer',
+            relics: this.relicManager.active.map(r => r.id),
+        });
 
         // Phase 1: slow-mo + flicker + vignette
         this.time.timeScale = 0.3;

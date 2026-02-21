@@ -30,9 +30,11 @@ export class InteractionSystem {
             if (s.physics.overlap(s.player, wisp)) {
                 if (wisp.collect()) {
                     s.runStats.wispsCollected++;
+                    const modWispMult = s._modWispRestoreMult !== null ? s._modWispRestoreMult : 1;
                     const restore = SkillManager.getValue('wisp.restoreAmount', FLAME_WISP.RESTORE)
                         * s.relicManager.getMult('wispRestoreMult')
-                        * FlameAltar.getWispBonus();
+                        * FlameAltar.getWispBonus()
+                        * modWispMult;
                     GlobalState.flame = GlobalState.flame + restore;
                     s.popups.flameRestored(wisp.x, wisp.y, Math.round(restore));
                     s.particles.wispCollect(wisp.x, wisp.y);
@@ -281,7 +283,8 @@ export class InteractionSystem {
                 if (shrine.activate()) {
                     const types = CHALLENGE_SHRINE.TYPES;
                     const challenge = types[Math.floor(Math.random() * types.length)];
-                    s.challengeArena.start(challenge, shrine.x);
+                    const segIdx = s.levelGenerator ? s.levelGenerator.segmentIndex || 0 : 0;
+                    s.challengeArena.start(challenge, shrine.x, segIdx);
                     s.popups.show(shrine.x, shrine.y - 60, challenge.name, '#FF4488', '16px');
                     s.cameras.main.shake(200, 0.005);
                 }

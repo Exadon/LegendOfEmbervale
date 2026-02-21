@@ -3,6 +3,8 @@ const STORAGE_KEY = 'elixirs-shadow-settings';
 const DEFAULTS = {
     resolution: [960, 600],
     volume: 1.0,
+    particleDensity: 'high',   // 'high' | 'low'
+    gamepadVibration: true,
 };
 
 function deepClone(obj) {
@@ -20,6 +22,8 @@ export class Settings {
                 Settings.data = deepClone(DEFAULTS);
                 if (saved.resolution) Settings.data.resolution = saved.resolution;
                 if (saved.volume !== undefined) Settings.data.volume = saved.volume;
+                if (saved.particleDensity) Settings.data.particleDensity = saved.particleDensity;
+                if (saved.gamepadVibration !== undefined) Settings.data.gamepadVibration = saved.gamepadVibration;
             }
         } catch (e) {
             console.warn('[Settings] Failed to load, using defaults:', e);

@@ -92,6 +92,12 @@ class _FlameAltar {
         const range = needed - prevNeeded;
         return { current, needed: range, pct: Math.min(1, current / range) };
     }
+
+    // Sprint 10: Prestige — reset level to 1, keep lifetime elixir
+    prestigeReset() {
+        this.level = 1;
+        this._save();
+    }
 }
 
 export const FlameAltar = new _FlameAltar();

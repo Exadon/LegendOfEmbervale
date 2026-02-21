@@ -242,6 +242,40 @@ export class PauseOverlay {
         }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301).setScale(s);
         this._elements.push(loreLabel);
 
+        // Particle density
+        const densP = this._uiXY(width / 2 - 140, Math.round(height * 0.79));
+        const densLabel = this.scene.add.text(densP.x, densP.y, '[D]  Particles:', {
+            fontSize: '13px', color: '#CCCCCC', fontFamily: 'monospace'
+        }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301).setScale(s);
+        this._elements.push(densLabel);
+        const densValP = this._uiXY(width / 2 + 60, Math.round(height * 0.79));
+        this._densText = this.scene.add.text(densValP.x, densValP.y,
+            (Settings.data.particleDensity || 'high').toUpperCase(), {
+            fontSize: '13px', color: '#FFCC00', fontFamily: 'monospace', fontStyle: 'bold'
+        }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301).setScale(s);
+        this._elements.push(this._densText);
+
+        // Key bindings reference (read-only, compact two-column)
+        const bindY = Math.round(height * 0.83);
+        const bindings = [
+            ['WASD / ←→', 'Move'],     ['SPACE / W/↑', 'Jump / Dbl'],
+            ['SHIFT / B', 'Dash'],     ['E / X', 'Flame Burst'],
+            ['Q / Y', 'Class Atk'],    ['S / RT', 'S Ability'],
+            ['M / LB', 'Mine'],        ['ESC / Start', 'Pause'],
+        ];
+        const bColL = width / 2 - 160;
+        const bColR = width / 2 + 10;
+        for (let i = 0; i < bindings.length; i++) {
+            const [key, action] = bindings[i];
+            const bx = i % 2 === 0 ? bColL : bColR;
+            const by = bindY + Math.floor(i / 2) * 11;
+            const bp = this._uiXY(bx, by);
+            const bt = this.scene.add.text(bp.x, bp.y, `${key.padEnd(14)} ${action}`, {
+                fontSize: '10px', color: '#666666', fontFamily: 'monospace'
+            }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301).setScale(s);
+            this._elements.push(bt);
+        }
+
         // ─── Dev Options (compact) ───
         const devDiv = this._uiXY(width / 2, Math.round(height * 0.87));
         const devDivider = this.scene.add.rectangle(devDiv.x, devDiv.y, 400 * s, 1, 0x666666)
@@ -289,6 +323,8 @@ export class PauseOverlay {
                 this._cycleClass();
             } else if (event.key === 'j' || event.key === 'J') {
                 this._openLoreCompendium();
+            } else if (event.key === 'd' || event.key === 'D') {
+                this._toggleParticleDensity();
             } else if (event.key === '-' || event.key === '_') {
                 this._adjustVolume(-0.1);
             } else if (event.key === '=' || event.key === '+') {
@@ -352,6 +388,15 @@ export class PauseOverlay {
         }
     }
 
+    _toggleParticleDensity() {
+        const cur = Settings.data.particleDensity || 'high';
+        Settings.data.particleDensity = cur === 'high' ? 'low' : 'high';
+        Settings.save();
+        if (this._densText) {
+            this._densText.setText(Settings.data.particleDensity.toUpperCase());
+        }
+    }
+
     _openLoreCompendium() {
         this.hide();
         if (this.scene.loreCompendium) {
@@ -386,6 +431,7 @@ export class PauseOverlay {
         }
         this._soundText = null;
         this._resText = null;
+        this._densText = null;
         this._devLine = null;
 
         // Kill tweens and destroy all elements

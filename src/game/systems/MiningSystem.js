@@ -8,6 +8,7 @@ export class MiningSystem {
         this.scene = scene;
         this.currentMiningVein = null;
         this._corruptionOverlay = null;
+        this._elixirBloomCount = 0; // Sprint 11: track for elixir bloom relic
         this._prevCorruption = 0;
     }
 
@@ -49,6 +50,18 @@ export class MiningSystem {
                 s.popups.elixirMined(overlappingVein.x, overlappingVein.y);
                 s.particles.mineComplete(overlappingVein.x, overlappingVein.y);
                 s.cameras.main.shake(200, 0.005);
+
+                // Sprint 11: Elixir Bloom relic — every 10 elixir spawns a free wisp
+                if (s.relicManager) {
+                    const bloomEvery = s.relicManager.getFlat('elixirWispSpawn', 0);
+                    if (bloomEvery > 0) {
+                        this._elixirBloomCount++;
+                        if (this._elixirBloomCount >= bloomEvery) {
+                            this._elixirBloomCount = 0;
+                            s.events.emit('spawnFreeWisp', overlappingVein.x, overlappingVein.y);
+                        }
+                    }
+                }
 
                 GlobalState.addCorruption(ELIXIR_CORRUPTION.PER_MINE);
 

@@ -134,6 +134,20 @@ export const BIOMES = Object.freeze([
         shrineChance: 0.03,
         coldDrain: 1,
     },
+    {
+        id: 'shroud_maw',
+        name: "The Shroud's Maw",
+        subtitle: 'Where the veil dissolves into void',
+        startDistance: 50000,
+        skyColor: 0x0A0010,
+        groundTint: 0x330044,
+        platformTint: 0x440055,
+        treeTint: 0x220033,
+        enemies: ['hollow_skeleton', 'corrupted_warrior', 'shroud_wraith'],
+        scrollChance: 0.2,
+        shrineChance: 0.02,
+        fogColor: 0x550066,
+    },
 ]);
 
 export const WORLD = Object.freeze({
@@ -341,6 +355,41 @@ export const ENEMIES = Object.freeze({
         elite: true,
         hitsToKill: 2,
         elixirDrop: true,
+    },
+    shroud_wraith: {
+        name: 'Shroud Wraith',
+        speed: 180,
+        damage: 8,
+        width: 22,
+        height: 36,
+        texture: 'hollow_reaper',
+        flying: false,
+        hitsToKill: 1,
+        phaseThrough: true,
+    },
+    corrupted_warrior: {
+        name: 'Corrupted Warrior',
+        speed: 50,
+        damage: 20,
+        width: 28,
+        height: 42,
+        texture: 'hollow_skeleton',
+        flying: false,
+        hitsToKill: 4,
+        elixirDrop: true,
+        shields: true,
+    },
+    void_slime: {
+        name: 'Void Slime',
+        speed: 40,
+        damage: 12,
+        width: 24,
+        height: 24,
+        texture: 'fell_critter',
+        flying: false,
+        hitsToKill: 1,
+        splits: true,
+        flameDrainOnContact: 5,
     },
 });
 
@@ -669,6 +718,82 @@ export const OBELISK = Object.freeze({
             correct: 'Sorcerer Ikora',
             wrong: ['Queen Jezmina', 'Balthazar'],
         },
+        // ─── Sprint 11 additions ───
+        {
+            question: 'What lies beyond Albaneve Summits?',
+            correct: "The Shroud's Maw",
+            wrong: ['The Cinder Vault', 'The Hollow Halls'],
+        },
+        {
+            question: 'What does the Corrupted Sentinel guard?',
+            correct: 'The boundary between worlds',
+            wrong: ['The Elixir Wells', 'The Stone Pillar'],
+        },
+        {
+            question: 'What do Shroud Wraiths phase through?',
+            correct: 'Solid platforms',
+            wrong: ['Fire', 'The Flame barrier'],
+        },
+        {
+            question: 'How many prestiges can a Flameborn achieve?',
+            correct: 'Three',
+            wrong: ['One', 'Unlimited'],
+        },
+        {
+            question: 'What does the Ember Heart prestige relic grant?',
+            correct: '+5 starting flame',
+            wrong: ['-10% cooldowns', '50% more wisps'],
+        },
+        {
+            question: 'What is the Void Slime\'s deadliest trait?',
+            correct: 'It splits on death',
+            wrong: ['It poisons the Flame', 'It is invincible'],
+        },
+        {
+            question: 'What does the Shroud Heart relic do in the Shroud itself?',
+            correct: 'Heals the bearer',
+            wrong: ['Destroys enemies', 'Grants invincibility'],
+        },
+        {
+            question: 'Who is the Stonefist?',
+            correct: 'The first Vukah chieftain',
+            wrong: ['An Ancient', 'Vorgoth'],
+        },
+        {
+            question: 'What did Sorcerer Ikora pay for power?',
+            correct: 'A terrible price of flesh',
+            wrong: ['Her name', 'The Flame itself'],
+        },
+        {
+            question: 'What lies beneath the deepest Elixir Well?',
+            correct: 'Something older than the Ancients',
+            wrong: ['The Cinder Vault', 'A second Shroud'],
+        },
+        {
+            question: 'What do the Corrupted Warriors guard before attacking?',
+            correct: 'During a windup, they shield',
+            wrong: ['They never defend', 'They flee first'],
+        },
+        {
+            question: 'What reward comes from the Elixir Bloom relic?',
+            correct: 'A free wisp every 10 elixir',
+            wrong: ['Double elixir', 'Flame restore'],
+        },
+        {
+            question: 'What colour does Time Fracture emit?',
+            correct: 'Cyan',
+            wrong: ['Gold', 'Crimson'],
+        },
+        {
+            question: 'Which biome has the coldDrain mechanic?',
+            correct: 'Albaneve Summits',
+            wrong: ["The Shroud's Maw", 'The Hollow'],
+        },
+        {
+            question: 'What is the Shroud\'s Maw ground tint?',
+            correct: 'Deep violet',
+            wrong: ['Ash grey', 'Blood red'],
+        },
     ],
 });
 
@@ -729,6 +854,7 @@ export const MUSIC = Object.freeze({
         kindlewastes: 'music_kindlewastes',
         hollow: 'music_kindlewastes',
         albaneve: 'music_highlands',
+        shroud_maw: 'music_shroud',
     },
 });
 
@@ -773,6 +899,8 @@ export const SHROUD_MUTATION = Object.freeze({
     ],
 });
 
+export const RELIC_UPGRADE_COST = 20;
+
 export const RELIC = Object.freeze({
     MAX_ACTIVE: 3,
     SHRINE_DROP_CHANCE: 0.25,
@@ -784,6 +912,7 @@ export const RELIC = Object.freeze({
             color: 0xFF8833,
             apply: { flameDrainMult: 0.6 },
             drawbackApply: { enemySpeedMult: 1.25 },
+            tier2: { flameDrainMult: 0.45 },
         },
         {
             id: 'shroud_pact', name: 'Shroud Pact', icon: '\u{1F311}',
@@ -791,6 +920,7 @@ export const RELIC = Object.freeze({
             color: 0x4488FF,
             apply: { elixirMult: 2 },
             drawbackApply: { shroudSpeedMult: 1.3 },
+            tier2: { elixirMult: 3 },
         },
         {
             id: 'glass_flame', name: 'Glass Flame', icon: '\u{1F4A0}',
@@ -798,6 +928,7 @@ export const RELIC = Object.freeze({
             color: 0xFF4444,
             apply: { dashSpeedMult: 1.5 },
             drawbackApply: { enemyDamageMult: 1.5 },
+            tier2: { dashSpeedMult: 2.0 },
         },
         {
             id: 'flame_siphon', name: 'Flame Siphon', icon: '\u{1F525}',
@@ -805,6 +936,7 @@ export const RELIC = Object.freeze({
             color: 0xFFAA33,
             apply: { banishFlameFlat: 8 },
             drawbackApply: { flameDrainMult: 1.3 },
+            tier2: { banishFlameFlat: 14 },
         },
         {
             id: 'elixir_lens', name: 'Elixir Lens', icon: '\u{1F48E}',
@@ -812,6 +944,7 @@ export const RELIC = Object.freeze({
             color: 0x00FFCC,
             apply: { wispRestoreMult: 1.5 },
             drawbackApply: { shroudSpeedMult: 1.15 },
+            tier2: { wispRestoreMult: 2.0 },
         },
         {
             id: 'iron_will', name: 'Iron Will', icon: '\u{2694}',
@@ -819,6 +952,7 @@ export const RELIC = Object.freeze({
             color: 0xCCCCCC,
             apply: { enemyDamageMult: 0.5 },
             drawbackApply: { flameDrainMult: 1.5 },
+            tier2: { enemyDamageMult: 0.35 },
         },
         {
             id: 'wind_runner', name: 'Wind Runner', icon: '\u{1F4A8}',
@@ -826,6 +960,7 @@ export const RELIC = Object.freeze({
             color: 0x88DDFF,
             apply: { moveSpeedMult: 1.4 },
             drawbackApply: { wispRestoreMult: 0.7 },
+            tier2: { moveSpeedMult: 1.7 },
         },
         {
             id: 'void_echo', name: 'Void Echo', icon: '\u{1F30C}',
@@ -833,6 +968,32 @@ export const RELIC = Object.freeze({
             color: 0xAA44FF,
             apply: { dashCooldownMult: 0.6 },
             drawbackApply: { comboWindowMult: 0.5 },
+            tier2: { dashCooldownMult: 0.35 },
+        },
+        // ─── Legendary Relics (Sprint 11) — no tier2 ───
+        {
+            id: 'shroud_heart', name: 'Shroud Heart', icon: '\u{1F49C}',
+            desc: 'Shroud heals you (+3 flame/s in shroud)', drawback: 'Enemies +100% HP',
+            color: 0xAA00FF,
+            legendary: true,
+            apply: { shroudHeal: 3 },
+            drawbackApply: { enemyHpMult: 2 },
+        },
+        {
+            id: 'time_fracture', name: 'Time Fracture', icon: '\u23F3',
+            desc: 'Ground slam freezes all enemies for 2s', drawback: 'Dash disabled',
+            color: 0x00CCFF,
+            legendary: true,
+            apply: { slamFreeze: true },
+            drawbackApply: { dashDisabled: true },
+        },
+        {
+            id: 'elixir_bloom', name: 'Elixir Bloom', icon: '\u{1F338}',
+            desc: 'Every 10 elixir mined spawns a free wisp', drawback: 'Flame drain 2x',
+            color: 0xFF88CC,
+            legendary: true,
+            apply: { elixirWispSpawn: 10 },
+            drawbackApply: { flameDrainMult: 2 },
         },
     ],
 });
@@ -841,10 +1002,27 @@ export const CHALLENGE_SHRINE = Object.freeze({
     CHANCE: 0.02,
     ARENA_DURATION: 15000,
     TYPES: [
-        { id: 'survive', name: 'Endurance Trial', desc: 'Survive for 15 seconds', target: 0 },
-        { id: 'kill', name: 'Slaughter Trial', desc: 'Banish 5 enemies in 15 seconds', target: 5 },
+        { id: 'survive', name: 'Endurance Trial', desc: 'Survive for 15 seconds', target: 0, timer: 15000, difficulty: 'easy' },
+        { id: 'kill', name: 'Slaughter Trial', desc: 'Banish 5 enemies in 15 seconds', target: 5, timer: 15000, difficulty: 'easy' },
+        { id: 'gauntlet', name: 'Gauntlet Trial', desc: 'Survive 3 waves of enemies', target: 3, timer: 45000, difficulty: 'medium' },
+        { id: 'elite_hunt', name: 'Elite Hunt', desc: 'Slay the skullflame elite', target: 1, timer: 25000, difficulty: 'medium' },
+        { id: 'flame_keeper', name: 'Flame Keeper', desc: 'Keep flame above 30 for 15 seconds', target: 0, timer: 15000, difficulty: 'medium' },
+        { id: 'speed_kill', name: 'Speed Kill', desc: 'Banish 10 enemies in 10 seconds', target: 10, timer: 10000, difficulty: 'hard' },
+        { id: 'no_escape', name: 'No Escape', desc: 'Survive shroud creeping inward', target: 0, timer: 20000, difficulty: 'hard' },
+        { id: 'boss_skirmish', name: 'Boss Skirmish', desc: 'Defeat a weakened boss', target: 1, timer: 30000, difficulty: 'hard' },
     ],
     REWARDS: { flame: 30, elixir: 1 },
+    REWARD_TIERS: {
+        easy:   { flame: 30, elixir: 1, relicChance: 0 },
+        medium: { flame: 50, elixir: 2, relicChance: 0.5 },
+        hard:   { flame: 80, elixir: 3, relicChance: 1.0 },
+    },
+    CURSED_CHANCE: 0.10,
+    CURSED_MODIFIERS: [
+        { id: 'flame_drain_cursed', name: 'Cursed Drain', desc: '+10 flame/s drain', bonusElixir: 0.5 },
+        { id: 'no_dash_cursed', name: 'Cursed Stillness', desc: 'Dash disabled', bonusElixir: 0.5 },
+        { id: 'half_flame_cursed', name: 'Cursed Ember', desc: 'Start at 50% flame', bonusElixir: 0.5 },
+    ],
 });
 
 export const BOSS = Object.freeze({
@@ -857,8 +1035,11 @@ export const BOSS = Object.freeze({
         tint: null,
         attackInterval: 2000,
         phase2SpeedMult: 1.5,
+        phase3SpeedMult: 2.0,
         vineSpawnCount: 2,
         vineSweepWidth: 200,
+        vineBombCount: 3,
+        combos: [['vineSweep', 'vineSpawn', 'vineBomb'], ['vineSpawn', 'vineBomb']],
     },
     nomad_highlands: {
         id: 'nomad_highlands',
@@ -869,8 +1050,11 @@ export const BOSS = Object.freeze({
         tint: 0xCC4433,
         attackInterval: 2500,
         phase2SpeedMult: 1.4,
+        phase3SpeedMult: 2.0,
         chargeSpeed: 350,
         groundPoundRadius: 180,
+        warCryDuration: 800,
+        combos: [['charge', 'groundPound', 'warCry'], ['groundPound', 'warCry']],
     },
     kindlewastes: {
         id: 'kindlewastes',
@@ -881,8 +1065,11 @@ export const BOSS = Object.freeze({
         tint: 0xFF4422,
         attackInterval: 1800,
         phase2SpeedMult: 1.6,
+        phase3SpeedMult: 2.2,
         projectileSpeed: 300,
         dashSpeed: 400,
+        flamePillarCount: 3,
+        combos: [['dash', 'projectile', 'flamePillar'], ['projectile', 'flamePillar']],
     },
     hollow: {
         id: 'hollow',
@@ -893,11 +1080,14 @@ export const BOSS = Object.freeze({
         tint: 0x6666AA,
         attackInterval: 2200,
         phase2SpeedMult: 1.3,
+        phase3SpeedMult: 1.8,
         groundPoundRadius: 220,
         summonCount: 2,
+        eyeBeamWidth: 150,
         idleAnim: 'skeleton_king_idle',
         moveAnim: 'skeleton_king_move',
         attackAnim: 'skeleton_king_attack',
+        combos: [['summon', 'groundPound', 'eyeBeam'], ['groundPound', 'eyeBeam']],
     },
     albaneve: {
         id: 'albaneve',
@@ -908,11 +1098,28 @@ export const BOSS = Object.freeze({
         tint: 0x88CCFF,
         attackInterval: 2000,
         phase2SpeedMult: 1.5,
+        phase3SpeedMult: 2.1,
         breathWidth: 250,
         diveBombSpeed: 400,
+        iceRainCount: 5,
         idleAnim: 'wind_elemental_idle',
         moveAnim: 'wind_elemental_move',
         attackAnim: 'wind_elemental_attack',
+        combos: [['breath', 'diveBomb', 'iceRain'], ['diveBomb', 'iceRain']],
+    },
+    shroud_maw: {
+        id: 'shroud_maw',
+        name: 'The Corrupted Sentinel',
+        health: 30,
+        spriteKey: 'necromancer',
+        scale: 2.5,
+        tint: 0x660088,
+        attackInterval: 1600,
+        phase2SpeedMult: 1.8,
+        phase3SpeedMult: 2.2,
+        shroudPulseRadius: 200,
+        cloneCount: 2,
+        combos: [['shroudPulse', 'corruptionTether', 'cloneStrike'], ['corruptionTether', 'cloneStrike']],
     },
 });
 
@@ -992,4 +1199,63 @@ export const BIOME_LORE = Object.freeze({
     kindlewastes: { author: 'Queen Jezmina', text: 'My kingdom burns, yet the Flame endures. Let the Kindlewastes be a monument to what we sacrificed.' },
     hollow: { author: 'Alden Crowley, The Collector', text: 'The Hollow Halls stretch deeper than any map records. The restless dead do not sleep — they wait, and they remember.' },
     albaneve: { author: 'Elin, Watchkeeper', text: 'The Albaneve Summits are a frozen tomb. The cold seeps into your bones and steals the Flame from your very soul.' },
+    shroud_maw: { author: 'Unknown Scribe', text: 'Beyond Albaneve lies the Shroud\'s Maw — where the veil between worlds grows thin, and the Corrupted Sentinel stands eternal watch.' },
 });
+
+// ─── Sprint 10: Prestige System ───
+export const PRESTIGE = Object.freeze({
+    MAX: 3,
+    COST: 100,
+    RELICS: [
+        { id: 'ember_heart', name: 'Ember Heart', icon: '\u2665', desc: '+5 starting flame', startFlame: 5 },
+        { id: 'void_mastery', name: 'Void Mastery', icon: '\u221E', desc: '-10% all cooldowns', cooldownMult: 0.9 },
+        { id: 'shroud_touched', name: 'Shroud Touched', icon: '\u{1F300}', desc: 'Enemies drop 50% more wisps', wispDropMult: 1.5 },
+    ],
+});
+
+// ─── Phase A: World Modifiers ───
+export const RUN_MODIFIERS = Object.freeze([
+    { id: 'glass_run',     name: 'Glass Run',      icon: '\u{1F48E}', tier: 'hard',   reward: 12, desc: 'Flame drains 2x faster',          apply: { flameDrainMult: 2.0 } },
+    { id: 'no_altar',      name: 'No Altar',        icon: '\u{1F6AB}', tier: 'hard',   reward: 10, desc: 'Flame Altar bonuses disabled',     apply: { altarDisabled: true } },
+    { id: 'no_dash',       name: 'No Flame Step',   icon: '\u{1F512}', tier: 'hard',   reward: 8,  desc: 'Dash is disabled this run',        apply: { dashDisabled: true } },
+    { id: 'fast_shroud',   name: 'Fast Shroud',     icon: '\u{1F4A8}', tier: 'medium', reward: 7,  desc: 'Shroud moves 40% faster',          apply: { shroudSpeedMult: 1.4 } },
+    { id: 'elite_surge',   name: 'Elite Surge',     icon: '\u{1F480}', tier: 'medium', reward: 7,  desc: 'Elites spawn 3x more often',       apply: { eliteSpawnMult: 3.0 } },
+    { id: 'cursed_relics', name: 'Cursed Relics',   icon: '\u26E7',    tier: 'medium', reward: 6,  desc: 'Relics only drop from bosses',     apply: { relicsBossOnly: true } },
+    { id: 'low_flame',     name: 'Low Flame',       icon: '\u{1F56F}', tier: 'easy',   reward: 4,  desc: 'Max flame capped at 50',           apply: { maxFlameCap: 50 } },
+    { id: 'no_wisps',      name: 'No Wisps',        icon: '\u{1F311}', tier: 'easy',   reward: 4,  desc: 'Wisps restore no flame this run',  apply: { wispRestoreMult: 0 } },
+    { id: 'slow_start',    name: 'Slow Start',      icon: '\u{1F422}', tier: 'easy',   reward: 3,  desc: 'Speed -20% for the first 1000m',  apply: { slowStartDist: 10000 } },
+]);
+
+// ─── Phase A: Endless Mode ───
+export const ENDLESS = Object.freeze({
+    LOOP_TRIGGER_DISTANCE: 55000,  // px, triggers loop after clearing shroud_maw
+    HP_MULT_PER_LOOP:      0.25,   // +25% enemy HP per loop
+    SPEED_MULT_PER_LOOP:   0.15,   // +15% enemy speed per loop
+    SHROUD_RAMP_PER_LOOP:  0.20,   // +20% shroud base speed per loop
+    ELIXIR_BONUS_PER_LOOP: 3,      // +3 lifetime elixir awarded on each loop
+});
+
+// ─── Sprint 10: Relic Synergies ───
+export const RELIC_SYNERGIES = Object.freeze([
+    {
+        id: 'ironclad_ember',
+        name: 'Ironclad Ember',
+        requires: ['ember_ward', 'iron_will'],
+        desc: '+15% max flame',
+        apply: { maxFlameMult: 1.15 },
+    },
+    {
+        id: 'siphon_dash',
+        name: 'Siphon Dash',
+        requires: ['flame_siphon', 'glass_flame'],
+        desc: 'Each dash banishes nearest enemy',
+        apply: { dashBanish: true },
+    },
+    {
+        id: 'phantom_speed',
+        name: 'Phantom Speed',
+        requires: ['wind_runner', 'void_echo'],
+        desc: 'Dash has no cooldown for 5s after kill',
+        apply: { killDashRefresh: true },
+    },
+]);

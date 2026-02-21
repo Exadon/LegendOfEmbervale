@@ -20,9 +20,9 @@ export class RelicOverlay {
         return { x: (sx - cx) / z + cx, y: (sy - cy) / z + cy };
     }
 
-    show() {
+    show(includeLegendary = false) {
         if (this.active) return;
-        this.choices = this.relicManager.getAvailableChoices(2);
+        this.choices = this.relicManager.getAvailableChoices(2, includeLegendary);
         if (this.choices.length === 0) return;
 
         this.active = true;

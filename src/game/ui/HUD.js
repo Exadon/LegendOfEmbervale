@@ -4,6 +4,7 @@ import { LORE_SCROLL, WORLD, BIOMES, PROGRESSION_BAR } from '../constants.js';
 import { SkillManager } from '../systems/SkillManager.js';
 import { AchievementManager } from '../systems/AchievementManager.js';
 import { FlameAltar } from '../systems/FlameAltar.js';
+import { MetaProgression } from '../systems/MetaProgression.js';
 
 const HIGHSCORE_KEY = 'elixirs-shadow-highscore';
 
@@ -158,6 +159,17 @@ export class HUD {
         this._distText.style.cssText = 'color:#999;font-size:13px;';
         distSection.appendChild(this._distText);
 
+        // Loop counter (hidden until loop 1)
+        this._loopText = document.createElement('span');
+        this._loopText.className = 'hud-value';
+        this._loopText.style.cssText = 'color:#FF44FF;font-size:12px;font-weight:bold;display:none;margin-left:6px;';
+        distSection.appendChild(this._loopText);
+
+        // Modifier badge (hidden by default)
+        this._modifierBadge = document.createElement('span');
+        this._modifierBadge.style.cssText = 'display:none;font-size:11px;margin-left:6px;padding:1px 4px;border-radius:3px;';
+        distSection.appendChild(this._modifierBadge);
+
         this._bar.appendChild(distSection);
 
         // ─── Transient Phaser overlays (stay in-canvas) ───
@@ -243,6 +255,15 @@ export class HUD {
         this.shroudWarnRect = scene.add.rectangle(swp.x, swp.y, 60, height, 0xFF0000, 0)
             .setScrollFactor(0).setDepth(99).setOrigin(0, 0.5);
         this._shroudWarnTween = null;
+
+        // ─── Sprint 9e: Combo glow border (screen-edge red ring at x5+) ───
+        const cg = u(width / 2, height / 2);
+        this._comboGlowRect = scene.add.rectangle(cg.x, cg.y, width, height, 0xFF2222, 0)
+            .setScrollFactor(0).setDepth(98).setStrokeStyle(8, 0xFF2222);
+        this._comboGlowRect.setAlpha(0);
+        this._comboGlowTween = null;
+        this._comboVignette = scene.add.rectangle(cg.x, cg.y, width, height, 0xFF0000, 0)
+            .setScrollFactor(0).setDepth(98);
 
         // ─── Scene shutdown cleanup ───
         scene.events.once('shutdown', () => this.destroy());
@@ -591,8 +612,33 @@ export class HUD {
             .setScrollFactor(0).setDepth(d).setAlpha(0);
         this._gameOverElements.push(div2);
 
+        // Sprint 10b: Class best comparison + medals
+        const compY = sy + rows.length * lineH + 18;
+        const className = (runStats && runStats.className) || 'adventurer';
+        const classBest = MetaProgression.getPersonalBest(className);
+        const overallBest = MetaProgression.getOverallBest();
+        if (classBest && classBest.distance > 0) {
+            const beatClass = dist >= classBest.distance;
+            const medal = beatClass ? '\u{1F947}' : (dist >= (overallBest ? overallBest.distance * 0.9 : 0) ? '\u{1F948}' : '');
+            _t(width / 2, compY, `${medal} Your best as ${className}: ${Math.floor(classBest.distance)}m`, {
+                fontSize: '12px', color: beatClass ? '#FFCC00' : '#888888'
+            });
+        }
+
+        // Sprint 10b: Run history (last 3 runs)
+        const historyY = compY + 22;
+        const history = MetaProgression.getRunHistory().slice(0, 3);
+        if (history.length > 1) {
+            _t(width / 2, historyY, '─ RECENT RUNS ─', { fontSize: '10px', color: '#444444' });
+            for (let i = 0; i < Math.min(3, history.length); i++) {
+                const run = history[i];
+                const runLabel = `${run.class} — ${Math.floor(run.distance)}m — ${run.kills} kills`;
+                _t(width / 2, historyY + 14 + i * 14, runLabel, { fontSize: '10px', color: '#555555' });
+            }
+        }
+
         // Achievements summary
-        const achY = sy + rows.length * lineH + 24;
+        const achY = historyY + (history.length > 1 ? 60 : 0) + 10;
         const achCount = AchievementManager.getUnlockedCount();
         const achTotal = AchievementManager.getTotalCount();
         _t(width / 2, achY, `Achievements: ${achCount} / ${achTotal}`, {
@@ -600,17 +646,19 @@ export class HUD {
         });
 
         // Flame Altar meta-progression
-        const altarY = achY + 28;
+        const altarY = achY + 24;
         const altarLevel = FlameAltar.level;
         const altarMax = FlameAltar.maxLevel;
-        _t(width / 2, altarY, `Flame Level ${altarLevel} / ${altarMax}`, {
+        const prestigeCount = MetaProgression.prestigeCount;
+        const prestigeStar = prestigeCount > 0 ? ' ' + '\u2605'.repeat(prestigeCount) : '';
+        _t(width / 2, altarY, `Flame Level ${altarLevel} / ${altarMax}${prestigeStar}`, {
             fontSize: '13px', color: '#FF8800'
         });
 
         // Flame Altar progress bar
         if (altarLevel < altarMax) {
             const prog = FlameAltar.getProgressToNext();
-            const barY = altarY + 18;
+            const barY = altarY + 16;
             const bp = u(width / 2, barY);
             const barW = 200;
             const barH = 8;
@@ -620,17 +668,32 @@ export class HUD {
             const barFill = scene.add.rectangle(bp.x - barW / 2 + fillW / 2, bp.y, fillW, barH, 0xFF8800)
                 .setScrollFactor(0).setDepth(d).setAlpha(0);
             this._gameOverElements.push(barBg, barFill);
-            _t(width / 2, barY + 14, `${prog.current} / ${prog.needed} elixir to next level`, {
+            _t(width / 2, barY + 12, `${prog.current} / ${prog.needed} elixir to next level`, {
                 fontSize: '10px', color: '#888888'
             });
+        } else if (MetaProgression.canPrestige && MetaProgression.canPrestige()) {
+            _t(width / 2, altarY + 16, '\u2605 MAX — Press [P] to Prestige at the Altar \u2605', {
+                fontSize: '10px', color: '#FFD700', fontStyle: 'italic'
+            });
         } else {
-            _t(width / 2, altarY + 18, 'MAX LEVEL \u2014 The Flame burns eternal', {
+            _t(width / 2, altarY + 16, 'MAX LEVEL \u2014 The Flame burns eternal', {
                 fontSize: '10px', color: '#FF8800', fontStyle: 'italic'
             });
         }
 
+        // Relic upgrade hints
+        const upgradeable = MetaProgression.seenRelics.filter(id => !MetaProgression.hasUpgrade(id));
+        if (upgradeable.length > 0) {
+            const avail = MetaProgression.getAvailableElixir();
+            const canAfford = avail >= 20;
+            _t(width / 2, altarY + 40,
+                canAfford ? `\u2B06 ${upgradeable.length} relic(s) upgradeable for 20 elixir each` : `\u2B06 Relic upgrades available (need 20 elixir)`, {
+                fontSize: '10px', color: canAfford ? '#FFCC44' : '#666666', fontStyle: 'italic'
+            });
+        }
+
         // Restart prompt
-        const restart = _t(width / 2, height * 0.88, 'Press SPACE to awaken again', {
+        const restart = _t(width / 2, height * 0.92, 'Press SPACE to awaken again', {
             fontSize: '14px', color: '#D4A04A'
         });
 
@@ -776,6 +839,71 @@ export class HUD {
                 this.shroudWarnRect.setAlpha(0);
             }
         }
+    }
+
+    // ─── Sprint 9e: Combo visual effects ───
+
+    updateCombo(count) {
+        if (!this._comboGlowRect) return;
+
+        if (count >= 5) {
+            // Start pulsing red glow border if not already active
+            if (!this._comboGlowTween) {
+                this._comboGlowTween = this.scene.tweens.add({
+                    targets: this._comboGlowRect,
+                    alpha: { from: 0, to: 0.12 },
+                    duration: 300,
+                    yoyo: true,
+                    repeat: -1,
+                    ease: 'Sine.easeInOut'
+                });
+            }
+        } else {
+            if (this._comboGlowTween) {
+                this._comboGlowTween.destroy();
+                this._comboGlowTween = null;
+                this._comboGlowRect.setAlpha(0);
+            }
+        }
+
+        if (count >= 10 && this._comboVignette) {
+            // Screen edge vignette flash at x10+
+            this._comboVignette.setAlpha(0.2);
+            this.scene.tweens.add({
+                targets: this._comboVignette,
+                alpha: 0,
+                duration: 400,
+                ease: 'Power2'
+            });
+        }
+    }
+
+    // ─── Endless loop indicator ───
+
+    updateLoop(n) {
+        if (!this._loopText) return;
+        if (n <= 0) {
+            this._loopText.style.display = 'none';
+        } else {
+            this._loopText.textContent = `\u27F3 LOOP ${n}`;
+            this._loopText.style.display = '';
+        }
+    }
+
+    // ─── World modifier badge ───
+
+    showModifier(mod) {
+        if (!this._modifierBadge) return;
+        if (!mod) {
+            this._modifierBadge.style.display = 'none';
+            return;
+        }
+        const tierColors = { hard: '#FF4444', medium: '#FFAA00', easy: '#44FF44' };
+        const color = tierColors[mod.tier] || '#AAAAAA';
+        this._modifierBadge.textContent = `${mod.icon} ${mod.name}`;
+        this._modifierBadge.style.color = color;
+        this._modifierBadge.style.border = `1px solid ${color}`;
+        this._modifierBadge.style.display = '';
     }
 
     // ─── Cleanup DOM on scene shutdown/restart ───

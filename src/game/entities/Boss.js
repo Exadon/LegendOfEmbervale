@@ -24,6 +24,18 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         this.stunTimer = 0;
         this.alive = true;
 
+        // Sprint 7: combo sequences
+        this.comboQueue = [];
+        this.comboIndex = 0;
+        this._lastAttackName = null;
+
+        // Sprint 7: vulnerability window (2x damage for 600ms after attack completes)
+        this.vulnerabilityWindow = false;
+        this._vulnerabilityTimer = 0;
+
+        // Sprint 9: phase text overlay
+        this._phaseTextTimer = 0;
+
         this.setDisplaySize(displayW, displayH);
         this.setDepth(10);
 
@@ -50,30 +62,91 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    hit() {
+    hit(multiplier = 1) {
         if (!this.alive) return;
-        this.health--;
 
-        // Flash white on hit
-        this.setTintFill(0xFFFFFF);
+        // Vulnerability window: 2x damage
+        const dmg = this.vulnerabilityWindow ? 2 * multiplier : multiplier;
+        this.health = Math.max(0, this.health - dmg);
+
+        // Flash white on hit (red tint during vulnerability)
+        if (this.vulnerabilityWindow) {
+            this.setTintFill(0xFF0000);
+        } else {
+            this.setTintFill(0xFFFFFF);
+        }
         this.scene.time.delayedCall(100, () => {
-            if (this.active) {
-                if (this.def.tint) this.setTint(this.def.tint);
-                else this.clearTint();
-            }
+            if (this.active) this._restoreTint();
         });
 
-        // Phase transition at 50%
-        if (this.currentPhase === 1 && this.health <= this.maxHealth / 2) {
+        // Phase 3 trigger at 25%
+        if (this.currentPhase < 3 && this.health <= this.maxHealth * 0.25) {
+            this.currentPhase = 3;
+            this.scene.cameras.main.shake(600, 0.015);
+            this.scene.cameras.main.flash(300, 180, 0, 0);
+            this._showPhaseText('ENRAGED', '#FF0000');
+            // Cycle boss tint red/white 3 times
+            this._cycleEnrageTint(3);
+        }
+        // Phase 2 trigger at 50%
+        else if (this.currentPhase === 1 && this.health <= this.maxHealth / 2) {
             this.currentPhase = 2;
             this.scene.cameras.main.shake(400, 0.008);
             this.scene.cameras.main.flash(200, 255, 100, 0);
+            this._showPhaseText('PHASE 2', '#FF8833');
         }
 
         if (this.health <= 0) {
             this.alive = false;
             this.scene.events.emit('bossDefeated', this.def);
         }
+    }
+
+    _restoreTint() {
+        if (!this.active) return;
+        if (this.vulnerabilityWindow) {
+            // Red tint during vulnerability
+            this.setTint(0xFF4444);
+        } else if (this.def.tint) {
+            this.setTint(this.def.tint);
+        } else {
+            this.clearTint();
+        }
+    }
+
+    _showPhaseText(msg, color) {
+        const cam = this.scene.cameras.main;
+        const cx = cam.scrollX + this.scene.scale.width / 2;
+        const cy = cam.scrollY + this.scene.scale.height / 2;
+        const txt = this.scene.add.text(cx, cy - 80, msg, {
+            fontSize: '32px', color, fontFamily: 'monospace', fontStyle: 'bold',
+            stroke: '#000000', strokeThickness: 4
+        }).setOrigin(0.5).setDepth(260).setScrollFactor(0);
+        this.scene.tweens.add({
+            targets: txt,
+            alpha: 0,
+            y: txt.y - 40,
+            duration: 1500,
+            ease: 'Power2',
+            onComplete: () => { if (txt.active) txt.destroy(); }
+        });
+    }
+
+    _cycleEnrageTint(times) {
+        let count = 0;
+        const iv = this.scene.time.addEvent({
+            delay: 200,
+            repeat: times * 2 - 1,
+            callback: () => {
+                if (!this.active) { iv.destroy(); return; }
+                count++;
+                if (count % 2 === 0) {
+                    if (this.def.tint) this.setTint(this.def.tint); else this.clearTint();
+                } else {
+                    this.setTint(0xFF0000);
+                }
+            }
+        });
     }
 
     stun(duration) {
@@ -86,7 +159,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         this.aiState = AI_STATE.TELEGRAPH;
         this.stateTimer = 300;
         this.setVelocityX(0);
-        // Flash white + red ground marker
+        // Flash red + ground marker
         this.setTintFill(0xFF4444);
         const dir = playerX > this.x ? 1 : -1;
         this._telegraphMarker = this.scene.add.rectangle(
@@ -102,18 +175,36 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
     }
 
     _endTelegraph() {
-        if (this.def.tint) this.setTint(this.def.tint);
-        else this.clearTint();
+        this._restoreTint();
         if (this._telegraphMarker && this._telegraphMarker.active) {
             this._telegraphMarker.destroy();
             this._telegraphMarker = null;
         }
+        // Open vulnerability window
+        this._openVulnerabilityWindow();
+    }
+
+    _openVulnerabilityWindow() {
+        this.vulnerabilityWindow = true;
+        this._vulnerabilityTimer = 600;
+        this._restoreTint(); // shows red tint
     }
 
     update(delta, playerX, playerY) {
         if (!this.alive) return;
 
-        const speedMult = this.currentPhase === 2 ? this.def.phase2SpeedMult : 1;
+        // Update vulnerability timer
+        if (this.vulnerabilityWindow) {
+            this._vulnerabilityTimer -= delta;
+            if (this._vulnerabilityTimer <= 0) {
+                this.vulnerabilityWindow = false;
+                this._restoreTint();
+            }
+        }
+
+        const speedMult = this.currentPhase === 3
+            ? (this.def.phase3SpeedMult || 2.0)
+            : this.currentPhase === 2 ? this.def.phase2SpeedMult : 1;
 
         // Stunned
         if (this.aiState === AI_STATE.STUNNED) {
@@ -147,7 +238,12 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         }
 
         this.attackTimer += delta;
-        const interval = this.def.attackInterval / speedMult;
+
+        // Phase 3: reduce attack interval significantly
+        let interval = this.def.attackInterval / speedMult;
+        if (this.currentPhase === 3) {
+            interval = Math.min(interval, 800); // non-stop combos
+        }
 
         switch (this.def.id) {
             case 'revelwood':
@@ -165,20 +261,34 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             case 'albaneve':
                 this._updateFrostWyvern(delta, playerX, playerY, interval, speedMult);
                 break;
+            case 'shroud_maw':
+                this._updateCorruptedSentinel(delta, playerX, playerY, interval, speedMult);
+                break;
         }
     }
 
+    // ─── Combo helpers ───
+
+    _nextComboAttack() {
+        if (!this.def.combos || this.def.combos.length === 0) return null;
+        // Phase 1: 2-attack combos; Phase 2+: 3-attack combos
+        const comboSet = this.currentPhase >= 2 ? this.def.combos[0] : this.def.combos[1] || this.def.combos[0];
+        const attack = comboSet[this.comboIndex % comboSet.length];
+        this.comboIndex++;
+        return attack;
+    }
+
+    // ─── Boss: Vine Queen ───
+
     _updateVineQueen(delta, playerX, playerY, interval, speedMult) {
-        // Stationary — spawns vine minions, vine sweep
         this.setVelocityX(0);
 
         if (this.attackTimer >= interval) {
             this.attackTimer = 0;
-            const count = this.currentPhase === 2 ? 3 : this.def.vineSpawnCount;
+            const count = this.currentPhase >= 2 ? 3 : this.def.vineSpawnCount;
+            const attack = this._nextComboAttack() || (Math.random() < 0.33 ? 'vineSpawn' : Math.random() < 0.5 ? 'vineSweep' : 'vineBomb');
 
-            // Alternate between spawn minions and sweep
-            if (Math.random() < 0.5) {
-                // Spawn fell_vine minions
+            if (attack === 'vineSpawn') {
                 for (let i = 0; i < count; i++) {
                     const offset = (Math.random() - 0.5) * 200;
                     const def = ENEMIES['fell_vine'] || ENEMIES['fell_critter'];
@@ -187,32 +297,45 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
                         this.scene.enemyGroup.add(enemy);
                     }
                 }
-            } else {
-                // Vine sweep: damage zone
+            } else if (attack === 'vineSweep') {
                 this.scene.events.emit('bossVineSweep', this.x, this.def.vineSweepWidth * speedMult);
+            } else {
+                // vineBomb: 3 projectiles in spread
+                const count2 = this.def.vineBombCount || 3;
+                for (let i = 0; i < count2; i++) {
+                    const angleOffset = (i - 1) * 15; // -15, 0, +15 degrees
+                    this.scene.events.emit('bossVineBomb', this.x, this.y, playerX, playerY, angleOffset);
+                }
             }
         }
     }
+
+    // ─── Boss: Vukah Chieftain ───
 
     _updateChieftain(delta, playerX, playerY, interval, speedMult) {
         const dx = playerX - this.x;
 
         if (this.aiState === AI_STATE.IDLE) {
-            // Move toward player
             const dir = dx > 0 ? 1 : -1;
             this.setVelocityX(dir * 80 * speedMult);
             this.setFlipX(dir < 0);
 
             if (this.attackTimer >= interval) {
                 this.attackTimer = 0;
-                if (Math.abs(dx) < 250 || Math.abs(dx) < 150) {
-                    // Telegraph before attack
-                    this._pendingAttack = Math.abs(dx) < 150 ? 'ground_pound' : 'charge';
+                const attack = this._nextComboAttack() || (Math.abs(dx) < 150 ? 'groundPound' : Math.random() < 0.5 ? 'charge' : 'warCry');
+
+                if (attack === 'charge' && Math.abs(dx) >= 100) {
+                    this._pendingAttack = 'charge';
                     this._startTelegraph(playerX);
+                } else if (attack === 'groundPound') {
+                    this._pendingAttack = 'ground_pound';
+                    this._startTelegraph(playerX);
+                } else {
+                    // warCry
+                    this._doWarCry(playerX, speedMult);
                 }
             }
 
-            // Execute pending attack after telegraph
             if (this.attackTimer === -1) {
                 this.attackTimer = 0;
                 if (this._pendingAttack === 'charge') {
@@ -220,7 +343,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
                     this.stateTimer = 800;
                     const chargeDir = dx > 0 ? 1 : -1;
                     this.setVelocityX(chargeDir * this.def.chargeSpeed * speedMult);
-                } else {
+                } else if (this._pendingAttack === 'ground_pound') {
                     this.scene.events.emit('bossGroundPound', this.x, this.def.groundPoundRadius);
                 }
                 this._pendingAttack = null;
@@ -234,16 +357,28 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    _playAttackAnim() {
-        if (this.def.attackAnim && this.scene.anims.exists(this.def.attackAnim)) {
-            this.play(this.def.attackAnim);
-            this.once('animationcomplete', () => {
-                if (this.active && this.alive && this.def.idleAnim) {
-                    this.play(this.def.idleAnim, true);
+    _doWarCry(playerX, speedMult) {
+        const dur = this.def.warCryDuration || 800;
+        // Brief invulnerability tint
+        this.setTint(0xFFDD00);
+        this.scene.time.delayedCall(dur, () => {
+            if (this.active) {
+                this._restoreTint();
+                // Spawn 2 warrior minions
+                for (let i = 0; i < 2; i++) {
+                    const offset = (i === 0 ? -80 : 80);
+                    const def = ENEMIES['vukah_warrior'] || ENEMIES['fell_critter'];
+                    if (def) {
+                        const enemy = new Enemy(this.scene, this.x + offset, WORLD.GROUND_Y - def.height / 2, 'vukah_warrior');
+                        this.scene.enemyGroup.add(enemy);
+                    }
                 }
-            });
-        }
+                this.scene.events.emit('bossWarCry', this.x);
+            }
+        });
     }
+
+    // ─── Boss: Hollow Cyclops ───
 
     _updateHollowCyclops(delta, playerX, playerY, interval, speedMult) {
         const dx = playerX - this.x;
@@ -255,12 +390,13 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
 
             if (this.attackTimer >= interval) {
                 this.attackTimer = 0;
-                if (Math.abs(dx) < 180) {
-                    // Ground pound
+                const attack = this._nextComboAttack() || (Math.abs(dx) < 180 ? 'groundPound' : Math.random() < 0.5 ? 'summon' : 'eyeBeam');
+
+                if (attack === 'groundPound') {
                     this._playAttackAnim();
                     this.scene.events.emit('bossGroundPound', this.x, this.def.groundPoundRadius);
-                } else {
-                    // Summon skeletons
+                    this._openVulnerabilityWindow();
+                } else if (attack === 'summon') {
                     for (let i = 0; i < this.def.summonCount; i++) {
                         const offset = (Math.random() - 0.5) * 200;
                         const def = ENEMIES['hollow_skeleton'] || ENEMIES['fell_critter'];
@@ -269,10 +405,15 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
                             this.scene.enemyGroup.add(enemy);
                         }
                     }
+                } else {
+                    // eyeBeam: sweep across arena floor
+                    this.scene.events.emit('bossEyeBeam', this.x, this.def.eyeBeamWidth || 150);
                 }
             }
         }
     }
+
+    // ─── Boss: Frost Wyvern ───
 
     _updateFrostWyvern(delta, playerX, playerY, interval, speedMult) {
         const dx = playerX - this.x;
@@ -280,7 +421,6 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         this.setFlipX(dir < 0);
 
         if (this.aiState === AI_STATE.IDLE) {
-            // Kite at distance
             if (Math.abs(dx) < 150) {
                 this.setVelocityX(-dir * 60 * speedMult);
             } else if (Math.abs(dx) > 350) {
@@ -291,15 +431,21 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
 
             if (this.attackTimer >= interval) {
                 this.attackTimer = 0;
-                if (Math.random() < 0.5 || this.currentPhase === 2) {
-                    // Breath attack
+                const attack = this._nextComboAttack() || (Math.random() < 0.33 ? 'breath' : Math.random() < 0.5 ? 'diveBomb' : 'iceRain');
+
+                if (attack === 'breath') {
                     this._playAttackAnim();
                     this.scene.events.emit('bossVineSweep', this.x, this.def.breathWidth * speedMult);
-                } else {
-                    // Dive bomb
+                    this._openVulnerabilityWindow();
+                } else if (attack === 'diveBomb') {
                     this.aiState = AI_STATE.ATTACK;
                     this.stateTimer = 700;
                     this.setVelocityX(dir * this.def.diveBombSpeed * speedMult);
+                } else {
+                    // iceRain: 5 projectiles from above
+                    const count = this.def.iceRainCount || 5;
+                    this.scene.events.emit('bossIceRain', this.x, count);
+                    this._openVulnerabilityWindow();
                 }
             }
         } else if (this.aiState === AI_STATE.ATTACK) {
@@ -307,9 +453,12 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             if (this.stateTimer <= 0) {
                 this.aiState = AI_STATE.IDLE;
                 this.setVelocityX(0);
+                this._openVulnerabilityWindow();
             }
         }
     }
+
+    // ─── Boss: Scavenger Pyrelord ───
 
     _updatePyrelord(delta, playerX, playerY, interval, speedMult) {
         const dx = playerX - this.x;
@@ -317,25 +466,30 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         this.setFlipX(dir < 0);
 
         if (this.aiState === AI_STATE.IDLE) {
-            // Kite — maintain distance
             if (Math.abs(dx) < 120) {
-                this.setVelocityX(-dir * 60 * speedMult); // back away
+                this.setVelocityX(-dir * 60 * speedMult);
             } else if (Math.abs(dx) > 300) {
-                this.setVelocityX(dir * 80 * speedMult); // approach
+                this.setVelocityX(dir * 80 * speedMult);
             } else {
                 this.setVelocityX(0);
             }
 
             if (this.attackTimer >= interval) {
                 this.attackTimer = 0;
-                if (Math.random() < 0.6 || this.currentPhase === 2) {
-                    // Fire projectile
+                const attack = this._nextComboAttack() || (Math.random() < 0.33 ? 'projectile' : Math.random() < 0.5 ? 'dash' : 'flamePillar');
+
+                if (attack === 'projectile') {
                     this.scene.events.emit('bossProjectile', this.x, this.y, dir, this.def.projectileSpeed * speedMult);
-                } else {
-                    // Dash attack
+                    this._openVulnerabilityWindow();
+                } else if (attack === 'dash') {
                     this.aiState = AI_STATE.ATTACK;
                     this.stateTimer = 600;
                     this.setVelocityX(dir * this.def.dashSpeed * speedMult);
+                } else {
+                    // flamePillar: 3 fire zones at random X in arena
+                    const count = this.def.flamePillarCount || 3;
+                    this.scene.events.emit('bossFlamePillar', this.x, count);
+                    this._openVulnerabilityWindow();
                 }
             }
         } else if (this.aiState === AI_STATE.ATTACK) {
@@ -343,7 +497,49 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             if (this.stateTimer <= 0) {
                 this.aiState = AI_STATE.IDLE;
                 this.setVelocityX(0);
+                this._openVulnerabilityWindow();
             }
+        }
+    }
+
+    // ─── Boss: Corrupted Sentinel (5th boss, Sprint 11) ───
+
+    _updateCorruptedSentinel(delta, playerX, playerY, interval, speedMult) {
+        if (this.aiState === AI_STATE.IDLE) {
+            // Stays near center, slow movement
+            const dx = playerX - this.x;
+            const dir = dx > 0 ? 1 : -1;
+            if (Math.abs(dx) > 200) {
+                this.setVelocityX(dir * 40 * speedMult);
+            } else {
+                this.setVelocityX(0);
+            }
+            this.setFlipX(dir < 0);
+
+            if (this.attackTimer >= interval) {
+                this.attackTimer = 0;
+                const attack = this._nextComboAttack() || (Math.random() < 0.33 ? 'shroudPulse' : Math.random() < 0.5 ? 'corruptionTether' : 'cloneStrike');
+
+                if (attack === 'shroudPulse') {
+                    this.scene.events.emit('bossShroudPulse', this.x, this.y, this.def.shroudPulseRadius || 200);
+                } else if (attack === 'corruptionTether') {
+                    this.scene.events.emit('bossCorruptionTether', this.x, this.y, 2000);
+                } else {
+                    this.scene.events.emit('bossCloneStrike', this.x, this.y);
+                }
+                this._openVulnerabilityWindow();
+            }
+        }
+    }
+
+    _playAttackAnim() {
+        if (this.def.attackAnim && this.scene.anims.exists(this.def.attackAnim)) {
+            this.play(this.def.attackAnim);
+            this.once('animationcomplete', () => {
+                if (this.active && this.alive && this.def.idleAnim) {
+                    this.play(this.def.idleAnim, true);
+                }
+            });
         }
     }
 }

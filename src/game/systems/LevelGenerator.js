@@ -1,4 +1,4 @@
-import { WORLD, GENERATION, ELIXIR, LORE_ENTRIES, LORE_SCROLL, FLAME_SHRINE, ENEMIES, DECORATION, CRUMBLING_PLATFORM, SURVIVOR, CHALLENGE_SHRINE, CINDER_VESSEL, CRAFTSPERSON, OBELISK, DEADLY_SHROUD, UNDEAD_HAND } from '../constants.js';
+import { WORLD, GENERATION, ELIXIR, LORE_ENTRIES, LORE_SCROLL, FLAME_SHRINE, ENEMIES, DECORATION, CRUMBLING_PLATFORM, SURVIVOR, CHALLENGE_SHRINE, CINDER_VESSEL, CRAFTSPERSON, OBELISK, DEADLY_SHROUD, UNDEAD_HAND, ENDLESS } from '../constants.js';
 import { ElixirVein } from '../entities/ElixirVein.js';
 import { FlameWisp } from '../entities/FlameWisp.js';
 import { CorruptionPool } from '../entities/CorruptionPool.js';
@@ -37,6 +37,8 @@ export class LevelGenerator {
         this.generatedUpTo = 0;
         this.difficulty = 0;
         this.loreIndex = 0; // cycles through LORE_ENTRIES
+        this.loopCount = 0;
+        this._eliteSpawnMult = 1;
 
         // Pre-compute total decoration weight for weighted random
         this._totalDecoWeight = DECORATION.TYPES.reduce((sum, d) => sum + d.weight, 0);
@@ -44,6 +46,14 @@ export class LevelGenerator {
 
     setDifficulty(tier) {
         this.difficulty = tier;
+    }
+
+    setLoop(n) {
+        this.loopCount = n;
+    }
+
+    setEliteSpawnMult(m) {
+        this._eliteSpawnMult = m;
     }
 
     generateAhead(cameraRightX) {
@@ -150,9 +160,10 @@ export class LevelGenerator {
 
         // --- Biome Enemies (distance-scaled density) ---
         if (biome.enemies.length > 0) {
+            const effectiveDifficulty = this.difficulty + this.loopCount * 3;
             const distBonus = segX * GENERATION.ENEMY_DISTANCE_RAMP;
             const enemyChance = Math.min(
-                GENERATION.ENEMY_CHANCE + this.difficulty * GENERATION.ENEMY_RAMP + distBonus,
+                GENERATION.ENEMY_CHANCE + effectiveDifficulty * GENERATION.ENEMY_RAMP + distBonus + this.loopCount * 0.08,
                 0.95
             );
 
@@ -170,7 +181,11 @@ export class LevelGenerator {
             // Place each enemy at a spread-out X offset
             const slotWidth = (WORLD.SEGMENT_WIDTH - 200) / Math.max(spawnCount, 1);
             for (let i = 0; i < spawnCount; i++) {
-                const typeId = biome.enemies[Math.floor(rng() * biome.enemies.length)];
+                let typeId = biome.enemies[Math.floor(rng() * biome.enemies.length)];
+                // Elite spawn mult: promote regular enemies to skullflame elite
+                if (this._eliteSpawnMult > 1 && !ENEMIES[typeId]?.elite && rng() < 0.05 * this._eliteSpawnMult) {
+                    typeId = 'skullflame';
+                }
                 const def = ENEMIES[typeId];
                 if (def) {
                     const ex = segX + 100 + slotWidth * i + rng() * slotWidth;
@@ -178,6 +193,11 @@ export class LevelGenerator {
                         ? WORLD.GROUND_Y - def.height / 2
                         : WORLD.GROUND_Y - def.height / 2 - rng() * 100;
                     const enemy = new Enemy(this.scene, ex, ey, typeId);
+                    // Loop difficulty scaling
+                    if (this.loopCount > 0) {
+                        enemy.hitsToKill = Math.ceil(enemy.hitsToKill * (1 + this.loopCount * ENDLESS.HP_MULT_PER_LOOP));
+                        enemy._baseSpeed = enemy._baseSpeed * (1 + this.loopCount * ENDLESS.SPEED_MULT_PER_LOOP);
+                    }
                     this.enemies.add(enemy);
                 }
             }

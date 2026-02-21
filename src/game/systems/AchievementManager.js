@@ -14,6 +14,7 @@ import { GlobalState } from '../GlobalState.js';
 import { SkillManager } from './SkillManager.js';
 
 const LORE_STORAGE_KEY = 'elixirs-shadow-lore-collected';
+const META_STORAGE_KEY = 'elixirs-shadow-meta-progression';
 
 const STORAGE_KEY = 'elixirs-shadow-achievements';
 
@@ -48,6 +49,19 @@ function _checkBiomeLore(biomeId) {
         return true;
     } catch {}
     return false;
+}
+
+// ── Prestige helper (lifetime) ──
+
+function _getPrestigeCount() {
+    try {
+        const raw = localStorage.getItem(META_STORAGE_KEY);
+        if (raw) {
+            const data = JSON.parse(raw);
+            return data.prestigeCount || 0;
+        }
+    } catch {}
+    return 0;
 }
 
 // ── Achievement Definitions ──
@@ -117,6 +131,24 @@ const ACHIEVEMENTS = [
     { id: 'first_death',      name: 'The Shroud Claims All', description: 'Die for the first time',     category: 'Meta', icon: '\u{1F480}', check: (s) => s.hasDied },
     { id: 'restarts_5',       name: 'Persistence',           description: 'Restart 5 times',             category: 'Meta', icon: '\u{1F480}', check: (s, state) => state.restartCount >= 5 },
     { id: 'achievements_15',  name: 'Completionist',          description: 'Unlock 15 achievements',      category: 'Meta', icon: '\u{1F480}', check: (s, state) => state.unlockedCount >= 15 },
+
+    // Boss (Sprint 10 — 3)
+    { id: 'boss_first',   name: 'First Blood',   description: 'Defeat any boss',                       category: 'Combat', icon: '\u{1F480}', check: (s) => s.bossKilled },
+    { id: 'boss_all',     name: 'Boss Slayer',   description: 'Defeat all 5 bosses in one run',       category: 'Combat', icon: '\u{1F480}', check: (s) => s.bossesDefeated && s.bossesDefeated.size >= 5 },
+    { id: 'boss_no_hit',  name: 'Untouchable',   description: 'Defeat a boss without taking damage',  category: 'Combat', icon: '\u{1F480}', check: (s) => s.bossKilledNoDamage },
+
+    // Challenge (Sprint 10 — 2)
+    { id: 'challenge_10',    name: 'Trial Master',    description: 'Complete 10 challenges',           category: 'Mechanics', icon: '\u{1F3C6}', check: (s) => (s.challengesCompleted || 0) >= 10 },
+    { id: 'cursed_complete', name: 'Dark Blessing',   description: 'Complete a cursed trial',          category: 'Mechanics', icon: '\u{1F3C6}', check: (s) => s.cursedChallengeCompleted },
+
+    // Prestige (Sprint 10 — 3) — checked via lifetime state
+    { id: 'prestige_1', name: 'Ascending Flame', description: 'Achieve your first prestige',          category: 'Meta', icon: '\u2605', check: () => _getPrestigeCount() >= 1 },
+    { id: 'prestige_2', name: 'Reborn',           description: 'Achieve your second prestige',        category: 'Meta', icon: '\u2605', check: () => _getPrestigeCount() >= 2 },
+    { id: 'prestige_3', name: 'Eternal Flame',    description: 'Achieve your third prestige',         category: 'Meta', icon: '\u2605', check: () => _getPrestigeCount() >= 3 },
+
+    // Relic / Combo (Sprint 10 — 2)
+    { id: 'relic_synergy', name: 'Harmonic',    description: 'Trigger a relic synergy',               category: 'Meta',   icon: '\u{1F48E}', check: (s) => s.relicSynergyTriggered },
+    { id: 'combo_10',      name: 'Annihilator', description: 'Reach a x10 combo',                    category: 'Combat', icon: '\u{2694}',  check: (s) => s.maxCombo >= 10 },
 ];
 
 const CATEGORIES = [

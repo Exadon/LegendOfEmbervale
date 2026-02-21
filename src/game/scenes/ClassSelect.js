@@ -3,6 +3,8 @@ import { CLASS_DEFS } from '../systems/ClassDefs.js';
 import { MetaProgression, ALL_CLASS_IDS } from '../systems/MetaProgression.js';
 import { SkillManager } from '../systems/SkillManager.js';
 import { FlameAltar } from '../systems/FlameAltar.js';
+import { ModifierSelect } from '../ui/ModifierSelect.js';
+import { RunModifier } from '../systems/RunModifier.js';
 
 /**
  * ClassSelect — player picks a class before starting a run.
@@ -19,6 +21,7 @@ export class ClassSelect extends Phaser.Scene {
 
         this._selectedIdx = 0;
         this._panels = [];
+        this._bossRushMode = !!(this.scene.settings.data && this.scene.settings.data.bossRush);
 
         // Background
         this.add.rectangle(0, 0, width, height, 0x0A0A1E).setOrigin(0, 0);
@@ -83,8 +86,15 @@ export class ClassSelect extends Phaser.Scene {
             fontSize: '11px', color: '#FF4444', fontFamily: 'monospace'
         }).setOrigin(1, 0);
 
+        // Boss Rush banner
+        if (this._bossRushMode) {
+            this.add.text(width / 2, height - 52, 'BOSS RUSH MODE — Face all bosses sequentially', {
+                fontSize: '13px', color: '#FF4444', fontFamily: 'monospace', fontStyle: 'bold'
+            }).setOrigin(0.5);
+        }
+
         // Controls hint
-        this.add.text(width / 2, height - 16, '[WASD/Arrows] Navigate   [1-0] Select   [U] Unlock   [M] Masteries   [SPACE] Confirm   [ESC] Back', {
+        this.add.text(width / 2, height - 16, '[WASD/Arrows] Navigate   [1-0] Select   [U] Unlock   [M] Masteries   [SPACE] Confirm   [B] Boss Rush   [ESC] Back', {
             fontSize: '10px', color: '#555555', fontFamily: 'monospace'
         }).setOrigin(0.5);
 
@@ -154,6 +164,9 @@ export class ClassSelect extends Phaser.Scene {
                     break;
                 case 'KeyM':
                     this._openMasteries();
+                    break;
+                case 'KeyB':
+                    this._launchBossRush();
                     break;
                 case 'Space':
                     this._confirmSelection();
@@ -341,11 +354,38 @@ export class ClassSelect extends Phaser.Scene {
         if (!MetaProgression.isClassUnlocked(panel.classId)) return;
 
         SkillManager.selectClass(panel.classId);
+        this.input.keyboard.removeAllListeners();
 
+        if (this._bossRushMode) {
+            // Skip modifier, go directly to BossRush
+            RunModifier.clear();
+            this.cameras.main.fadeOut(600, 0, 0, 0);
+            this.cameras.main.once('camerafadeoutcomplete', () => {
+                this.scene.start('BossRush');
+            });
+            return;
+        }
+
+        // Show modifier selection overlay
+        new ModifierSelect(this, () => {
+            this.cameras.main.fadeOut(600, 0, 0, 0);
+            this.cameras.main.once('camerafadeoutcomplete', () => {
+                this.scene.start('Level1');
+            });
+        });
+    }
+
+    _launchBossRush() {
+        const panel = this._panels[this._selectedIdx];
+        if (!panel) return;
+        if (!MetaProgression.isClassUnlocked(panel.classId)) return;
+
+        SkillManager.selectClass(panel.classId);
+        RunModifier.clear();
         this.input.keyboard.removeAllListeners();
         this.cameras.main.fadeOut(600, 0, 0, 0);
         this.cameras.main.once('camerafadeoutcomplete', () => {
-            this.scene.start('Level1');
+            this.scene.start('BossRush');
         });
     }
 }

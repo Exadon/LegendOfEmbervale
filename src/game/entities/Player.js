@@ -76,6 +76,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.isClassAttacking = false;
         this._classDef = classDef;
         this._attackFallbackTimer = null;
+
+        // Run modifier flags
+        this._modifierNoDash = false;
     }
 
     preUpdate(time, delta) {
@@ -395,8 +398,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             this.scene.events.emit('classAttack', this.x, this.y);
         }
 
-        // Flame Step trigger
-        if (input.dash && this.dashReady) {
+        // Flame Step trigger (blocked during cursed no_dash trial or run modifier)
+        if (input.dash && this.dashReady && !this._cursedNoDash && !this._modifierNoDash) {
             this.startDash();
         }
 

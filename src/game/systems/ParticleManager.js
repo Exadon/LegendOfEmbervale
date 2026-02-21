@@ -1,6 +1,12 @@
 import Phaser from 'phaser';
+import { Settings } from './Settings.js';
 
 export class ParticleManager {
+    // Returns true if particle density is set to high (default)
+    static isHighDensity() {
+        return (Settings.data.particleDensity || 'high') === 'high';
+    }
+
     constructor(scene) {
         this.scene = scene;
 
@@ -225,6 +231,71 @@ export class ParticleManager {
             quantity: 20,
             frequency: -1
         }).setDepth(50);
+
+        // Sprint 9: Boss hit sparks
+        this.bossHitEmitter = scene.add.particles(0, 0, 'pixel', {
+            speed: { min: 60, max: 220 },
+            angle: { min: 0, max: 360 },
+            scale: { start: 3.5, end: 0 },
+            alpha: { start: 1, end: 0 },
+            lifespan: 500,
+            tint: [0xFF8800, 0xFF5500, 0xFFCC00],
+            emitting: false,
+            quantity: 12,
+            frequency: -1
+        }).setDepth(55);
+
+        // Sprint 9: Boss kill burst
+        this.bossKillEmitter = scene.add.particles(0, 0, 'pixel', {
+            speed: { min: 80, max: 350 },
+            angle: { min: 0, max: 360 },
+            scale: { start: 5, end: 0 },
+            alpha: { start: 1, end: 0 },
+            lifespan: 800,
+            tint: [0xFF8800, 0xFFCC00, 0xFF4422, 0xFFFFAA],
+            emitting: false,
+            quantity: 40,
+            frequency: -1
+        }).setDepth(55);
+
+        // Sprint 9: Elite death burst
+        this.eliteDeathEmitter = scene.add.particles(0, 0, 'pixel', {
+            speed: { min: 50, max: 180 },
+            angle: { min: 0, max: 360 },
+            scale: { start: 3, end: 0 },
+            alpha: { start: 1, end: 0 },
+            lifespan: 600,
+            tint: [0x00FFCC, 0x00DDAA, 0xFFFFAA, 0x80FFE0],
+            emitting: false,
+            quantity: 20,
+            frequency: -1
+        }).setDepth(55);
+
+        // Sprint 9: Challenge win confetti
+        this.challengeWinEmitter = scene.add.particles(0, 0, 'pixel', {
+            speed: { min: 60, max: 200 },
+            angle: { min: 200, max: 340 },
+            scale: { start: 2.5, end: 0 },
+            alpha: { start: 1, end: 0 },
+            lifespan: 900,
+            tint: [0xFF4488, 0x44FF88, 0x4488FF, 0xFFCC00, 0xFF8833, 0xAA44FF],
+            emitting: false,
+            quantity: 30,
+            frequency: -1
+        }).setDepth(55);
+
+        // Sprint 9: Phase transition ring
+        this.phaseRingEmitter = scene.add.particles(0, 0, 'pixel', {
+            speed: { min: 80, max: 250 },
+            angle: { min: 0, max: 360 },
+            scale: { start: 2, end: 0 },
+            alpha: { start: 0.8, end: 0 },
+            lifespan: 700,
+            tint: [0xFF4400, 0xFFCC00, 0xFF8800],
+            emitting: false,
+            quantity: 20,
+            frequency: -1
+        }).setDepth(55);
     }
 
     dashTrail(x, y) {
@@ -261,6 +332,7 @@ export class ParticleManager {
     }
 
     corruptionBubbles(x, y, active) {
+        if (!ParticleManager.isHighDensity()) return;
         this.corruptionEmitter.setPosition(x, y);
         if (active && !this.corruptionEmitter.emitting) {
             this.corruptionEmitter.start();
@@ -314,6 +386,37 @@ export class ParticleManager {
         } else if (!active && this.miningEmitter.emitting) {
             this.miningEmitter.stop();
         }
+    }
+
+    // Sprint 9: New particle methods
+
+    bossHit(x, y) {
+        this.bossHitEmitter.setPosition(x, y);
+        this.bossHitEmitter.explode();
+        this.scene.cameras.main.shake(200, 0.005);
+    }
+
+    bossKillBurst(x, y) {
+        this.bossKillEmitter.setPosition(x, y);
+        this.bossKillEmitter.explode();
+    }
+
+    eliteDeath(x, y) {
+        if (!ParticleManager.isHighDensity()) return;
+        this.eliteDeathEmitter.setPosition(x, y);
+        this.eliteDeathEmitter.explode();
+    }
+
+    challengeWin(x, y) {
+        if (!ParticleManager.isHighDensity()) return;
+        this.challengeWinEmitter.setPosition(x, y);
+        this.challengeWinEmitter.explode();
+    }
+
+    bossPhaseTransition(x, y) {
+        if (!ParticleManager.isHighDensity()) return;
+        this.phaseRingEmitter.setPosition(x, y);
+        this.phaseRingEmitter.explode();
     }
 
     setBiomeAtmosphere(biomeId) {

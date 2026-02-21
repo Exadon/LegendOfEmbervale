@@ -73,9 +73,11 @@ export class CombatSystem {
                         GlobalState.addElixir(1);
                         s.hud.popElixir();
                         s.popups.show(enemy.x, enemy.y - 40, '+1 ELIXIR (ELITE)', '#00FFCC', '12px');
+                        // Sprint 9: elite death particles
+                        if (s.particles && s.particles.eliteDeath) s.particles.eliteDeath(enemy.x, enemy.y);
                     }
                     enemy.banish();
-                    this.onEnemyBanished(enemy.x, enemy.y, s.player.isDashing);
+                    this.onEnemyBanished(enemy.x, enemy.y, s.player.isDashing, enemy.def.elite);
                 } else if (s.player.hitInvincibleTimer <= 0) {
                     // Tank: reduced enemy damage, + relic multiplier
                     const dmg = SkillManager.getValue('enemyDamage', enemy.def.damage) * s.relicManager.getMult('enemyDamageMult');
@@ -152,7 +154,7 @@ export class CombatSystem {
 
     // ─── Combo System ───
 
-    onEnemyBanished(x, y, duringDash = false) {
+    onEnemyBanished(x, y, duringDash = false, isElite = false) {
         const s = this.scene;
         s.runStats.enemiesBanished++;
         this.comboCount++;
@@ -161,9 +163,14 @@ export class CombatSystem {
         // Kill streak audio escalation
         s.audio.playBanishCombo(this.comboCount);
 
-        // Hit freeze + shake on every banish
+        // Sprint 9: Hit freeze — 50ms regular, 80ms elite
         s.cameras.main.shake(100, 0.004);
-        this._hitFreeze(50);
+        this._hitFreeze(isElite ? 80 : 50);
+
+        // Relic: siphon dash — dash banishes nearest enemy (synergy)
+        if (duringDash && s.relicManager && s.relicManager.activeSynergies && s.relicManager.activeSynergies.has('siphon_dash')) {
+            // Already happening by dash, so no extra banish needed
+        }
 
         // Relic: banish flame restore
         const banishFlame = s.relicManager.getFlat('banishFlameFlat', 0);
@@ -185,13 +192,29 @@ export class CombatSystem {
         if (this.comboCount >= 2) {
             // Scale text size and effects with combo count
             const size = Math.min(16 + this.comboCount * 2, 30);
-            s.popups.show(x, y - 60, `x${this.comboCount} COMBO!`, '#FFCC00', `${size}px`);
+            const comboTxt = s.popups.show(x, y - 60, `x${this.comboCount} COMBO!`, '#FFCC00', `${size}px`);
+            // Sprint 9e: scale punch tween 1.0 → 1.6 → 1.0 over 200ms
+            if (comboTxt) {
+                comboTxt.setScale(1.0);
+                s.tweens.add({
+                    targets: comboTxt,
+                    scaleX: { from: 1.0, to: 1.6 },
+                    scaleY: { from: 1.0, to: 1.6 },
+                    duration: 100,
+                    yoyo: true,
+                    ease: 'Power2'
+                });
+            }
             if (this.comboCount >= 3) {
                 s.cameras.main.shake(150, 0.003 + this.comboCount * 0.001);
                 s.audio.playComboMilestone();
             }
             if (this.comboCount >= 4) {
                 s.cameras.main.flash(100, 255, 200, 0, false, null, s);
+            }
+            // Sprint 9e: notify HUD for persistent glow/vignette effects
+            if (s.hud && s.hud.updateCombo) {
+                s.hud.updateCombo(this.comboCount);
             }
         }
 
@@ -806,8 +829,18 @@ export class CombatSystem {
             if (!enemy.active || !enemy.alive) continue;
             const dist = Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y);
             if (dist < stunRadius) {
-                enemy.stun(stunDuration);
+                // Sprint 11: Time Fracture relic — freeze (stun) ALL enemies for 2s
+                const freeze = s.relicManager && s.relicManager.getFlag('slamFreeze');
+                enemy.stun(freeze ? 2000 : stunDuration);
             }
+        }
+        // Time Fracture: stun ALL enemies regardless of distance
+        if (s.relicManager && s.relicManager.getFlag('slamFreeze')) {
+            for (const enemy of s.enemyGroup.getChildren()) {
+                if (!enemy.active || !enemy.alive) continue;
+                enemy.stun(2000);
+            }
+            s.popups.show(x, y - 40, 'TIME FRACTURE!', '#00CCFF', '14px');
         }
     }
 
