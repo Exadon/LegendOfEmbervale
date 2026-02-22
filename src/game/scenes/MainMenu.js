@@ -4,6 +4,8 @@ import { Settings } from '../systems/Settings.js';
 import { MusicManager } from '../systems/MusicManager.js';
 import { AchievementManager } from '../systems/AchievementManager.js';
 import { RunModifier } from '../systems/RunModifier.js';
+import { MetaProgression } from '../systems/MetaProgression.js';
+import { DailyRun } from '../systems/DailyRun.js';
 
 export class MainMenu extends Phaser.Scene {
     constructor() {
@@ -161,7 +163,7 @@ export class MainMenu extends Phaser.Scene {
         // Resolution toggle
         const [rw, rh] = Settings.data.resolution;
         this._resText = this.add.text(width / 2, height * 0.92,
-            `[R] Resolution: ${rw}x${rh}   [V] Sprite Viewer   [A] Achievements   [B] Boss Rush`, {
+            `[R] Resolution: ${rw}x${rh}   [V] Sprite Viewer   [A] Achievements   [B] Boss Rush   [D] Daily Run`, {
             fontSize: '12px',
             color: '#666666',
             fontFamily: 'monospace'
@@ -180,6 +182,32 @@ export class MainMenu extends Phaser.Scene {
             color: '#444444',
             fontFamily: 'monospace'
         }).setOrigin(0.5);
+
+        // ─── Daily Run banner ───
+        const todayMod = DailyRun.getTodayModifier();
+        const todayClass = DailyRun.getTodayClass();
+        const todayResult = DailyRun.getTodayResult();
+        const dailyLabel = todayResult
+            ? `✓ DAILY: ${todayMod.icon} ${todayMod.name} · ${todayClass}   ${todayResult.distance}m`
+            : `DAILY: ${todayMod.icon} ${todayMod.name} · ${todayClass}`;
+        const dailyBanner = this.add.text(width / 2, height * 0.97, dailyLabel, {
+            fontSize: '11px',
+            color: todayResult ? '#44FF44' : '#FFAA33',
+            fontFamily: 'monospace',
+        }).setOrigin(0.5).setAlpha(0);
+        this.tweens.add({ targets: dailyBanner, alpha: 1, delay: 5000, duration: 600 });
+
+        // ─── Legend badge ───
+        if (MetaProgression.hasWon()) {
+            const badge = this.add.text(width / 2, 158, '✦ LEGEND', {
+                fontSize: '13px',
+                color: '#FFDD00',
+                fontFamily: 'monospace',
+                fontStyle: 'bold',
+                shadow: { offsetX: 0, offsetY: 0, color: '#FFAA00', blur: 8, fill: true },
+            }).setOrigin(0.5);
+            this.tweens.add({ targets: badge, alpha: { from: 0.5, to: 1 }, duration: 1200, yoyo: true, repeat: -1 });
+        }
 
         // Music (start on first gesture)
         const startMusic = () => {
@@ -238,6 +266,19 @@ export class MainMenu extends Phaser.Scene {
             this.cameras.main.fadeOut(800, 0, 0, 0);
             this.cameras.main.once('camerafadeoutcomplete', () => {
                 this.scene.start('ClassSelect', { bossRush: true });
+            });
+        });
+
+        // Daily Run shortcut [D]
+        this.input.keyboard.on('keydown-D', () => {
+            this.input.keyboard.removeAllListeners();
+            const todayMod = DailyRun.getTodayModifier();
+            const todayClass = DailyRun.getTodayClass();
+            RunModifier.set(todayMod);
+            MusicManager.stopMenu();
+            this.cameras.main.fadeOut(800, 0, 0, 0);
+            this.cameras.main.once('camerafadeoutcomplete', () => {
+                this.scene.start('ClassSelect', { daily: true, suggestedClass: todayClass });
             });
         });
     }

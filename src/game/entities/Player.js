@@ -368,7 +368,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
         // Class attack: Q
         if (input.classAttack && this.classAttackReady && SkillManager.hasClassAttack()) {
-            this.classAttackCooldownTimer = this._classDef.attackCooldown;
+            const _atkCdMult = this.scene.relicManager ? this.scene.relicManager.getMult('attackCooldownMult') : 1;
+            this.classAttackCooldownTimer = this._classDef.attackCooldown * _atkCdMult;
             this.isClassAttacking = true;
             // Cancel any prior fallback timer
             if (this._attackFallbackTimer) {

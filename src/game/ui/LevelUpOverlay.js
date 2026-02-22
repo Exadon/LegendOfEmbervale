@@ -212,7 +212,7 @@ export class LevelUpOverlay {
         }
 
         // After delay, clean up and resume
-        this.scene.time.delayedCall(600, () => {
+        this.scene.time.delayedCall(300, () => {
             this._cleanup();
             this.scene.physics.resume();
             // Notify HUD and scene

@@ -5,6 +5,9 @@ const DEFAULTS = {
     volume: 1.0,
     particleDensity: 'high',   // 'high' | 'low'
     gamepadVibration: true,
+    difficulty: 'standard',    // 'pilgrim' | 'standard' | 'torment'
+    colorblindMode: false,
+    keybinds: {},              // { action: 'KEYCODE' } overrides
 };
 
 function deepClone(obj) {
@@ -24,6 +27,9 @@ export class Settings {
                 if (saved.volume !== undefined) Settings.data.volume = saved.volume;
                 if (saved.particleDensity) Settings.data.particleDensity = saved.particleDensity;
                 if (saved.gamepadVibration !== undefined) Settings.data.gamepadVibration = saved.gamepadVibration;
+                if (saved.difficulty) Settings.data.difficulty = saved.difficulty;
+                if (saved.colorblindMode !== undefined) Settings.data.colorblindMode = saved.colorblindMode;
+                if (saved.keybinds) Settings.data.keybinds = saved.keybinds;
             }
         } catch (e) {
             console.warn('[Settings] Failed to load, using defaults:', e);

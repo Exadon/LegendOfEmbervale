@@ -12,6 +12,7 @@
 import { BIOMES, LORE_ENTRIES } from '../constants.js';
 import { GlobalState } from '../GlobalState.js';
 import { SkillManager } from './SkillManager.js';
+import { MetaProgression } from './MetaProgression.js';
 
 const LORE_STORAGE_KEY = 'elixirs-shadow-lore-collected';
 const META_STORAGE_KEY = 'elixirs-shadow-meta-progression';
@@ -149,6 +150,9 @@ const ACHIEVEMENTS = [
     // Relic / Combo (Sprint 10 — 2)
     { id: 'relic_synergy', name: 'Harmonic',    description: 'Trigger a relic synergy',               category: 'Meta',   icon: '\u{1F48E}', check: (s) => s.relicSynergyTriggered },
     { id: 'combo_10',      name: 'Annihilator', description: 'Reach a x10 combo',                    category: 'Combat', icon: '\u{2694}',  check: (s) => s.maxCombo >= 10 },
+
+    // Phase C: Win Condition (1)
+    { id: 'flameborn_legend', name: 'Flameborn Legend', description: 'Complete any win condition', category: 'Meta', icon: '\u2726', check: () => MetaProgression.hasWon() },
 ];
 
 const CATEGORIES = [

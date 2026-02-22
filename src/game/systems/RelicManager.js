@@ -6,6 +6,7 @@ export class RelicManager {
         this.active = [];
         this.activeSynergies = new Set();
         this._synergyCallbacks = [];
+        this._deathSaveUsed = false;
     }
 
     getAvailableChoices(count = 2, includeLegendary = false) {
@@ -111,6 +112,27 @@ export class RelicManager {
         return false;
     }
 
+    /** Helper for chain_banish — returns the effective chain radius (base or tier2) */
+    _getChainBanishRadius() {
+        for (const relic of this.active) {
+            if (relic.id !== 'chain_banish') continue;
+            if (MetaProgression.hasUpgrade(relic.id) && relic.tier2 && relic.tier2.chainRadius !== undefined) {
+                return relic.tier2.chainRadius;
+            }
+            return (relic.apply && relic.apply.chainRadius) || 80;
+        }
+        return 80;
+    }
+
+    /** Helper to get a specific key from a relic's apply or tier2 block */
+    getApplyOrTier2Value(relicId, key) {
+        for (const relic of this.active) {
+            if (relic.id !== relicId) continue;
+            return this._getApplyValue(relic, key);
+        }
+        return undefined;
+    }
+
     canDrop() {
         return this.active.length < RELIC.MAX_ACTIVE;
     }
@@ -118,5 +140,6 @@ export class RelicManager {
     reset() {
         this.active = [];
         this.activeSynergies.clear();
+        this._deathSaveUsed = false;
     }
 }

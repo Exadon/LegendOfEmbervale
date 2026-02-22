@@ -22,6 +22,14 @@ export class ClassSelect extends Phaser.Scene {
         this._selectedIdx = 0;
         this._panels = [];
         this._bossRushMode = !!(this.scene.settings.data && this.scene.settings.data.bossRush);
+        this._dailyMode = !!(this.scene.settings.data && this.scene.settings.data.daily);
+        this._suggestedClass = (this.scene.settings.data && this.scene.settings.data.suggestedClass) || null;
+
+        // If daily mode, pre-select the suggested class
+        if (this._dailyMode && this._suggestedClass) {
+            const suggestedIdx = ALL_CLASS_IDS.indexOf(this._suggestedClass);
+            if (suggestedIdx >= 0) this._selectedIdx = suggestedIdx;
+        }
 
         // Background
         this.add.rectangle(0, 0, width, height, 0x0A0A1E).setOrigin(0, 0);
@@ -30,6 +38,14 @@ export class ClassSelect extends Phaser.Scene {
         this.add.text(width / 2, 20, 'CHOOSE YOUR CLASS', {
             fontSize: '22px', color: '#FFCC00', fontFamily: 'monospace', fontStyle: 'bold'
         }).setOrigin(0.5);
+
+        // Daily mode banner
+        if (this._dailyMode) {
+            this.add.text(width / 2, 44, '⚡ DAILY RUN', {
+                fontSize: '14px', color: '#FFDD00', fontFamily: 'monospace', fontStyle: 'bold',
+                shadow: { offsetX: 0, offsetY: 0, color: '#FF8800', blur: 8, fill: true },
+            }).setOrigin(0.5);
+        }
 
         // Elixir balance
         const avail = MetaProgression.getAvailableElixir();
@@ -367,10 +383,11 @@ export class ClassSelect extends Phaser.Scene {
         }
 
         // Show modifier selection overlay
+        const _isDaily = this._dailyMode;
         new ModifierSelect(this, () => {
             this.cameras.main.fadeOut(600, 0, 0, 0);
             this.cameras.main.once('camerafadeoutcomplete', () => {
-                this.scene.start('Level1');
+                this.scene.start('Level1', { daily: _isDaily });
             });
         });
     }

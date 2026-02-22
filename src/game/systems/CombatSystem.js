@@ -65,6 +65,13 @@ export class CombatSystem {
                 if (s.player.isDashing || s.player.isInvincible) {
                     // Blacksmith buff: guaranteed banish on dash
                     if (s.interactionSystem.blacksmithBuff && s.player.isDashing && enemy.hitsToKill > 1) enemy.hitsToKill = 1;
+
+                    // Relic: wraithbane — dash through enemy slows it
+                    if (s.player.isDashing && s.relicManager && s.relicManager.getFlag('dashSlow')) {
+                        const slowDur = s.relicManager.getApplyOrTier2Value('wraithbane', 'dashSlowDuration') || 3000;
+                        enemy.stun(slowDur);
+                        enemy.setTint(0x4488FF);
+                    }
                     s.particles.wraithBanish(enemy.x, enemy.y);
                     s.popups.wraithBanished(enemy.x, enemy.y);
                     s.audio.playWraithBanish();
@@ -79,8 +86,9 @@ export class CombatSystem {
                     enemy.banish();
                     this.onEnemyBanished(enemy.x, enemy.y, s.player.isDashing, enemy.def.elite);
                 } else if (s.player.hitInvincibleTimer <= 0) {
-                    // Tank: reduced enemy damage, + relic multiplier
-                    const dmg = SkillManager.getValue('enemyDamage', enemy.def.damage) * s.relicManager.getMult('enemyDamageMult');
+                    // Tank: reduced enemy damage, + relic multiplier + difficulty mult
+                    const _diffDmgMult = s._diffEnemyDamageMult || 1;
+                    const dmg = SkillManager.getValue('enemyDamage', enemy.def.damage) * s.relicManager.getMult('enemyDamageMult') * _diffDmgMult;
                     GlobalState.drainFlame(dmg);
                     s.audio.playWraithHit();
                     s.cameras.main.shake(200, 0.008);
@@ -232,6 +240,44 @@ export class CombatSystem {
             const restore = SkillManager.getValue('dash.flameRestoreAmount', 0);
             GlobalState.flame = GlobalState.flame + restore;
             s.popups.show(x, y - 40, `+${restore} FLAME`, '#FF6600', '12px');
+        }
+
+        // Relic: crimson_pyre — create fire zone on banish
+        if (s.relicManager && s.relicManager.getFlag('pyreOnBanish')) {
+            const pyreDuration = s.relicManager.getApplyOrTier2Value('crimson_pyre', 'pyreDuration') || 2000;
+            const pyreZone = s.add.rectangle(x, y, 60, 40, 0xFF2200, 0.35).setDepth(5);
+            s.time.delayedCall(pyreDuration, () => { if (pyreZone.active) pyreZone.destroy(); });
+            s.time.addEvent({
+                delay: 200, repeat: Math.ceil(pyreDuration / 200) - 1,
+                callback: () => {
+                    if (!pyreZone.active) return;
+                    for (const en of s.enemyGroup.getChildren()) {
+                        if (!en.active || !en.alive) continue;
+                        if (Phaser.Math.Distance.Between(x, y, en.x, en.y) < 40) {
+                            en.stun(300);
+                        }
+                    }
+                }
+            });
+        }
+
+        // Relic: chain_banish — splash damage to nearby enemies
+        if (s.relicManager && s.relicManager.getFlag('chainBanish')) {
+            const chainRadius = s.relicManager._getChainBanishRadius();
+            for (const en of s.enemyGroup.getChildren()) {
+                if (!en.active || !en.alive) continue;
+                const dist = Phaser.Math.Distance.Between(x, y, en.x, en.y);
+                if (dist < chainRadius && dist > 1) {
+                    // Reduce hitsToKill or stun if multi-hit
+                    if (en.hitsToKill > 1) {
+                        en.hitsToKill--;
+                        en.setTint(0xFF8844);
+                        s.time.delayedCall(120, () => { if (en.active) { en.setTint(en._enemyTint || 0xFFFFFF); if (!en._enemyTint) en.clearTint(); } });
+                    }
+                    s.popups.show(en.x, en.y - 20, '-8 CHAIN', '#FF8844', '10px');
+                    GlobalState.drainFlame(-0); // no flame cost; just visual
+                }
+            }
         }
     }
 

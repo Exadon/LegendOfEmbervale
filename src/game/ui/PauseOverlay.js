@@ -5,6 +5,10 @@ import { CLASS_DEFS } from '../systems/ClassDefs.js';
 import { ALL_CLASS_IDS } from '../systems/MetaProgression.js';
 import { Settings } from '../systems/Settings.js';
 import { AchievementManager } from '../systems/AchievementManager.js';
+import { DIFFICULTIES } from '../constants.js';
+import { KeybindOverlay } from './KeybindOverlay.js';
+
+const DIFFICULTY_ORDER = ['pilgrim', 'standard', 'torment'];
 
 export class PauseOverlay {
     constructor(scene) {
@@ -255,8 +259,43 @@ export class PauseOverlay {
         }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301).setScale(s);
         this._elements.push(this._densText);
 
+        // Difficulty preset [F]
+        const diffLabelP = this._uiXY(width / 2 - 140, Math.round(height * 0.83));
+        const diffLabel = this.scene.add.text(diffLabelP.x, diffLabelP.y, '[F]  Difficulty:', {
+            fontSize: '13px', color: '#CCCCCC', fontFamily: 'monospace'
+        }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301).setScale(s);
+        this._elements.push(diffLabel);
+        const diffValP = this._uiXY(width / 2 + 60, Math.round(height * 0.83));
+        this._diffText = this.scene.add.text(diffValP.x, diffValP.y,
+            DIFFICULTIES[Settings.data.difficulty || 'standard'].label, {
+            fontSize: '13px', color: '#FFCC00', fontFamily: 'monospace', fontStyle: 'bold'
+        }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301).setScale(s);
+        this._elements.push(this._diffText);
+
+        // Colorblind mode [O]
+        const cbLabelP = this._uiXY(width / 2 - 140, Math.round(height * 0.87));
+        const cbLabel = this.scene.add.text(cbLabelP.x, cbLabelP.y, '[O]  Colorblind:', {
+            fontSize: '13px', color: '#CCCCCC', fontFamily: 'monospace'
+        }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301).setScale(s);
+        this._elements.push(cbLabel);
+        const cbValP = this._uiXY(width / 2 + 60, Math.round(height * 0.87));
+        this._cbText = this.scene.add.text(cbValP.x, cbValP.y,
+            Settings.data.colorblindMode ? 'ON' : 'OFF', {
+            fontSize: '13px',
+            color: Settings.data.colorblindMode ? '#44FF44' : '#FF4444',
+            fontFamily: 'monospace', fontStyle: 'bold'
+        }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301).setScale(s);
+        this._elements.push(this._cbText);
+
+        // Key Bindings [K]
+        const kbLabelP = this._uiXY(width / 2 - 140, Math.round(height * 0.91));
+        const kbLabel = this.scene.add.text(kbLabelP.x, kbLabelP.y, '[K]  Key Bindings', {
+            fontSize: '13px', color: '#CCCCCC', fontFamily: 'monospace'
+        }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301).setScale(s);
+        this._elements.push(kbLabel);
+
         // Key bindings reference (read-only, compact two-column)
-        const bindY = Math.round(height * 0.83);
+        const bindY = Math.round(height * 0.95);
         const bindings = [
             ['WASD / ←→', 'Move'],     ['SPACE / W/↑', 'Jump / Dbl'],
             ['SHIFT / B', 'Dash'],     ['E / X', 'Flame Burst'],
@@ -325,6 +364,12 @@ export class PauseOverlay {
                 this._openLoreCompendium();
             } else if (event.key === 'd' || event.key === 'D') {
                 this._toggleParticleDensity();
+            } else if (event.key === 'f' || event.key === 'F') {
+                this._cycleDifficulty();
+            } else if (event.key === 'o' || event.key === 'O') {
+                this._toggleColorblind();
+            } else if (event.key === 'k' || event.key === 'K') {
+                this._openKeybinds();
             } else if (event.key === '-' || event.key === '_') {
                 this._adjustVolume(-0.1);
             } else if (event.key === '=' || event.key === '+') {
@@ -404,6 +449,33 @@ export class PauseOverlay {
         }
     }
 
+    _cycleDifficulty() {
+        const cur = Settings.data.difficulty || 'standard';
+        const idx = DIFFICULTY_ORDER.indexOf(cur);
+        const next = DIFFICULTY_ORDER[(idx + 1) % DIFFICULTY_ORDER.length];
+        Settings.data.difficulty = next;
+        Settings.save();
+        if (this._diffText) {
+            this._diffText.setText(DIFFICULTIES[next].label);
+        }
+    }
+
+    _toggleColorblind() {
+        Settings.data.colorblindMode = !Settings.data.colorblindMode;
+        Settings.save();
+        if (this._cbText) {
+            this._cbText.setText(Settings.data.colorblindMode ? 'ON' : 'OFF');
+            this._cbText.setColor(Settings.data.colorblindMode ? '#44FF44' : '#FF4444');
+        }
+    }
+
+    _openKeybinds() {
+        if (!this._keybindOverlay) {
+            this._keybindOverlay = new KeybindOverlay(this.scene);
+        }
+        this._keybindOverlay.show();
+    }
+
     _cycleClass() {
         this._classIndex = (this._classIndex + 1) % this._classKeys.length;
         const classId = this._classKeys[this._classIndex];
@@ -432,6 +504,8 @@ export class PauseOverlay {
         this._soundText = null;
         this._resText = null;
         this._densText = null;
+        this._diffText = null;
+        this._cbText = null;
         this._devLine = null;
 
         // Kill tweens and destroy all elements

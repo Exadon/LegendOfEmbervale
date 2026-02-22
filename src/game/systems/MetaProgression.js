@@ -20,7 +20,7 @@ export const ALL_CLASS_IDS = ['adventurer', 'barbarian', 'wizard', 'ranger', 'ta
 
 class _MetaProgression {
     constructor() {
-        this.version = 3;
+        this.version = 4;
         this.unlockedClasses = ['adventurer'];
         this.totalSpent = 0;
         this.classProgress = {};
@@ -29,6 +29,7 @@ class _MetaProgression {
         this.prestigeRelics = [];  // permanent prestige relic IDs
         this.seenRelics = [];      // relic IDs acquired at least once
         this.upgradedRelics = [];  // relic IDs permanently upgraded to tier 2
+        this.wins = [];            // { path, date } win records
         this._load();
     }
 
@@ -51,6 +52,9 @@ class _MetaProgression {
                     this.seenRelics = data.seenRelics || [];
                     this.upgradedRelics = data.upgradedRelics || [];
                 }
+                if (data.version >= 4) {
+                    this.wins = data.wins || [];
+                }
             }
         } catch {}
     }
@@ -67,6 +71,7 @@ class _MetaProgression {
                 prestigeRelics: this.prestigeRelics,
                 seenRelics: this.seenRelics,
                 upgradedRelics: this.upgradedRelics,
+                wins: this.wins,
             }));
         } catch {}
     }
@@ -286,6 +291,21 @@ class _MetaProgression {
         const history = this.getRunHistory();
         if (history.length === 0) return null;
         return history.reduce((best, r) => r.distance > best.distance ? r : best, history[0]);
+    }
+
+    // ─── Phase C4: Win Tracking ───
+
+    markWin(path) {
+        this.wins.push({ path, date: Date.now() });
+        this._save();
+    }
+
+    hasWon() {
+        return this.wins.length > 0;
+    }
+
+    hasWonPath(path) {
+        return this.wins.some(w => w.path === path);
     }
 }
 

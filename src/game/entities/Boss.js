@@ -281,30 +281,68 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
     // ─── Boss: Vine Queen ───
 
     _updateVineQueen(delta, playerX, playerY, interval, speedMult) {
-        this.setVelocityX(0);
+        const dx = playerX - this.x;
+        const dir = dx > 0 ? 1 : -1;
 
-        if (this.attackTimer >= interval) {
-            this.attackTimer = 0;
-            const count = this.currentPhase >= 2 ? 3 : this.def.vineSpawnCount;
-            const attack = this._nextComboAttack() || (Math.random() < 0.33 ? 'vineSpawn' : Math.random() < 0.5 ? 'vineSweep' : 'vineBomb');
+        // Lunge / retreat during ATTACK state
+        if (this.aiState === AI_STATE.ATTACK) {
+            this.stateTimer -= delta;
+            if (this.stateTimer <= 0) {
+                this.aiState = AI_STATE.IDLE;
+                this.setVelocityX(0);
+                this._openVulnerabilityWindow();
+            }
+            return;
+        }
 
-            if (attack === 'vineSpawn') {
-                for (let i = 0; i < count; i++) {
-                    const offset = (Math.random() - 0.5) * 200;
-                    const def = ENEMIES['fell_vine'] || ENEMIES['fell_critter'];
-                    if (def) {
-                        const enemy = new Enemy(this.scene, this.x + offset, WORLD.GROUND_Y - def.height / 2, 'fell_vine');
-                        this.scene.enemyGroup.add(enemy);
-                    }
-                }
-            } else if (attack === 'vineSweep') {
-                this.scene.events.emit('bossVineSweep', this.x, this.def.vineSweepWidth * speedMult);
+        if (this.aiState === AI_STATE.IDLE) {
+            // Stalk the player: stay 120–250px away
+            if (Math.abs(dx) > 250) {
+                this.setVelocityX(dir * 65 * speedMult);
+            } else if (Math.abs(dx) < 120) {
+                this.setVelocityX(-dir * 50 * speedMult);
             } else {
-                // vineBomb: 3 projectiles in spread
-                const count2 = this.def.vineBombCount || 3;
-                for (let i = 0; i < count2; i++) {
-                    const angleOffset = (i - 1) * 15; // -15, 0, +15 degrees
-                    this.scene.events.emit('bossVineBomb', this.x, this.y, playerX, playerY, angleOffset);
+                this.setVelocityX(0);
+            }
+            this.setFlipX(dir < 0);
+
+            if (this.attackTimer >= interval) {
+                this.attackTimer = 0;
+                const count = this.currentPhase >= 2 ? 3 : this.def.vineSpawnCount;
+                // Prefer sweep when close, otherwise random
+                const attack = this._nextComboAttack() ||
+                    (Math.abs(dx) < 200 ? 'vineSweep' : Math.random() < 0.5 ? 'vineSpawn' : 'vineBomb');
+
+                if (attack === 'vineSpawn') {
+                    // Plant feet while summoning vines
+                    this.setVelocityX(0);
+                    for (let i = 0; i < count; i++) {
+                        const offset = (Math.random() - 0.5) * 200;
+                        const def = ENEMIES['fell_vine'] || ENEMIES['fell_critter'];
+                        if (def) {
+                            const enemy = new Enemy(this.scene, this.x + offset, WORLD.GROUND_Y - def.height / 2, 'fell_vine');
+                            this.scene.enemyGroup.add(enemy);
+                        }
+                    }
+                    this._openVulnerabilityWindow();
+                } else if (attack === 'vineSweep') {
+                    // Lunge forward into the sweep
+                    this.aiState = AI_STATE.ATTACK;
+                    this.stateTimer = 500;
+                    this.setVelocityX(dir * 180 * speedMult);
+                    this.scene.events.emit('bossVineSweep', this.x, this.def.vineSweepWidth * speedMult);
+                } else {
+                    // vineBomb: step back to create arc room, then fire spread
+                    this.setVelocityX(-dir * 70 * speedMult);
+                    const count2 = this.def.vineBombCount || 3;
+                    for (let i = 0; i < count2; i++) {
+                        const angleOffset = (i - 1) * 15;
+                        this.scene.events.emit('bossVineBomb', this.x, this.y, playerX, playerY, angleOffset);
+                    }
+                    this.scene.time.delayedCall(450, () => {
+                        if (this.active && this.alive) this.setVelocityX(0);
+                    });
+                    this._openVulnerabilityWindow();
                 }
             }
         }

@@ -1,5 +1,15 @@
 import Phaser from 'phaser';
 import { ENEMIES, ENEMY_SPRITES, ENEMY_AI, FELL_MUTATION } from '../constants.js';
+import { Settings } from '../systems/Settings.js';
+
+const COLORBLIND_CODES = {
+    fell_critter: 'CR', fell_footsoldier: 'FS', fell_vine: 'FV', fell_ranger: 'FR',
+    scavenger: 'SC', scavenger_pyreblade: 'SP', vukah_warrior: 'VK', vukah_shaman: 'VS',
+    hollow_skeleton: 'SK', hollow_mage: 'HM', hollow_reaper: 'HR', frost_fell: 'FF',
+    frost_scavenger: 'FC', skullflame: 'EL', shroud_wraith: 'WR', corrupted_warrior: 'CW',
+    void_slime: 'SL', vine_spitter: 'VS', vukah_berserker: 'VB', pyrebat: 'PB',
+    soul_leech: 'SL', frost_hulk: 'FH',
+};
 
 /**
  * Data-driven enemy. Constructed from an ENEMIES config entry.
@@ -52,6 +62,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         // Hollow reaper teleport cooldown (Feature 10)
         this._teleportCooldown = 0;
 
+        // Phase B2: new enemy behavior timers
+        this._fireTimer = 0;                // vine_spitter ranged attack
+        this._berserkerTimer = 0;           // vukah_berserker charge duration
+        this._divePhase = Math.random() * Math.PI * 2; // pyrebat sine phase
+
         this.body.setAllowGravity(!def.stationary);
         this.body.setSize(def.width - 4, def.height - 4);
         this.setDepth(4);
@@ -67,6 +82,16 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             // Apply enemy tint and start idle animation
             if (spriteCfg.tint) this.setTint(spriteCfg.tint);
             if (!def.stationary) this.play(spriteCfg.idleAnim);
+        }
+
+        // E2: Colorblind label
+        this._cbLabel = null;
+        if (Settings.data.colorblindMode) {
+            const code = COLORBLIND_CODES[typeId] || '??';
+            this._cbLabel = scene.add.text(x, y - 20, code, {
+                fontSize: '8px', backgroundColor: '#000000AA', color: '#FFFFFF',
+                fontFamily: 'monospace', padding: { x: 1, y: 1 },
+            }).setDepth(60).setOrigin(0.5);
         }
 
         if (def.stationary) {
@@ -319,6 +344,34 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             }
         }
 
+        // Phase B2: vine_spitter ranged attack
+        if (this.def.ranged && this.def.stationary) {
+            this._fireTimer -= delta;
+            if (this._fireTimer <= 0) {
+                this._fireTimer = this.def.fireInterval || 2500;
+                this.scene.events.emit('enemyProjectile', { x: this.x, y: this.y, damage: this.def.damage });
+            }
+        }
+
+        // Phase B2: vukah_berserker charge
+        if (this.def.berserker && this.aiState === 'chase') {
+            if (distToPlayer < 150 && this._berserkerTimer <= 0) {
+                this._berserkerTimer = 800;
+                const angle = Phaser.Math.Angle.Between(this.x, this.y, playerX, playerY);
+                this.setVelocity(Math.cos(angle) * 220, Math.sin(angle) * 220 * 0.3);
+            }
+            if (this._berserkerTimer > 0) {
+                this._berserkerTimer -= delta;
+            }
+        }
+
+        // Phase B2: pyrebat sinusoidal dive
+        if (this.def.diveBomb && this.aiState === 'chase') {
+            this._divePhase += delta * 0.004;
+            const yOff = Math.sin(this._divePhase) * 40;
+            this.setVelocityY(yOff);
+        }
+
         this.setFlipX(this.body.velocity.x > 0);
 
         if (this._hasSprite) {
@@ -328,6 +381,18 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             if (currentKey !== desiredAnim) {
                 this.play(desiredAnim, true);
             }
+        }
+
+        // Update colorblind label position
+        if (this._cbLabel && this._cbLabel.active) {
+            this._cbLabel.setPosition(this.x, this.y - 20);
+        }
+    }
+
+    _destroyCbLabel() {
+        if (this._cbLabel && this._cbLabel.active) {
+            this._cbLabel.destroy();
+            this._cbLabel = null;
         }
     }
 
@@ -346,6 +411,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
         this.alive = false;
         this.body.enable = false;
+        this._destroyCbLabel();
         if (this._stunTween) {
             this._stunTween.destroy();
             this._stunTween = null;

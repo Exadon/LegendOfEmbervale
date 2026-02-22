@@ -1,23 +1,18 @@
 import Phaser from 'phaser';
+import { Settings } from './Settings.js';
+
+export const DEFAULT_KEYBINDS = {
+    left: 'A', right: 'D', up: 'W', down: 'S',
+    jump: 'SPACE', dash: 'SHIFT',
+    flameBurst: 'E', classAttack: 'Q', mine: 'M', lore: 'J',
+    pause: 'ESC', interact: 'F', sAbility: 'S',
+};
 
 export class InputManager {
     constructor(scene) {
         this.scene = scene;
+        this.refreshKeys();
 
-        // Keyboard
-        this.keys = scene.input.keyboard.addKeys({
-            up: Phaser.Input.Keyboard.KeyCodes.W,
-            down: Phaser.Input.Keyboard.KeyCodes.S,
-            left: Phaser.Input.Keyboard.KeyCodes.A,
-            right: Phaser.Input.Keyboard.KeyCodes.D,
-            jump: Phaser.Input.Keyboard.KeyCodes.SPACE,
-            dash: Phaser.Input.Keyboard.KeyCodes.SHIFT,
-            flameBurst: Phaser.Input.Keyboard.KeyCodes.E,
-            classAttack: Phaser.Input.Keyboard.KeyCodes.Q,
-            pause: Phaser.Input.Keyboard.KeyCodes.ESC,
-            mine: Phaser.Input.Keyboard.KeyCodes.M,
-            lore: Phaser.Input.Keyboard.KeyCodes.J,
-        });
 
         // Per-button "just pressed" state for gamepad
         this._prevPad = {};
@@ -41,6 +36,19 @@ export class InputManager {
                 this.gamepadConnected = true;
             }
         }
+    }
+
+    /** Re-read keybinds from Settings and rebuild the Phaser key map */
+    refreshKeys() {
+        const resolved = { ...DEFAULT_KEYBINDS, ...(Settings.data.keybinds || {}) };
+        const keyMap = {};
+        for (const [action, code] of Object.entries(resolved)) {
+            const keyCode = Phaser.Input.Keyboard.KeyCodes[code] ?? Phaser.Input.Keyboard.KeyCodes[code.toUpperCase()];
+            if (keyCode !== undefined) {
+                keyMap[action] = keyCode;
+            }
+        }
+        this.keys = this.scene.input.keyboard.addKeys(keyMap);
     }
 
     // ─── Movement ───
@@ -98,6 +106,7 @@ export class InputManager {
 
     /** S key — ground slam / class S ability */
     get sAbility() {
+        if (this.keys.sAbility && Phaser.Input.Keyboard.JustDown(this.keys.sAbility)) return true;
         return this._padJustPressed('RT') || this._padJustPressed('R2');
     }
 

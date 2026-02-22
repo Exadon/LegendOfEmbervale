@@ -39,6 +39,8 @@ export class LevelGenerator {
         this.loreIndex = 0; // cycles through LORE_ENTRIES
         this.loopCount = 0;
         this._eliteSpawnMult = 1;
+        this._diffEnemySpeedMult = 1;
+        this._diffEnemyHpMult = 1;
 
         // Pre-compute total decoration weight for weighted random
         this._totalDecoWeight = DECORATION.TYPES.reduce((sum, d) => sum + d.weight, 0);
@@ -54,6 +56,12 @@ export class LevelGenerator {
 
     setEliteSpawnMult(m) {
         this._eliteSpawnMult = m;
+    }
+
+    /** Apply difficulty preset multipliers (E1) */
+    setDifficultyMult(diff) {
+        this._diffEnemySpeedMult = diff ? diff.enemySpeedMult : 1;
+        this._diffEnemyHpMult = diff ? diff.enemyHpMult : 1;
     }
 
     generateAhead(cameraRightX) {
@@ -197,6 +205,20 @@ export class LevelGenerator {
                     if (this.loopCount > 0) {
                         enemy.hitsToKill = Math.ceil(enemy.hitsToKill * (1 + this.loopCount * ENDLESS.HP_MULT_PER_LOOP));
                         enemy._baseSpeed = enemy._baseSpeed * (1 + this.loopCount * ENDLESS.SPEED_MULT_PER_LOOP);
+                    }
+                    // Difficulty preset scaling (E1)
+                    if (this._diffEnemyHpMult !== 1) {
+                        enemy.hitsToKill = Math.max(1, Math.ceil(enemy.hitsToKill * this._diffEnemyHpMult));
+                    }
+                    if (this._diffEnemySpeedMult !== 1) {
+                        enemy._baseSpeed = enemy._baseSpeed * this._diffEnemySpeedMult;
+                    }
+                    // Relic: ember_crown / chain_banish enemy HP drawback
+                    if (this.scene.relicManager) {
+                        const relicHpMult = this.scene.relicManager.getMult('enemyHpMult');
+                        if (relicHpMult !== 1) {
+                            enemy.hitsToKill = Math.max(1, Math.ceil(enemy.hitsToKill * relicHpMult));
+                        }
                     }
                     this.enemies.add(enemy);
                 }

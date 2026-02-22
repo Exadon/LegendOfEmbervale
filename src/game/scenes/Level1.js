@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { WORLD, PLAYER, FLAME, FLAME_WISP, FLAME_SHRINE, WRAITH, SHROUD, GROUND_SLAM, FLAME_BURST, COMBO, PROGRESSION_BAR, LORE_ENTRIES, SHRINE_INSCRIPTIONS, NEAR_DEATH, SURVIVOR, CHALLENGE_SHRINE, RELIC, RELIC_UPGRADE_COST, ENEMIES, CINDER_VESSEL, ELIXIR_CORRUPTION, CRAFTSPERSON, OBELISK, DEADLY_SHROUD, DOUBLE_JUMP, UNDEAD_HAND, ENDLESS } from '../constants.js';
+import { WORLD, PLAYER, FLAME, FLAME_WISP, FLAME_SHRINE, WRAITH, SHROUD, GROUND_SLAM, FLAME_BURST, COMBO, PROGRESSION_BAR, LORE_ENTRIES, SHRINE_INSCRIPTIONS, NEAR_DEATH, SURVIVOR, CHALLENGE_SHRINE, RELIC, RELIC_UPGRADE_COST, ENEMIES, CINDER_VESSEL, ELIXIR_CORRUPTION, CRAFTSPERSON, OBELISK, DEADLY_SHROUD, DOUBLE_JUMP, UNDEAD_HAND, ENDLESS, DIFFICULTIES } from '../constants.js';
 import { RunModifier } from '../systems/RunModifier.js';
 import { GlobalState } from '../GlobalState.js';
 import { SkillManager } from '../systems/SkillManager.js';
@@ -150,6 +150,7 @@ export class Level1 extends Phaser.Scene {
             undeadHands: this.undeadHandGroup,
         }, this.biomeManager);
 
+        this.levelGen.setDifficultyMult(this._diff);
         this.levelGen.generateAhead(this.cameras.main.scrollX + this.scale.width);
 
         // Camera
@@ -201,6 +202,10 @@ export class Level1 extends Phaser.Scene {
 
         // Shroud mutations
         this.shroudMutationManager = new ShroudMutationManager(this);
+
+        // Difficulty preset (E1)
+        this._diff = DIFFICULTIES[Settings.data.difficulty] || DIFFICULTIES.standard;
+        this._diffEnemyDamageMult = this._diff.enemyDamageMult;
 
         // Relic system
         this.relicManager = new RelicManager();
@@ -260,7 +265,15 @@ export class Level1 extends Phaser.Scene {
             skillsAcquired: 0,
             hasDied: false,
             biomesReached: new Set(['springlands']),
+            bossesDefeated: new Set(),
+            isDaily: false,
         };
+        this._winTriggered = false;
+
+        // Apply daily flag from scene init data
+        if (this.scene.settings.data && this.scene.settings.data.daily) {
+            this.runStats.isDaily = true;
+        }
 
         // ─── Run Modifier (Phase A2) ───
         this._modFlameDrainMult = 1;
@@ -933,6 +946,8 @@ export class Level1 extends Phaser.Scene {
         drainRate *= this.relicManager.getMult('flameDrainMult');
         // Run modifier flame drain multiplier
         drainRate *= this._modFlameDrainMult;
+        // Difficulty preset drain multiplier (E1)
+        drainRate *= this._diff ? this._diff.flameDrainMult : 1;
 
         // Sprint 11: Shroud Heart legendary — heals in shroud
         const shroudHeal = this.relicManager.getFlat('shroudHeal', 0);
@@ -1024,6 +1039,18 @@ export class Level1 extends Phaser.Scene {
         }
 
         GlobalState.drainFlame(drainRate * (delta / 1000));
+
+        // --- Relic: soul_anchor — death save ---
+        if (GlobalState.flame <= 0 && this.relicManager.getFlag('deathSave') && !this.relicManager._deathSaveUsed) {
+            const saveFlame = this.relicManager.getApplyOrTier2Value('soul_anchor', 'deathSaveFlame') || 1;
+            GlobalState._gameOver = false;
+            GlobalState._flame = saveFlame;
+            this.relicManager._deathSaveUsed = true;
+            this.cameras.main.flash(400, 136, 136, 255);
+            this.cameras.main.shake(300, 0.01);
+            this.popups.show(this.player.x, this.player.y - 60, 'SOUL ANCHORED', '#8888FF', '18px');
+        }
+
         this.hud.showShroudWarning(this.playerInShroud);
 
         // --- Corruption decay (Feature 5) ---
@@ -1236,6 +1263,9 @@ export class Level1 extends Phaser.Scene {
                 onComplete: () => { this.cameras.main.setZoom(1.6); }
             });
         }
+
+        // --- Win condition check ---
+        this._checkWinConditions(distMeters);
 
         // --- Game over ---
         if (GlobalState.gameOver) {
@@ -1773,6 +1803,70 @@ export class Level1 extends Phaser.Scene {
                 this.player.setAlpha(0);
             }
             this.hud.showGameOver(GlobalState.elixir, distMeters || 0, this.interactionSystem.loreScrollsCollected, this.runStats);
+        });
+    }
+
+    // ─── Win Conditions (Phase C) ───
+
+    _checkWinConditions(distMeters) {
+        if (this._winTriggered || GlobalState.gameOver) return;
+        const bosses = this.runStats.bossesDefeated;
+
+        // Path 1: defeat all 6 bosses
+        if (bosses && bosses.size >= 6) {
+            this._triggerWin('boss_conquest');
+            return;
+        }
+        // Path 2: collect all lore scrolls (lifetime)
+        if (this.interactionSystem && this.interactionSystem.loreScrollsCollected >= LORE_ENTRIES.length) {
+            this._triggerWin('lore_master');
+            return;
+        }
+        // Path 3: reach 50000m AND have defeated shroud_maw boss
+        if (distMeters >= 50000 && bosses && bosses.has('shroud_maw')) {
+            this._triggerWin('shroud_conquest');
+        }
+    }
+
+    _triggerWin(path) {
+        if (this._winTriggered) return;
+        this._winTriggered = true;
+
+        // Stop flame drain and shroud
+        GlobalState._gameOver = false;
+        this.shroud.speedMultiplier = 0;
+
+        // Award elixir
+        FlameAltar.addElixir(100);
+        MetaProgression.markWin(path);
+        AchievementManager.update();
+
+        // Music + camera flash
+        MusicManager.playBoss();
+        this.cameras.main.flash(800, 255, 200, 0);
+        this.cameras.main.shake(400, 0.008);
+        this.popups.show(this.player.x, this.player.y - 80, 'VICTORY!', '#FFDD00', '28px');
+
+        // Save run history
+        MetaProgression.saveRunHistory({
+            ...this.runStats,
+            distanceMeters: this.runStats.distanceMeters,
+            className: (SkillManager.activeClass && SkillManager.activeClass.className) || 'adventurer',
+            relics: this.relicManager.active.map(r => r.id),
+            win: true,
+        });
+
+        // After 1.5s go to WinScene
+        this.time.delayedCall(1500, () => {
+            MusicManager.stopAll();
+            this.cameras.main.fadeOut(800, 0, 0, 0);
+            this.cameras.main.once('camerafadeoutcomplete', () => {
+                this.scene.start('WinScene', {
+                    path,
+                    runStats: { ...this.runStats, bossesDefeated: this.runStats.bossesDefeated ? [...this.runStats.bossesDefeated] : [] },
+                    relics: this.relicManager.active.map(r => r.id),
+                });
+            });
         });
     }
 

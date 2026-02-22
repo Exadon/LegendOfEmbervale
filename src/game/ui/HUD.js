@@ -5,6 +5,7 @@ import { SkillManager } from '../systems/SkillManager.js';
 import { AchievementManager } from '../systems/AchievementManager.js';
 import { FlameAltar } from '../systems/FlameAltar.js';
 import { MetaProgression } from '../systems/MetaProgression.js';
+import { DailyRun } from '../systems/DailyRun.js';
 
 const HIGHSCORE_KEY = 'elixirs-shadow-highscore';
 
@@ -690,6 +691,45 @@ export class HUD {
                 canAfford ? `\u2B06 ${upgradeable.length} relic(s) upgradeable for 20 elixir each` : `\u2B06 Relic upgrades available (need 20 elixir)`, {
                 fontSize: '10px', color: canAfford ? '#FFCC44' : '#666666', fontStyle: 'italic'
             });
+        }
+
+        // Daily run share card
+        if (runStats && runStats.isDaily) {
+            const shareData = {
+                distance: dist,
+                className: (runStats && runStats.className) || 'adventurer',
+                kills: (runStats && runStats.enemiesBanished) || 0,
+                time: (runStats && runStats.survivalTime) || 0,
+                hasDied: (runStats && runStats.hasDied) || false,
+                relics: (runStats && runStats.relicsCollected) || [],
+            };
+            DailyRun.saveDailyResult(shareData);
+            const shareText = DailyRun.generateShareText(shareData);
+
+            const dY = height * 0.76;
+            const dDivP = u(width / 2, dY - 10);
+            const dDiv = scene.add.rectangle(dDivP.x, dDivP.y, 360, 1, 0x446644)
+                .setScrollFactor(0).setDepth(d).setAlpha(0);
+            this._gameOverElements.push(dDiv);
+
+            _t(width / 2, dY + 4, 'DAILY RESULT', { fontSize: '12px', color: '#FFDD00', fontStyle: 'bold' });
+
+            const lines = shareText.split('\n');
+            for (let li = 0; li < lines.length; li++) {
+                _t(width / 2, dY + 18 + li * 13, lines[li], { fontSize: '9px', color: '#AAAAAA' });
+            }
+
+            const copyHint = _t(width / 2, dY + 18 + lines.length * 13 + 6,
+                '[C] Copy to Clipboard', { fontSize: '10px', color: '#667766' });
+
+            const copyHandler = (e) => {
+                if ((e.key === 'c' || e.key === 'C') && !e.ctrlKey && copyHint.active) {
+                    navigator.clipboard.writeText(shareText).catch(() => {});
+                    copyHint.setText('[C] Copied!');
+                    copyHint.setColor('#44FF44');
+                }
+            };
+            scene.input.keyboard.on('keydown', copyHandler);
         }
 
         // Restart prompt

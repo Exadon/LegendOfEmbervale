@@ -77,7 +77,7 @@ export const BIOMES = Object.freeze([
         groundTint: 0x2A3A1A,
         platformTint: 0x4A5A3A,
         treeTint: 0x1A3A12,
-        enemies: ['fell_footsoldier', 'fell_critter', 'fell_vine'],
+        enemies: ['fell_footsoldier', 'fell_critter', 'fell_vine', 'vine_spitter'],
         scrollChance: 0.15,
         shrineChance: 0.05,
     },
@@ -90,7 +90,7 @@ export const BIOMES = Object.freeze([
         groundTint: 0x5A4A3A,
         platformTint: 0x7A6A5A,
         treeTint: 0x3A3A2A,
-        enemies: ['vukah_warrior', 'fell_footsoldier', 'fell_ranger', 'vukah_shaman'],
+        enemies: ['vukah_warrior', 'fell_footsoldier', 'fell_ranger', 'vukah_shaman', 'vukah_berserker'],
         scrollChance: 0.15,
         shrineChance: 0.04,
     },
@@ -103,7 +103,7 @@ export const BIOMES = Object.freeze([
         groundTint: 0x6A5030,
         platformTint: 0x8A7050,
         treeTint: 0x5A4A20,
-        enemies: ['fell_ranger', 'vukah_warrior', 'scavenger_pyreblade', 'vukah_shaman', 'skullflame'],
+        enemies: ['fell_ranger', 'vukah_warrior', 'scavenger_pyreblade', 'vukah_shaman', 'skullflame', 'pyrebat'],
         scrollChance: 0.18,
         shrineChance: 0.04,
     },
@@ -116,7 +116,7 @@ export const BIOMES = Object.freeze([
         groundTint: 0x2A2A3A,
         platformTint: 0x4A4A5A,
         treeTint: 0x3A3A4A,
-        enemies: ['hollow_skeleton', 'hollow_mage', 'hollow_reaper', 'skullflame'],
+        enemies: ['hollow_skeleton', 'hollow_mage', 'hollow_reaper', 'skullflame', 'soul_leech'],
         scrollChance: 0.18,
         shrineChance: 0.03,
     },
@@ -129,7 +129,7 @@ export const BIOMES = Object.freeze([
         groundTint: 0x8899AA,
         platformTint: 0x99AABB,
         treeTint: 0x6688AA,
-        enemies: ['frost_fell', 'frost_scavenger', 'hollow_reaper', 'skullflame'],
+        enemies: ['frost_fell', 'frost_scavenger', 'hollow_reaper', 'skullflame', 'frost_hulk'],
         scrollChance: 0.2,
         shrineChance: 0.03,
         coldDrain: 1,
@@ -190,7 +190,7 @@ export const SHROUD = Object.freeze({
 
 export const FLAME = Object.freeze({
     MAX: 100,
-    DRAIN_NORMAL: 2,
+    DRAIN_NORMAL: 1.7,
     DRAIN_SHROUD: 4,
     DRAIN_CORRUPTION: 3,
 });
@@ -224,7 +224,7 @@ export const ENEMIES = Object.freeze({
     fell_critter: {
         name: 'Fell Critter',
         speed: 100,
-        damage: 8,
+        damage: 6,
         width: 18,
         height: 18,
         texture: 'fell_critter',
@@ -261,7 +261,7 @@ export const ENEMIES = Object.freeze({
     scavenger: {
         name: 'Scavenger Scalper',
         speed: 90,
-        damage: 12,
+        damage: 6,
         width: 22,
         height: 36,
         texture: 'scavenger',
@@ -390,6 +390,60 @@ export const ENEMIES = Object.freeze({
         hitsToKill: 1,
         splits: true,
         flameDrainOnContact: 5,
+    },
+    // ─── Phase B2: 5 new enemy types ───
+    vine_spitter: {
+        name: 'Vine Spitter',
+        speed: 0,
+        damage: 10,
+        width: 22,
+        height: 28,
+        texture: 'vine_spitter',
+        flying: false,
+        stationary: true,
+        ranged: true,
+        fireInterval: 2500,
+    },
+    vukah_berserker: {
+        name: 'Vukah Berserker',
+        speed: 65,
+        damage: 20,
+        width: 28,
+        height: 32,
+        texture: 'vukah_berserker',
+        flying: false,
+        berserker: true,
+    },
+    pyrebat: {
+        name: 'Pyrebat',
+        speed: 90,
+        damage: 14,
+        width: 24,
+        height: 16,
+        texture: 'pyrebat',
+        flying: true,
+        diveBomb: true,
+    },
+    soul_leech: {
+        name: 'Soul Leech',
+        speed: 35,
+        damage: 6,
+        width: 20,
+        height: 24,
+        texture: 'soul_leech',
+        flying: false,
+        flameDrainOnContact: 10,
+    },
+    frost_hulk: {
+        name: 'Frost Hulk',
+        speed: 28,
+        damage: 18,
+        width: 32,
+        height: 40,
+        texture: 'frost_hulk',
+        flying: false,
+        hitsToKill: 3,
+        freezeAura: true,
     },
 });
 
@@ -995,6 +1049,55 @@ export const RELIC = Object.freeze({
             apply: { elixirWispSpawn: 10 },
             drawbackApply: { flameDrainMult: 2 },
         },
+        // ─── Phase B1: 6 new standard relics ───
+        {
+            id: 'crimson_pyre', name: 'Crimson Pyre', icon: '\u{1F525}',
+            desc: 'Banishing creates a 2s fire zone', drawback: 'Flame drains 20% faster',
+            color: 0xFF2200,
+            apply: { pyreOnBanish: true },
+            drawbackApply: { flameDrainMult: 1.2 },
+            tier2: { pyreOnBanish: true, pyreDuration: 3000 },
+        },
+        {
+            id: 'soul_anchor', name: 'Soul Anchor', icon: '\u2693',
+            desc: 'Once per run, survive lethal drain at 1 flame', drawback: 'Max flame -20',
+            color: 0x8888FF,
+            apply: { deathSave: true },
+            drawbackApply: { maxFlamePenalty: 20 },
+            tier2: { deathSave: true, deathSaveFlame: 10 },
+        },
+        {
+            id: 'wraithbane', name: 'Wraithbane', icon: '\u{1F5E1}',
+            desc: 'Dashing through enemy slows it 60% for 3s', drawback: 'Dash cooldown +50%',
+            color: 0xAAFF88,
+            apply: { dashSlow: true },
+            drawbackApply: { dashCooldownMult: 1.5 },
+            tier2: { dashSlow: true, dashSlowDuration: 5000 },
+        },
+        {
+            id: 'mirrored_spark', name: 'Mirrored Spark', icon: '\u{1FA9E}',
+            desc: 'Combo window doubled', drawback: 'Wisps restore 40% less',
+            color: 0xCCDDFF,
+            apply: { comboWindowMult: 2.0 },
+            drawbackApply: { wispRestoreMult: 0.6 },
+            tier2: { comboWindowMult: 3.0 },
+        },
+        {
+            id: 'ember_crown', name: 'Ember Crown', icon: '\u{1F451}',
+            desc: 'Class Q cooldown -40%', drawback: 'Enemies +50% HP',
+            color: 0xFFDD00,
+            apply: { attackCooldownMult: 0.6 },
+            drawbackApply: { enemyHpMult: 1.5 },
+            tier2: { attackCooldownMult: 0.4 },
+        },
+        {
+            id: 'chain_banish', name: 'Chain Banish', icon: '\u{1F517}',
+            desc: 'Banish splashes 8 dmg to enemies within 80px', drawback: 'Elixir gain -1 per pickup (min 1)',
+            color: 0xFF8844,
+            apply: { chainBanish: true, chainRadius: 80 },
+            drawbackApply: { elixirPickupPenalty: 1 },
+            tier2: { chainBanish: true, chainRadius: 120 },
+        },
     ],
 });
 
@@ -1259,3 +1362,34 @@ export const RELIC_SYNERGIES = Object.freeze([
         apply: { killDashRefresh: true },
     },
 ]);
+
+// ─── Phase C3: Ending Narrative ───
+export const ENDING_NARRATIVE = Object.freeze([
+    {
+        title: 'The Truth of the Wells',
+        text: 'Long before the Shroud consumed Embervale, the Ancients built the Elixir Wells not for power — but to contain the Void. Each Well was a seal, a prison of light holding back the darkness that hungered beneath the world.',
+    },
+    {
+        title: 'The Flood',
+        text: 'Then came Vorgoth. Poisoned by ambition, he shattered the first Well. The Shroud poured forth like a black tide — the Void\'s breath freed at last. "After Me, The Flood," the Mysterious Wanderer had warned. No one listened.',
+    },
+    {
+        title: 'The Cinder Vault',
+        text: 'The youngest Ancients, desperate and defiant, forged the Cinder Vault beneath the Pillars of Creation. Within it, they kindled a Flameborn — a mortal vessel carrying a fire ancient enough to re-seal the broken Wells.',
+    },
+    {
+        title: 'You Were the Key',
+        text: 'Every run was not a desperate escape — it was a gathering. Each step you took, each ember you carried, each enemy you banished fed the Flame. The Shroud drove you forward because it feared what you were becoming.',
+    },
+    {
+        title: 'The Flame Endures',
+        text: 'The last Well is sealed. The Shroud recedes like a tide finding its shore. From the ruins of Embervale, survivors emerge into pale, trembling light. The Ancients are gone. But the Flame endures — carried now in mortal hands, where it was always meant to be.',
+    },
+]);
+
+// ─── Phase E1: Difficulty Presets ───
+export const DIFFICULTIES = Object.freeze({
+    pilgrim:  { label: 'Pilgrim',  flameDrainMult: 0.65, enemySpeedMult: 0.80, enemyDamageMult: 0.70, enemyHpMult: 0.80 },
+    standard: { label: 'Standard', flameDrainMult: 1.00, enemySpeedMult: 1.00, enemyDamageMult: 1.00, enemyHpMult: 1.00 },
+    torment:  { label: 'Torment',  flameDrainMult: 1.60, enemySpeedMult: 1.30, enemyDamageMult: 1.50, enemyHpMult: 1.40 },
+});

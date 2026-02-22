@@ -20,6 +20,105 @@ export class TextureGenerator {
         this.generateVukah(scene);
         this.generateLoreScroll(scene);
         this.generateGlider(scene);
+        // Phase B2: new enemy textures
+        this.generateVineSpitter(scene);
+        this.generateVukahBerserker(scene);
+        this.generatePyrebat(scene);
+        this.generateSoulLeech(scene);
+        this.generateFrostHulk(scene);
+    }
+
+    static generateVineSpitter(scene) {
+        const g = scene.make.graphics({ add: false });
+        // Dark green blob body
+        g.fillStyle(0x1A5C1A);
+        g.fillEllipse(11, 14, 22, 28);
+        // Vine tendrils
+        g.lineStyle(2, 0x2D8C2D);
+        g.strokeRect(2, 2, 4, 10);
+        g.strokeRect(16, 2, 4, 10);
+        // Eye glow
+        g.fillStyle(0xFF4400);
+        g.fillCircle(8, 12, 3);
+        g.fillCircle(14, 12, 3);
+        g.generateTexture('vine_spitter', 22, 28);
+        g.destroy();
+    }
+
+    static generateVukahBerserker(scene) {
+        const g = scene.make.graphics({ add: false });
+        // Dark red body — bigger than warrior
+        g.fillStyle(0x8B1A1A);
+        g.fillRect(4, 8, 20, 24);
+        // Head
+        g.fillStyle(0xCC3333);
+        g.fillRect(6, 0, 16, 12);
+        // Tusks
+        g.fillStyle(0xDDCCAA);
+        g.fillRect(4, 6, 4, 6);
+        g.fillRect(20, 6, 4, 6);
+        // Enrage marks
+        g.fillStyle(0xFF0000);
+        g.fillRect(8, 3, 3, 2);
+        g.fillRect(17, 3, 3, 2);
+        g.generateTexture('vukah_berserker', 28, 32);
+        g.destroy();
+    }
+
+    static generatePyrebat(scene) {
+        const g = scene.make.graphics({ add: false });
+        // Orange wedge body
+        g.fillStyle(0xFF6600);
+        g.fillTriangle(12, 0, 0, 16, 24, 16);
+        // Wing tips
+        g.fillStyle(0xFF8833);
+        g.fillTriangle(0, 8, 0, 16, 8, 16);
+        g.fillTriangle(24, 8, 16, 16, 24, 16);
+        // Eyes
+        g.fillStyle(0xFF0000);
+        g.fillCircle(9, 6, 2);
+        g.fillCircle(15, 6, 2);
+        g.generateTexture('pyrebat', 24, 16);
+        g.destroy();
+    }
+
+    static generateSoulLeech(scene) {
+        const g = scene.make.graphics({ add: false });
+        // Purple oval
+        g.fillStyle(0x6600AA);
+        g.fillEllipse(10, 12, 20, 24);
+        // Pale underbelly
+        g.fillStyle(0xAA44CC);
+        g.fillEllipse(10, 14, 12, 14);
+        // Eyes (white with red pupil)
+        g.fillStyle(0xFFFFFF);
+        g.fillCircle(7, 9, 3);
+        g.fillCircle(13, 9, 3);
+        g.fillStyle(0xFF0000);
+        g.fillCircle(7, 9, 1);
+        g.fillCircle(13, 9, 1);
+        g.generateTexture('soul_leech', 20, 24);
+        g.destroy();
+    }
+
+    static generateFrostHulk(scene) {
+        const g = scene.make.graphics({ add: false });
+        // Icy blue bulk
+        g.fillStyle(0x4488BB);
+        g.fillRect(4, 8, 24, 32);
+        // Head — blocky
+        g.fillStyle(0x66AACC);
+        g.fillRect(6, 0, 20, 12);
+        // Ice crystals on shoulders
+        g.fillStyle(0xAADDEE);
+        g.fillTriangle(4, 8, 0, 0, 8, 8);
+        g.fillTriangle(28, 8, 24, 8, 32, 0);
+        // Eyes
+        g.fillStyle(0xCCEEFF);
+        g.fillCircle(12, 6, 3);
+        g.fillCircle(20, 6, 3);
+        g.generateTexture('frost_hulk', 32, 40);
+        g.destroy();
     }
 
     static generatePlayer(scene) {

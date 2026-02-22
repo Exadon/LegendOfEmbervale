@@ -9,6 +9,7 @@ import { Level1 } from './scenes/Level1.js';
 import { DevGuide } from './scenes/DevGuide.js';
 import { SpriteViewer } from './scenes/SpriteViewer.js';
 import { BossRush } from './scenes/BossRush.js';
+import { WinScene } from './scenes/WinScene.js';
 
 Settings.load();
 
@@ -28,7 +29,7 @@ const config = {
             debug: false
         }
     },
-    scene: [Boot, Preloader, MainMenu, ClassSelect, ClassMasteryScene, Level1, DevGuide, SpriteViewer, BossRush]
+    scene: [Boot, Preloader, MainMenu, ClassSelect, ClassMasteryScene, Level1, DevGuide, SpriteViewer, BossRush, WinScene]
 };
 
 export function StartGame(containerId) {
