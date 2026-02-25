@@ -1,4 +1,4 @@
-import { CHALLENGE_SHRINE, ENEMIES, WORLD } from '../constants.js';
+import { CHALLENGE_SHRINE, ENEMIES, WORLD, BOSS } from '../constants.js';
 import { Enemy } from '../entities/Enemy.js';
 import { GlobalState } from '../GlobalState.js';
 
@@ -19,6 +19,9 @@ export class ChallengeArena {
         // Cursed modifier
         this.cursedModifier = null;
         this._cursedDrainTimer = 0;
+
+        // Last second for which a countdown tick was played
+        this._lastTickSecond = -1;
 
         // Segment index for difficulty scaling
         this.segmentIndex = 0;
@@ -44,6 +47,7 @@ export class ChallengeArena {
         this._flameKeeperFailed = false;
         this._bossSkirmishEnemy = null;
         this._cursedDrainTimer = 0;
+        this._lastTickSecond = -1;
 
         // Determine if cursed variant
         this.cursedModifier = null;
@@ -61,6 +65,10 @@ export class ChallengeArena {
 
         // Pause shroud
         this.scene.events.emit('challengeArenaStart');
+
+        // Start fanfare + camera flash
+        if (this.scene.audio) this.scene.audio.playChallengeStart();
+        this.scene.cameras.main.flash(180, 255, 180, 80);
 
         // UI: timer + objective
         const { width } = this.scene.scale;
@@ -101,6 +109,11 @@ export class ChallengeArena {
         if (challenge.id === 'boss_skirmish') {
             this._spawnBossSkirmish();
         }
+
+        // No escape: accelerate the shroud
+        if (challenge.id === 'no_escape' && this.scene.shroud) {
+            this.scene.shroud.speedMultiplier = 2.5;
+        }
     }
 
     update(delta) {
@@ -109,6 +122,13 @@ export class ChallengeArena {
         this.timer -= delta;
         const secs = Math.max(0, Math.ceil(this.timer / 1000));
         this.timerText.setText(`${secs}s`);
+
+        // Countdown ticks for last 5 seconds
+        if (secs <= 5 && secs > 0 && secs !== this._lastTickSecond) {
+            this._lastTickSecond = secs;
+            if (this.scene.audio) this.scene.audio.playChallengeTimerTick();
+            this.timerText.setColor(secs <= 3 ? '#FF2222' : '#FF8800');
+        }
 
         // Cursed drain
         if (this.cursedModifier && this.cursedModifier.id === 'flame_drain_cursed') {
@@ -226,21 +246,38 @@ export class ChallengeArena {
     }
 
     _spawnBossSkirmish() {
-        // Spawn a regular enemy at 50% strength (fake boss)
-        const biome = this.scene.biomeManager.getCurrentBiome();
-        if (!biome || biome.enemies.length === 0) return;
-        const typeId = biome.enemies[biome.enemies.length - 1];
-        const def = ENEMIES[typeId];
-        if (!def) return;
-        const ex = this.arenaX + 100;
-        const ey = WORLD.GROUND_Y - def.height / 2 - 20;
-        const enemy = new Enemy(this.scene, ex, ey, typeId);
-        // Give it more HP to simulate boss
-        if (enemy.hitsToKill !== undefined) {
-            enemy.hitsToKill = Math.max(3, enemy.hitsToKill + 2);
+        // Spawn an actual Boss.js instance using the current biome's boss def
+        const biome = this.scene.biomeManager?.getCurrentBiome();
+        const bm = this.scene.bossManager;
+        const biomeId = biome?.id;
+        const bossDef = biomeId && BOSS && BOSS[biomeId] ? BOSS[biomeId] : null;
+
+        if (bm && bossDef) {
+            // Mark as skirmish so _onBossDefeated skips adding to defeated set
+            bm._skirmishMode = true;
+            const spawnX = this.arenaX + 120;
+            const surfaceY = this.scene.player?.body?.bottom || WORLD.GROUND_Y;
+            bm._doSpawn(spawnX, bossDef, surfaceY);
+
+            // When boss dies, count as a challenge kill
+            this.scene.events.once('bossFightEnd', () => {
+                if (this.active) this.onEnemyKilled();
+            });
+        } else {
+            // Fallback: spawn a buffed regular enemy if no boss def found
+            if (!biome || biome.enemies.length === 0) return;
+            const typeId = biome.enemies[biome.enemies.length - 1];
+            const def = ENEMIES[typeId];
+            if (!def) return;
+            const ex = this.arenaX + 100;
+            const ey = WORLD.GROUND_Y - def.height / 2 - 20;
+            const enemy = new Enemy(this.scene, ex, ey, typeId);
+            if (enemy.hitsToKill !== undefined) {
+                enemy.hitsToKill = Math.max(3, enemy.hitsToKill + 2);
+            }
+            this.scene.enemyGroup.add(enemy);
+            this._bossSkirmishEnemy = enemy;
         }
-        this.scene.enemyGroup.add(enemy);
-        this._bossSkirmishEnemy = enemy;
     }
 
     _scaleEnemyForBiome(enemy) {
@@ -278,6 +315,11 @@ export class ChallengeArena {
             if (this.scene.player) this.scene.player._cursedNoDash = false;
         }
 
+        // Reset shroud speed if no_escape challenge
+        if (this.challenge?.id === 'no_escape' && this.scene.shroud) {
+            this.scene.shroud.speedMultiplier = 1;
+        }
+
         // Cleanup UI
         for (const el of this._elements) {
             if (el && el.active) {
@@ -286,6 +328,12 @@ export class ChallengeArena {
             }
         }
         this._elements = [];
+
+        // Failure audio + camera shake
+        if (!success && this.scene.audio) {
+            this.scene.audio.playChallengeFailure();
+            this.scene.cameras.main.shake(300, 0.008);
+        }
 
         // Build reward data for the event
         const tier = CHALLENGE_SHRINE.REWARD_TIERS[this.challenge.difficulty] || CHALLENGE_SHRINE.REWARD_TIERS.easy;

@@ -13,12 +13,12 @@ export class FlameBar {
         this.icon = document.createElement('span');
         this.icon.className = 'hud-icon';
         this.icon.textContent = '\u25C6'; // ◆
-        this.icon.style.cssText = 'color:#FF6600;font-size:14px;';
+        this.icon.style.cssText = 'color:#FF6600;font-size:21px;';
 
         // Bar background
         this.barBg = document.createElement('div');
         this.barBg.className = 'hud-bar-bg';
-        this.barBg.style.cssText = 'flex:1;height:14px;';
+        this.barBg.style.cssText = 'flex:1;height:21px;';
 
         // Bar fill
         this.barFill = document.createElement('div');
@@ -37,6 +37,7 @@ export class FlameBar {
         // Color interpolation: orange (#FF6600) at full → red (#FF0000) at empty
         const g = Math.floor(0x66 * pct);
         this.barFill.style.background = `rgb(255, ${g}, 0)`;
+        this.icon.style.color = `rgb(255, ${g}, 0)`;
 
         // Urgency pulse when flame is low
         this.el.classList.toggle('hud-flame-low', pct < 0.2);

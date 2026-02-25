@@ -6,6 +6,7 @@ export class RelicManager {
         this.active = [];
         this.activeSynergies = new Set();
         this._synergyCallbacks = [];
+        this._relicAcquiredCallbacks = [];
         this._deathSaveUsed = false;
     }
 
@@ -26,13 +27,18 @@ export class RelicManager {
         // Only 1 legendary allowed
         if (def.legendary && this.active.some(r => r.legendary)) return false;
         this.active.push(def);
+        for (const cb of this._relicAcquiredCallbacks) cb(def);
         this.checkSynergies();
         return true;
     }
 
+    onRelicAcquired(cb) {
+        this._relicAcquiredCallbacks.push(cb);
+    }
+
     /** Check for active synergy combos — Sprint 10 */
     checkSynergies() {
-        const prevCount = this.activeSynergies.size;
+        const prevSynergies = new Set(this.activeSynergies);
         this.activeSynergies.clear();
         const ids = new Set(this.active.map(r => r.id));
         for (const syn of RELIC_SYNERGIES) {
@@ -40,10 +46,11 @@ export class RelicManager {
                 this.activeSynergies.add(syn.id);
             }
         }
-        // Notify if new synergy activated
-        if (this.activeSynergies.size > prevCount) {
+        // Notify with only the newly activated synergies (delta)
+        const newlyActivated = [...this.activeSynergies].filter(id => !prevSynergies.has(id));
+        if (newlyActivated.length > 0) {
             for (const cb of this._synergyCallbacks) {
-                cb([...this.activeSynergies]);
+                cb(newlyActivated);
             }
         }
     }

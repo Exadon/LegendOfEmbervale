@@ -55,6 +55,10 @@ class _GlobalState {
         this.flame = this._flame - amount;
     }
 
+    restoreFlame(amount) {
+        this.flame = Math.min(this._flame + amount, this._maxFlame);
+    }
+
     surgeShroud() {
         this._shroudX += SHROUD.SURGE_AMOUNT;
     }

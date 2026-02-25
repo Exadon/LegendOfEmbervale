@@ -19,6 +19,7 @@ body {
 
 #game-container canvas {
     display: block;
+    cursor: crosshair;
 }
 
 /* ─── HUD Layer ─── */
@@ -38,13 +39,13 @@ body {
     top: 0;
     left: 0;
     width: 100%;
-    height: 44px;
+    height: 88px;
     background: rgba(10, 10, 20, 0.85);
     border-bottom: 1px solid #334455;
     display: flex;
     align-items: center;
-    padding: 0 10px;
-    gap: 14px;
+    padding: 0 15px;
+    gap: 21px;
     pointer-events: none;
     font-family: monospace;
     color: #ccc;
@@ -59,18 +60,18 @@ body {
 }
 
 #hud-bar .hud-section-cooldowns {
-    gap: 16px;
+    gap: 24px;
 }
 
 #hud-bar .hud-section-flame {
     flex: 1;
-    min-width: 120px;
-    max-width: 260px;
+    min-width: 180px;
+    max-width: 390px;
 }
 
 #hud-bar .hud-separator {
     width: 1px;
-    height: 20px;
+    height: 30px;
     background: #334455;
     flex-shrink: 0;
 }
@@ -78,23 +79,25 @@ body {
 /* ─── Bar Styles ─── */
 
 .hud-bar-bg {
-    background: #222;
-    border: 1px solid #444;
+    background: #1a1a1a;
+    border: 1px solid #553322;
     border-radius: 2px;
     overflow: hidden;
     flex-shrink: 0;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.6);
 }
 
 .hud-bar-fill {
     height: 100%;
     border-radius: 1px;
-    transition: width 0.05s linear;
+    transition: width 0.1s ease-out;
+    box-shadow: inset -2px 0 4px rgba(0,0,0,0.35);
 }
 
 /* ─── Label / Icon / Value ─── */
 
 .hud-label {
-    font-size: 9px;
+    font-size: 13px;
     color: #aaa;
     text-transform: uppercase;
     white-space: nowrap;
@@ -108,6 +111,7 @@ body {
 .hud-value {
     font-weight: bold;
     white-space: nowrap;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
 }
 
 /* ─── Cooldown Group ─── */
@@ -143,7 +147,8 @@ body {
 
 @keyframes hud-flame-pulse {
     0%   { opacity: 1; }
-    50%  { opacity: 0.5; }
+    40%  { opacity: 0.45; }
+    60%  { opacity: 0.45; }
     100% { opacity: 1; }
 }
 
@@ -162,3 +167,27 @@ body {
 .hud-pop {
     animation: hud-pop 0.2s ease-out;
 }
+
+/* ─── Achievement Toast ─── */
+
+#achievement-toast {
+    position: absolute; bottom: 96px; right: 12px;
+    background: rgba(0,0,0,0.78); border: 1px solid #FFCC44;
+    color: #FFCC44; font-family: monospace; font-size: 12px;
+    padding: 6px 12px; border-radius: 3px;
+    animation: toast-in 0.25s ease-out, toast-out 0.4s ease-in 2.6s forwards;
+    pointer-events: none; z-index: 9999;
+}
+
+@keyframes toast-in  { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+@keyframes toast-out { from { opacity:1; } to { opacity:0; } }
+
+/* ─── Cooldown-Ready Ping ─── */
+
+@keyframes cd-ready-ping {
+    0%   { color: #FFFFFF; text-shadow: 0 0 8px #FFFFFF; }
+    60%  { color: #FFCC00; text-shadow: 0 0 4px #FFCC00; }
+    100% { color: inherit;  text-shadow: none; }
+}
+
+.cd-ready-ping { animation: cd-ready-ping 0.6s ease-out forwards; }

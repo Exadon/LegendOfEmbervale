@@ -1,9 +1,16 @@
 export class PopupText {
     constructor(scene) {
         this.scene = scene;
+        this._stack = new Map();
     }
 
     show(x, y, message, color = '#FFFFFF', fontSize = '14px') {
+        const bucket = Math.round(x / 70);
+        const now = Date.now();
+        const entry = this._stack.get(bucket);
+        const depth = (entry && now - entry.timestamp < 250) ? entry.count : 0;
+        this._stack.set(bucket, { count: depth + 1, timestamp: now });
+        y = y - depth * 30;
         const text = this.scene.add.text(x, y, message, {
             fontSize,
             color,
@@ -13,13 +20,23 @@ export class PopupText {
             strokeThickness: 3
         }).setOrigin(0.5).setDepth(150);
 
+        text.setScale(0);
         this.scene.tweens.add({
             targets: text,
-            y: y - 50,
-            alpha: { from: 1, to: 0 },
-            duration: 1200,
-            ease: 'Power2',
-            onComplete: () => text.destroy()
+            scaleX: 1.2, scaleY: 1.2,
+            duration: 100,
+            ease: 'Back.easeOut',
+            onComplete: () => {
+                this.scene.tweens.add({
+                    targets: text,
+                    y: y - 50,
+                    alpha: { from: 1, to: 0 },
+                    scaleX: 0.85, scaleY: 0.85,
+                    duration: 1100,
+                    ease: 'Power2',
+                    onComplete: () => text.destroy()
+                });
+            }
         });
 
         return text;

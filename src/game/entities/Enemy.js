@@ -46,6 +46,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.aliveTimer = 0;
         this.mutated = false;
         this.hitsToKill = def.hitsToKill || 1;
+        this._maxHits = this.hitsToKill;
 
         // Shaman buff timer (Feature 4)
         this._shamanBuffTimer = 0;
@@ -66,8 +67,55 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this._fireTimer = 0;                // vine_spitter ranged attack
         this._berserkerTimer = 0;           // vukah_berserker charge duration
         this._divePhase = Math.random() * Math.PI * 2; // pyrebat sine phase
+        this._diveSoundTimer = 0;           // pyrebat audio cooldown
 
-        this.body.setAllowGravity(!def.stationary);
+        // Elite glow aura — shown for multi-hit or berserker enemies
+        this._eliteGlow = null;
+        if ((def.hitsToKill || 1) > 1 || def.berserker) {
+            const glowColor = def.berserker ? 0xFF4400 : 0xFFCC00;
+            this._eliteGlow = scene.add.ellipse(x, y, def.width + 20, def.height + 20, glowColor, 0.22)
+                .setDepth(3).setBlendMode(Phaser.BlendModes.ADD);
+            scene.tweens.add({
+                targets: this._eliteGlow,
+                alpha: { from: 0.08, to: 0.28 },
+                scaleX: { from: 0.9, to: 1.12 },
+                scaleY: { from: 0.9, to: 1.12 },
+                duration: 650,
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut'
+            });
+            // Spawn burst: brief scale-up then settle
+            scene.tweens.add({
+                targets: this._eliteGlow,
+                scaleX: { from: 2.2, to: 1.0 },
+                scaleY: { from: 2.2, to: 1.0 },
+                alpha: { from: 0.5, to: 0.22 },
+                duration: 380,
+                ease: 'Back.easeOut',
+            });
+            if (scene.audio?.initialized) scene.audio.playEliteSpawn();
+
+            // Auto-cleanup if sprite is destroyed without going through banish()
+            this.on('destroy', () => {
+                if (this._eliteGlow && this._eliteGlow.active) {
+                    this._eliteGlow.destroy();
+                    this._eliteGlow = null;
+                }
+            });
+        }
+
+        // Health pip indicators for multi-hit enemies
+        this._hitPips = null;
+        if (this._maxHits > 1) {
+            this._hitPips = scene.add.graphics().setDepth(61);
+            this._drawHitPips();
+            this.on('destroy', () => {
+                if (this._hitPips?.active) { this._hitPips.destroy(); this._hitPips = null; }
+            });
+        }
+
+        this.body.setAllowGravity(!def.stationary && !def.phaseThrough);
         this.body.setSize(def.width - 4, def.height - 4);
         this.setDepth(4);
 
@@ -119,8 +167,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                     ease: 'Sine.easeInOut'
                 });
             }
-        } else {
-            // Ghostly hover for Fell, stomping bob for Vukah
+        } else if (!def.phaseThrough) {
+            // Ghostly hover for Fell, stomping bob for Vukah (skip for phase-through enemies)
             scene.tweens.add({
                 targets: this,
                 y: y - (typeId.startsWith('vukah') ? 3 : 6),
@@ -141,6 +189,27 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 repeat: -1
             });
         }
+    }
+
+    /** Draw health pips at current position — call when hitsToKill changes */
+    _drawHitPips() {
+        if (!this._hitPips?.active) return;
+        const pw = 5, ph = 3, gap = 2;
+        const totalW = this._maxHits * (pw + gap) - gap;
+        const startX = -totalW / 2;
+        this._hitPips.setPosition(this.x, this.y - (this.displayHeight || 32) / 2 - 9);
+        this._hitPips.clear();
+        for (let i = 0; i < this._maxHits; i++) {
+            const filled = i < this.hitsToKill;
+            this._hitPips.fillStyle(filled ? 0xFFCC00 : 0x333333, filled ? 0.9 : 0.4);
+            this._hitPips.fillRect(startX + i * (pw + gap), 0, pw, ph);
+        }
+    }
+
+    /** Reposition pips to follow the enemy each frame */
+    _trackHitPips() {
+        if (!this._hitPips?.active) return;
+        this._hitPips.setPosition(this.x, this.y - (this.displayHeight || 32) / 2 - 9);
     }
 
     stun(duration) {
@@ -196,9 +265,16 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             if (this.aliveTimer >= FELL_MUTATION.TIME_TO_MUTATE) {
                 this.mutated = true;
                 this.hitsToKill = 2;
+                this._maxHits = 2;
                 this.setTint(0xAA22FF);
                 this.setScale(this.scaleX * 1.2, this.scaleY * 1.2);
                 this._baseSpeed = this.def.speed * FELL_MUTATION.SPEED_MULT;
+                // Create pip graphics now if not already present
+                if (!this._hitPips) {
+                    this._hitPips = this.scene.add.graphics().setDepth(61);
+                    this.on('destroy', () => { if (this._hitPips?.active) { this._hitPips.destroy(); this._hitPips = null; } });
+                }
+                this._drawHitPips();
             }
         }
 
@@ -344,12 +420,40 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             }
         }
 
-        // Phase B2: vine_spitter ranged attack
+        // Phase-through enemies (shroud_wraith): sinusoidal float, no ground collision
+        if (this.def.phaseThrough) {
+            const floatY = Math.sin(this.scene.time.now * 0.002 + this._divePhase) * 30;
+            this.body.setVelocityY(floatY);
+        }
+
+        // Phase B2: vine_spitter ranged attack (with line-of-sight row check)
         if (this.def.ranged && this.def.stationary) {
             this._fireTimer -= delta;
             if (this._fireTimer <= 0) {
-                this._fireTimer = this.def.fireInterval || 2500;
-                this.scene.events.emit('enemyProjectile', { x: this.x, y: this.y, damage: this.def.damage });
+                const sameRow = Math.abs(this.y - playerY) < 120;
+                const inRange = distToPlayer < 500;
+                if (sameRow && inRange) {
+                    this._fireTimer = this.def.fireInterval || 2500;
+                    // Telegraph: bright green tint + scale punch before projectile
+                    this.setTint(0x88FF44);
+                    this.scene.tweens.add({
+                        targets: this,
+                        scaleX: this.scaleX * 1.25,
+                        scaleY: this.scaleY * 1.25,
+                        duration: 110,
+                        yoyo: true,
+                        onComplete: () => {
+                            if (this.active && this.alive) {
+                                if (this._enemyTint) this.setTint(this._enemyTint);
+                                else this.clearTint();
+                            }
+                        }
+                    });
+                    this.scene.events.emit('enemyProjectile', { x: this.x, y: this.y, damage: this.def.damage });
+                    if (this.scene.audio) this.scene.audio.playVineSpitterFire();
+                } else {
+                    this._fireTimer = 300; // check again soon
+                }
             }
         }
 
@@ -357,6 +461,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         if (this.def.berserker && this.aiState === 'chase') {
             if (distToPlayer < 150 && this._berserkerTimer <= 0) {
                 this._berserkerTimer = 800;
+                if (this.scene.audio) this.scene.audio.playBerserkerCharge();
                 const angle = Phaser.Math.Angle.Between(this.x, this.y, playerX, playerY);
                 this.setVelocity(Math.cos(angle) * 220, Math.sin(angle) * 220 * 0.3);
             }
@@ -370,6 +475,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             this._divePhase += delta * 0.004;
             const yOff = Math.sin(this._divePhase) * 40;
             this.setVelocityY(yOff);
+            this._diveSoundTimer -= delta;
+            if (this._diveSoundTimer <= 0) {
+                this._diveSoundTimer = 2200;
+                if (this.scene.audio) this.scene.audio.playPyrebatDive();
+            }
         }
 
         this.setFlipX(this.body.velocity.x > 0);
@@ -387,6 +497,14 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         if (this._cbLabel && this._cbLabel.active) {
             this._cbLabel.setPosition(this.x, this.y - 20);
         }
+
+        // Sync elite glow position
+        if (this._eliteGlow && this._eliteGlow.active) {
+            this._eliteGlow.setPosition(this.x, this.y);
+        }
+
+        // Track hit pips
+        this._trackHitPips();
     }
 
     _destroyCbLabel() {
@@ -402,7 +520,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         // Fell mutation armor (Feature 3): requires multiple hits
         if (this.hitsToKill > 1) {
             this.hitsToKill--;
+            this._drawHitPips();
             this.setTint(0xFFFFFF);
+            this.scene.audio?.playHurt?.();
             this.scene.time.delayedCall(100, () => {
                 if (this.active && this.alive) this.setTint(0xAA22FF);
             });
@@ -412,6 +532,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.alive = false;
         this.body.enable = false;
         this._destroyCbLabel();
+        if (this._eliteGlow && this._eliteGlow.active) {
+            this.scene.tweens.killTweensOf(this._eliteGlow);
+            this._eliteGlow.destroy();
+            this._eliteGlow = null;
+        }
         if (this._stunTween) {
             this._stunTween.destroy();
             this._stunTween = null;
@@ -423,12 +548,18 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             this.scene.events.emit('fellSplit', this.x, this.y);
         }
 
+        // Void slime: split into two smaller copies on death
+        if (this.def.splits && !this._isSplit) {
+            this.scene.events.emit('voidSlimeSplit', this.x, this.y);
+        }
+
         // Hollow skeleton reassembly (Feature 10)
         if (this.def.reassemble && !this._reassembled && Math.random() < 0.5) {
             const rx = this.x;
             const ry = this.y;
-            this.scene.time.delayedCall(3000, () => {
-                this.scene.events.emit('skeletonReassemble', rx, ry);
+            const scene = this.scene;
+            scene.time.delayedCall(3000, () => {
+                if (scene?.events) scene.events.emit('skeletonReassemble', rx, ry);
             });
         }
 
@@ -454,6 +585,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         }
 
         // White flash before scale-up + fade
+        this.scene.audio?.playEnemyDeath?.(this.typeId);
         this.setTint(0xFFFFFF);
         this.scene.time.delayedCall(80, () => {
             if (!this.active) return;

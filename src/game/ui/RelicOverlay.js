@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { RELIC_SYNERGIES } from '../constants.js';
 
 const BASE_CARD_W = 240;
 const BASE_CARD_H = 200;
@@ -10,6 +11,7 @@ export class RelicOverlay {
         this.active = false;
         this.choices = [];
         this._elements = [];
+        this._cardBgs = [];
         this._keyHandler = null;
     }
 
@@ -26,6 +28,7 @@ export class RelicOverlay {
         if (this.choices.length === 0) return;
 
         this.active = true;
+        this._cardBgs = [];
         this.scene.physics.pause();
 
         const { width, height } = this.scene.scale;
@@ -86,6 +89,7 @@ export class RelicOverlay {
             .setScrollFactor(0).setDepth(302);
         bg.setStrokeStyle(2, relic.color);
         this._elements.push(bg);
+        this._cardBgs.push(bg);
 
         // Icon
         const icon = this.scene.add.text(x, y - Math.round(60 * s), relic.icon, {
@@ -113,6 +117,19 @@ export class RelicOverlay {
         }).setOrigin(0.5).setScrollFactor(0).setDepth(303).setScale(s);
         this._elements.push(drawback);
 
+        // Synergy hint — if player already has a companion relic for a synergy
+        const activeIds = new Set(this.relicManager.active.map(r => r.id));
+        const partialSynergies = RELIC_SYNERGIES.filter(syn =>
+            syn.requires.includes(relic.id) &&
+            syn.requires.some(id => id !== relic.id && activeIds.has(id))
+        );
+        if (partialSynergies.length > 0) {
+            const hint = this.scene.add.text(x, y + Math.round(50 * s), `\u26A1 ${partialSynergies[0].name}`, {
+                fontSize: '11px', color: '#FFCC00', fontFamily: 'monospace', fontStyle: 'italic'
+            }).setOrigin(0.5).setScrollFactor(0).setDepth(303).setScale(s);
+            this._elements.push(hint);
+        }
+
         // Key prompt
         const prompt = this.scene.add.text(x, y + ch / 2 - Math.round(16 * s), `Press [${num}]`, {
             fontSize: '14px', color: '#FFCC00', fontFamily: 'monospace'
@@ -135,7 +152,28 @@ export class RelicOverlay {
         this.scene.input.keyboard.off('keydown', this._keyHandler);
 
         const relic = this.choices[idx];
+
+        // Gold border pulse feedback on selected card
+        const cardBg = this._cardBgs[idx];
+        if (cardBg && cardBg.active) {
+            const origColor = relic.color;
+            this.scene.tweens.add({
+                targets: cardBg,
+                duration: 100,
+                onUpdate: () => { if (cardBg.active) cardBg.setStrokeStyle(3, 0xFFCC00); },
+                onComplete: () => {
+                    if (cardBg.active) {
+                        this.scene.tweens.add({
+                            targets: cardBg, duration: 100,
+                            onUpdate: () => { if (cardBg.active) cardBg.setStrokeStyle(2, origColor); }
+                        });
+                    }
+                }
+            });
+        }
+
         this.relicManager.acquire(relic);
+        if (this.scene.audio) this.scene.audio.playRelicAcquire();
 
         // Cleanup and resume after brief delay
         this.scene.time.delayedCall(300, () => {

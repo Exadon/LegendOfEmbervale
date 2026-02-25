@@ -4,7 +4,9 @@ import { Settings } from '../systems/Settings.js';
 import { MusicManager } from '../systems/MusicManager.js';
 import { AchievementManager } from '../systems/AchievementManager.js';
 import { RunModifier } from '../systems/RunModifier.js';
-import { MetaProgression } from '../systems/MetaProgression.js';
+import { FlameAltar } from '../systems/FlameAltar.js';
+import { MetaProgression, ALL_CLASS_IDS } from '../systems/MetaProgression.js';
+import { CLASS_DEFS } from '../systems/ClassDefs.js';
 import { DailyRun } from '../systems/DailyRun.js';
 
 export class MainMenu extends Phaser.Scene {
@@ -30,7 +32,7 @@ export class MainMenu extends Phaser.Scene {
         });
 
         // Glow layer behind title
-        const titleGlow = this.add.text(width / 2, 120, 'Legacy Of Embervale', {
+        const titleGlow = this.add.text(width / 2, 120, 'Legacy of Embervale', {
             fontSize: '42px',
             color: '#0066CC',
             fontFamily: 'monospace',
@@ -38,7 +40,7 @@ export class MainMenu extends Phaser.Scene {
         }).setOrigin(0.5).setAlpha(0.4);
 
         // Main title
-        const title = this.add.text(width / 2, 120, 'Legacy Of Embervale', {
+        const title = this.add.text(width / 2, 120, 'Legacy of Embervale', {
             fontSize: '42px',
             color: '#00BFFF',
             fontFamily: 'monospace',
@@ -123,11 +125,11 @@ export class MainMenu extends Phaser.Scene {
         });
 
         // Start prompt (appears after lore)
-        const startText = this.add.text(width / 2, height * 0.78, 'Press SPACE to awaken from the Cinder Vault', {
+        const startText = this.add.text(width / 2, height * 0.78, 'Press SPACE or click to awaken from the Cinder Vault', {
             fontSize: '18px',
-            color: '#FF6600',
+            color: '#FFCC00',
             fontFamily: 'monospace'
-        }).setOrigin(0.5).setAlpha(0);
+        }).setOrigin(0.5).setAlpha(0).setInteractive({ useHandCursor: true });
 
         this.tweens.add({
             targets: startText,
@@ -147,7 +149,7 @@ export class MainMenu extends Phaser.Scene {
 
         // Controls
         const ctrlText = this.add.text(width / 2, height * 0.86,
-            '[WASD] Move  [SPACE] Jump/Double Jump  [SHIFT] Flame Step  [S] Slam  [E] Flame Burst', {
+            '[WASD] Move  [SPACE] Jump  [SHIFT] Flame Step  [S] Ability  [E] Ability  [Q] Class Attack', {
             fontSize: '12px',
             color: '#666666',
             fontFamily: 'monospace'
@@ -163,7 +165,7 @@ export class MainMenu extends Phaser.Scene {
         // Resolution toggle
         const [rw, rh] = Settings.data.resolution;
         this._resText = this.add.text(width / 2, height * 0.92,
-            `[R] Resolution: ${rw}x${rh}   [V] Sprite Viewer   [A] Achievements   [B] Boss Rush   [D] Daily Run`, {
+            `[R] Resolution: ${rw}x${rh}   [A] Achievements   [B] Boss Rush   [D] Daily Run`, {
             fontSize: '12px',
             color: '#666666',
             fontFamily: 'monospace'
@@ -188,7 +190,7 @@ export class MainMenu extends Phaser.Scene {
         const todayClass = DailyRun.getTodayClass();
         const todayResult = DailyRun.getTodayResult();
         const dailyLabel = todayResult
-            ? `✓ DAILY: ${todayMod.icon} ${todayMod.name} · ${todayClass}   ${todayResult.distance}m`
+            ? `✓ DAILY: ${todayMod.icon} ${todayMod.name} · ${todayClass}   ${Math.round(todayResult.distance).toLocaleString()}m`
             : `DAILY: ${todayMod.icon} ${todayMod.name} · ${todayClass}`;
         const dailyBanner = this.add.text(width / 2, height * 0.97, dailyLabel, {
             fontSize: '11px',
@@ -199,7 +201,9 @@ export class MainMenu extends Phaser.Scene {
 
         // ─── Legend badge ───
         if (MetaProgression.hasWon()) {
-            const badge = this.add.text(width / 2, 158, '✦ LEGEND', {
+            const _prestige = MetaProgression.prestigeCount;
+            const _prestigeStr = _prestige > 0 ? ' ' + '★'.repeat(_prestige) : '';
+            const badge = this.add.text(width / 2, 158, `✦ FLAMEBORN LEGEND${_prestigeStr}`, {
                 fontSize: '13px',
                 color: '#FFDD00',
                 fontFamily: 'monospace',
@@ -207,6 +211,49 @@ export class MainMenu extends Phaser.Scene {
                 shadow: { offsetX: 0, offsetY: 0, color: '#FFAA00', blur: 8, fill: true },
             }).setOrigin(0.5);
             this.tweens.add({ targets: badge, alpha: { from: 0.5, to: 1 }, duration: 1200, yoyo: true, repeat: -1 });
+        }
+
+        // ─── Next class unlock hint (U1) ───
+        {
+            const _avail = MetaProgression.getAvailableElixir();
+            const _cost = MetaProgression.getUnlockCost();
+            const _nextLocked = ALL_CLASS_IDS.find(id => !MetaProgression.isClassUnlocked(id));
+            if (_nextLocked && _cost < Infinity && _avail < _cost) {
+                const _nextName = CLASS_DEFS[_nextLocked]?.className || _nextLocked;
+                const _hint = this.add.text(width / 2, 192,
+                    `Next unlock: ${_nextName}  —  ${_avail} / ${_cost} elixir`, {
+                    fontSize: '10px', color: '#667788', fontFamily: 'monospace'
+                }).setOrigin(0.5).setAlpha(0);
+                this.tweens.add({ targets: _hint, alpha: 1, delay: 5000, duration: 600 });
+            }
+        }
+
+        // ─── W1: Lifetime stats snapshot ───
+        {
+            const _history = MetaProgression.getRunHistory();
+            if (_history.length > 0) {
+                const _unlockedCount = MetaProgression.unlockedClasses.length;
+                const _bestDist = _history.reduce((b, r) => Math.max(b, r.distance), 0);
+                const _wonPaths = ['boss_conquest', 'lore_master', 'shroud_conquest'].filter(p => MetaProgression.hasWonPath(p)).length;
+                const _sessionRuns = MetaProgression.getSessionRuns();
+                const _sessionStr = _sessionRuns > 0 ? `  ·  ${_sessionRuns} this session` : '';
+                const _statsLine = `Classes ${_unlockedCount}/${ALL_CLASS_IDS.length}  ·  Best ${Math.floor(_bestDist).toLocaleString()}m  ·  Wins ${_wonPaths}/3  ·  ${FlameAltar.lifetimeElixir.toLocaleString()} lifetime elixir${_sessionStr}`;
+                const _statsText = this.add.text(width / 2, 208, _statsLine, {
+                    fontSize: '10px', color: '#556677', fontFamily: 'monospace'
+                }).setOrigin(0.5).setAlpha(0);
+                this.tweens.add({ targets: _statsText, alpha: 1, delay: 5000, duration: 600 });
+            }
+        }
+
+        // ─── Prestige available hint ───
+        if (MetaProgression.canPrestige && MetaProgression.canPrestige()) {
+            const prestigeHint = this.add.text(width / 2, 175, '★ PRESTIGE AVAILABLE — visit the Flame Altar', {
+                fontSize: '11px',
+                color: '#FFD700',
+                fontFamily: 'monospace',
+                shadow: { offsetX: 0, offsetY: 0, color: '#FF8800', blur: 6, fill: true },
+            }).setOrigin(0.5);
+            this.tweens.add({ targets: prestigeHint, alpha: { from: 0.3, to: 1 }, duration: 1000, yoyo: true, repeat: -1 });
         }
 
         // Music (start on first gesture)
@@ -232,12 +279,6 @@ export class MainMenu extends Phaser.Scene {
             this.scene.restart();
         });
 
-        // Sprite viewer
-        this.input.keyboard.on('keydown-V', () => {
-            this.input.keyboard.removeAllListeners();
-            this.scene.start('SpriteViewer');
-        });
-
         // Sprint 10e: Achievement panel
         this._achievePanelOpen = false;
         this.input.keyboard.on('keydown-A', () => {
@@ -249,14 +290,16 @@ export class MainMenu extends Phaser.Scene {
         });
 
         // Input
-        this.input.keyboard.on('keydown-SPACE', () => {
+        const _goPlay = () => {
             this.input.keyboard.removeAllListeners();
             MusicManager.stopMenu();
             this.cameras.main.fadeOut(800, 0, 0, 0);
             this.cameras.main.once('camerafadeoutcomplete', () => {
                 this.scene.start('ClassSelect');
             });
-        });
+        };
+        this.input.keyboard.on('keydown-SPACE', _goPlay);
+        startText.on('pointerdown', _goPlay);
 
         // Boss Rush shortcut
         this.input.keyboard.on('keydown-B', () => {

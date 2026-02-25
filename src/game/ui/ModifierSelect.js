@@ -1,9 +1,15 @@
 import { RUN_MODIFIERS } from '../constants.js';
 import { RunModifier } from '../systems/RunModifier.js';
 
+const NORMAL_CARD = Object.freeze({
+    icon: '✦', name: 'Normal', tier: 'normal',
+    desc: 'Standard run — no modifier effects',
+});
+
 /**
  * ModifierSelect — shown in ClassSelect after class confirmation.
- * Displays 3 random modifier cards; player picks one or skips.
+ * Displays a Normal card ([0]) plus 3 random modifier cards ([1][2][3]).
+ * Pressing [0], [SPACE], or [ESC] all start a normal run.
  */
 export class ModifierSelect {
     /**
@@ -31,35 +37,42 @@ export class ModifierSelect {
         }).setOrigin(0.5).setDepth(401);
         this._elements.push(title);
 
-        const subtitle = scene.add.text(width / 2, 54, 'Pick one challenge for bonus lifetime elixir on completion — or skip for no modifier.', {
+        const subtitle = scene.add.text(width / 2, 54, 'Pick one challenge for bonus lifetime elixir on completion — or choose Normal for a standard run.', {
             fontSize: '11px', color: '#888888', fontFamily: 'monospace'
         }).setOrigin(0.5).setDepth(401);
         this._elements.push(subtitle);
 
-        // Cards
-        const cardW = 200;
+        // Cards: Normal first ([0]), then the 3 random modifiers ([1][2][3])
+        const allCards = [NORMAL_CARD, ...this._choices];
+        const cardW = 190;
         const cardH = 170;
-        const gapX = 20;
-        const totalW = 3 * cardW + 2 * gapX;
+        const gapX = 16;
+        const totalW = allCards.length * cardW + (allCards.length - 1) * gapX;
         const startX = (width - totalW) / 2 + cardW / 2;
         const cardY = height / 2 + 10;
 
-        for (let i = 0; i < this._choices.length; i++) {
-            const mod = this._choices[i];
+        for (let i = 0; i < allCards.length; i++) {
             const cx = startX + i * (cardW + gapX);
-            this._createCard(cx, cardY, cardW, cardH, mod, i + 1);
+            const startLen = this._elements.length;
+            this._createCard(cx, cardY, cardW, cardH, allCards[i], i);
+            const cardEls = this._elements.slice(startLen);
+            for (const el of cardEls) { if (el && el.setAlpha) el.setAlpha(0); }
+            scene.tweens.add({ targets: cardEls, alpha: 1, duration: 250, delay: i * 100 });
         }
 
         // Skip hint
         const skipHint = scene.add.text(width / 2, cardY + cardH / 2 + 30,
-            '[SPACE] or [ESC] to skip — no modifier', {
+            '[0] Normal  ·  [SPACE] or [ESC] to skip', {
             fontSize: '11px', color: '#666666', fontFamily: 'monospace'
-        }).setOrigin(0.5).setDepth(401);
+        }).setOrigin(0.5).setDepth(401).setAlpha(0);
         this._elements.push(skipHint);
+        scene.tweens.add({ targets: skipHint, alpha: { from: 0.4, to: 1 }, duration: 600, yoyo: true, repeat: 3,
+            onComplete: () => { if (skipHint.active) skipHint.setAlpha(1); } });
 
-        // Key bindings
+        // Key bindings — [0]/Space/Esc = normal run; [1][2][3] = modifier choices
         const handler = (event) => {
-            if (event.key === '1') { this._select(0); scene.input.keyboard.off('keydown', handler); }
+            if (event.key === '0') { this._skip(); scene.input.keyboard.off('keydown', handler); }
+            else if (event.key === '1') { this._select(0); scene.input.keyboard.off('keydown', handler); }
             else if (event.key === '2') { this._select(1); scene.input.keyboard.off('keydown', handler); }
             else if (event.key === '3') { this._select(2); scene.input.keyboard.off('keydown', handler); }
             else if (event.code === 'Space' || event.code === 'Escape') {
@@ -93,14 +106,17 @@ export class ModifierSelect {
 
     _createCard(cx, cy, w, h, mod, keyNum) {
         const scene = this.scene;
-        const tierColors = { hard: 0xFF4444, medium: 0xFFAA00, easy: 0x44FF44 };
-        const tierStrs   = { hard: '#FF4444', medium: '#FFAA00', easy: '#44FF44' };
+        const tierColors = { hard: 0xFF4444, medium: 0xFFAA00, easy: 0x44FF44, normal: 0x888888 };
+        const tierStrs   = { hard: '#FF4444', medium: '#FFAA00', easy: '#44FF44', normal: '#888888' };
         const borderColor = tierColors[mod.tier] || 0x888888;
         const tierStr     = tierStrs[mod.tier]   || '#888888';
 
         // Card bg
         const bg = scene.add.rectangle(cx, cy, w, h, 0x111122)
             .setStrokeStyle(2, borderColor).setDepth(402);
+        bg.setInteractive();
+        bg.on('pointerover', () => scene.tweens.add({ targets: bg, alpha: 0.85, duration: 80 }));
+        bg.on('pointerout',  () => scene.tweens.add({ targets: bg, alpha: 1.0,  duration: 80 }));
         this._elements.push(bg);
 
         // Key label
@@ -135,30 +151,56 @@ export class ModifierSelect {
         }).setOrigin(0.5, 0).setDepth(403);
         this._elements.push(desc);
 
-        // Reward
-        const reward = scene.add.text(cx, cy + h / 2 - 16, `+${mod.reward} elixir on clear`, {
-            fontSize: '10px', color: '#00FFCC', fontFamily: 'monospace'
-        }).setOrigin(0.5).setDepth(403);
-        this._elements.push(reward);
+        // Reward (not shown for the normal/no-modifier card)
+        if (mod.tier !== 'normal') {
+            const reward = scene.add.text(cx, cy + h / 2 - 16, `+${mod.reward} elixir on clear`, {
+                fontSize: '10px', color: '#00FFCC', fontFamily: 'monospace'
+            }).setOrigin(0.5).setDepth(403);
+            this._elements.push(reward);
+        }
+    }
+
+    _playMenuSound(freq) {
+        try {
+            if (!this._navCtx) {
+                this._navCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            const ctx = this._navCtx;
+            const o = ctx.createOscillator(); const g = ctx.createGain();
+            o.connect(g); g.connect(ctx.destination);
+            o.frequency.value = freq; g.gain.value = 0.08;
+            o.start(); o.stop(ctx.currentTime + 0.08);
+        } catch (e) {}
     }
 
     _select(index) {
+        this._playMenuSound(600);
         const mod = this._choices[index];
         RunModifier.set(mod);
-        this._dismiss();
-        this._onSelected();
+        this._dismiss(this._onSelected.bind(this));
     }
 
     _skip() {
+        this._playMenuSound(300);
         RunModifier.clear();
-        this._dismiss();
-        this._onSelected();
+        this._dismiss(this._onSelected.bind(this));
     }
 
-    _dismiss() {
-        for (const el of this._elements) {
-            if (el && el.active) el.destroy();
-        }
+    _dismiss(onComplete) {
+        const els = this._elements.filter(el => el && el.active);
         this._elements = [];
+        if (els.length === 0) {
+            if (onComplete) onComplete();
+            return;
+        }
+        this.scene.tweens.add({
+            targets: els,
+            alpha: 0,
+            duration: 150,
+            onComplete: () => {
+                for (const el of els) { if (el.active) el.destroy(); }
+                if (onComplete) onComplete();
+            }
+        });
     }
 }

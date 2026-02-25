@@ -4,7 +4,7 @@
  */
 
 import { RUN_MODIFIERS } from '../constants.js';
-import { ALL_CLASS_IDS } from './MetaProgression.js';
+import { ALL_CLASS_IDS, MetaProgression } from './MetaProgression.js';
 
 const STORAGE_KEY = 'elixirs-shadow-daily';
 
@@ -43,7 +43,9 @@ export class DailyRun {
 
     static getTodayClass() {
         const rng = DailyRun._rng();
-        rng(); // consume one value (same rng sequence, offset by 1 pick)
+        // Advance the sequence by one step so the class pick is independent
+        // of the modifier pick (both share the same seed, different positions).
+        rng();
         const idx = Math.floor(rng() * ALL_CLASS_IDS.length);
         return ALL_CLASS_IDS[idx];
     }
@@ -86,14 +88,17 @@ export class DailyRun {
         const secs = String(Math.floor((data.time || 0) % 60)).padStart(2, '0');
         const className = data.className || 'Adventurer';
         // Death/relics as emoji
-        const deathDots = data.hasDied ? '💀' : '';
+        const deathDots = data.hasDied ? '\u{1F480}' : '\u2714\uFE0F';
         const relicDots = '\u{1F52E}'.repeat(Math.min(data.relics?.length || 0, 3));
+        // Prestige stars
+        const prestigeCount = MetaProgression.prestigeCount;
+        const prestigeStr = prestigeCount > 0 ? ' ' + '\u2605'.repeat(prestigeCount) : '';
 
         return [
-            `🔥 Legacy of Embervale · Daily ${key}`,
-            `📏 ${dist}m · ⚔️ ${kills} · ⏱️ ${mins}:${secs}`,
-            `Modifier: ${mod.icon} ${mod.name} · Class: ${className}`,
-            `${deathDots} ${relicDots}`,
+            `\uD83D\uDD25 Legacy of Embervale \u00B7 Daily ${key}`,
+            `${mod.icon} ${mod.name} \u00B7 ${className}${prestigeStr}`,
+            `\uD83D\uDCCF ${dist}m \u00B7 \u2694\uFE0F ${kills} \u00B7 \u23F1\uFE0F ${mins}:${secs}`,
+            `${deathDots} ${relicDots}`.trim(),
         ].join('\n').trim();
     }
 }

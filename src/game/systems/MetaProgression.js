@@ -30,6 +30,8 @@ class _MetaProgression {
         this.seenRelics = [];      // relic IDs acquired at least once
         this.upgradedRelics = [];  // relic IDs permanently upgraded to tier 2
         this.wins = [];            // { path, date } win records
+        this._sessionRuns = 0;     // not persisted — resets each page load
+        this._sessionWins = 0;
         this._load();
     }
 
@@ -251,7 +253,11 @@ class _MetaProgression {
 
     // ─── Sprint 10: Run History ───
 
+    getSessionRuns() { return this._sessionRuns; }
+    getSessionWins() { return this._sessionWins; }
+
     saveRunHistory(runData) {
+        this._sessionRuns++;
         try {
             const raw = localStorage.getItem(HISTORY_KEY);
             let history = raw ? JSON.parse(raw) : [];
@@ -297,6 +303,7 @@ class _MetaProgression {
 
     markWin(path) {
         this.wins.push({ path, date: Date.now() });
+        this._sessionWins++;
         this._save();
     }
 

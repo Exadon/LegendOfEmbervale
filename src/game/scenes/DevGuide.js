@@ -15,7 +15,7 @@ export class DevGuide extends Phaser.Scene {
         this.add.rectangle(width / 2, height / 2, width, height, 0x0A0A1A);
 
         // Title
-        this.add.text(width / 2, 30, 'DEV GUIDE  —  Class Skill Trees', {
+        this.add.text(width / 2, 30, 'Class Guide  —  Skill Trees', {
             fontSize: '22px', color: '#FFCC00', fontFamily: 'monospace', fontStyle: 'bold'
         }).setOrigin(0.5, 0);
 

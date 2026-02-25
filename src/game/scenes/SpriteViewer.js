@@ -49,7 +49,10 @@ export class SpriteViewer extends Phaser.Scene {
         this.input.keyboard.on('keydown-SPACE', () => this._togglePause());
         this.input.keyboard.on('keydown-ESC', () => {
             this.input.keyboard.removeAllListeners();
-            this.scene.start('MainMenu');
+            this.cameras.main.fadeOut(350, 0, 0, 0);
+            this.cameras.main.once('camerafadeoutcomplete', () => {
+                this.scene.start('MainMenu');
+            });
         });
 
         this._showClass(0);

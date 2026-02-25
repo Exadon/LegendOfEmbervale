@@ -54,7 +54,7 @@ export class FlameWisp extends Phaser.Physics.Arcade.Sprite {
         if (this.collected) return false;
         this.collected = true;
 
-        // Quick absorb animation: scale up and fade
+        // Quick absorb animation: drift up, scale up and fade
         this.stop();
         this.scene.tweens.killTweensOf(this);
         this.scene.tweens.add({
@@ -62,6 +62,7 @@ export class FlameWisp extends Phaser.Physics.Arcade.Sprite {
             scaleX: 2,
             scaleY: 2,
             alpha: 0,
+            y: this.y - 22,
             duration: 250,
             ease: 'Power2',
             onComplete: () => this.destroy()

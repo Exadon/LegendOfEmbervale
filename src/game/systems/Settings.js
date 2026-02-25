@@ -7,6 +7,7 @@ const DEFAULTS = {
     gamepadVibration: true,
     difficulty: 'standard',    // 'pilgrim' | 'standard' | 'torment'
     colorblindMode: false,
+    showFps: false,
     keybinds: {},              // { action: 'KEYCODE' } overrides
 };
 
@@ -29,6 +30,7 @@ export class Settings {
                 if (saved.gamepadVibration !== undefined) Settings.data.gamepadVibration = saved.gamepadVibration;
                 if (saved.difficulty) Settings.data.difficulty = saved.difficulty;
                 if (saved.colorblindMode !== undefined) Settings.data.colorblindMode = saved.colorblindMode;
+                if (saved.showFps !== undefined) Settings.data.showFps = saved.showFps;
                 if (saved.keybinds) Settings.data.keybinds = saved.keybinds;
             }
         } catch (e) {

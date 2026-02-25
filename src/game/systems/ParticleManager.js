@@ -191,13 +191,14 @@ export class ParticleManager {
                 frequency: 400,
             },
             revelwood: {
-                tint: [0x44AA44, 0x228822, 0x66CC66],
-                speed: { min: 8, max: 25 },
-                angle: { min: 240, max: 300 },
-                lifespan: 3500,
-                alpha: { start: 0.35, end: 0 },
-                scale: { start: 1.5, end: 0 },
-                frequency: 250,
+                texture: 'particle_leaf',
+                tint: [0x2D5A1B, 0x3D7A2B, 0x1A3A10],
+                speed: { min: 8, max: 20 },
+                angle: { min: 195, max: 250 },
+                lifespan: 4000,
+                alpha: { start: 0.8, end: 0 },
+                scale: { start: 1, end: 0.6 },
+                frequency: 300,
             },
             nomad_highlands: {
                 tint: [0xBBAA88, 0xDDCC99, 0x998866],
@@ -209,13 +210,42 @@ export class ParticleManager {
                 frequency: 150,
             },
             kindlewastes: {
-                tint: [0xFF6600, 0xFF4400, 0xFFAA33],
-                speed: { min: 10, max: 35 },
+                texture: 'particle_ember',
+                tint: [0xFF6600, 0xFF8800, 0xFFAA00],
+                speed: { min: 20, max: 50 },
                 angle: { min: 250, max: 290 },
-                lifespan: 3000,
-                alpha: { start: 0.5, end: 0 },
-                scale: { start: 2, end: 0 },
-                frequency: 120,
+                lifespan: 2500,
+                alpha: { start: 1, end: 0 },
+                scale: { start: 1, end: 0.2 },
+                frequency: 100,
+            },
+            hollow: {
+                tint: [0x888888, 0xAAAAAA, 0x666666],
+                speed: { min: 3, max: 10 },
+                angle: { min: 160, max: 200 },
+                lifespan: 4500,
+                alpha: { start: 0.2, end: 0 },
+                scale: { start: 1, end: 0 },
+                frequency: 400,
+            },
+            albaneve: {
+                texture: 'particle_snowflake',
+                tint: [0xCCDDFF, 0xEEEEFF, 0xAABBEE],
+                speed: { min: 12, max: 35 },
+                angle: { min: 265, max: 275 },
+                lifespan: 5000,
+                alpha: { start: 0.9, end: 0 },
+                scale: { start: 0.8, end: 0.4 },
+                frequency: 400,
+            },
+            shroud_maw: {
+                tint: [0x4400AA, 0x220066, 0x6622AA],
+                speed: { min: 5, max: 22 },
+                angle: { min: 250, max: 290 },
+                lifespan: 3500,
+                alpha: { start: 0.45, end: 0 },
+                scale: { start: 1.5, end: 0 },
+                frequency: 180,
             },
         };
 
@@ -295,6 +325,17 @@ export class ParticleManager {
             emitting: false,
             quantity: 20,
             frequency: -1
+        }).setDepth(55);
+
+        // Water splash
+        this.waterSplashEmitter = scene.add.particles(0, 0, 'pixel', {
+            speed: { min: 40, max: 140 },
+            angle: { min: 220, max: 320 },
+            scale: { start: 2.5, end: 0 },
+            alpha: { start: 0.8, end: 0 },
+            tint: [0x44AAFF, 0x88CCFF, 0xAADDFF],
+            lifespan: { min: 280, max: 600 },
+            emitting: false,
         }).setDepth(55);
     }
 
@@ -419,11 +460,22 @@ export class ParticleManager {
         this.phaseRingEmitter.explode();
     }
 
+    waterSplash(x, y) {
+        if (!ParticleManager.isHighDensity()) return;
+        this.waterSplashEmitter.setPosition(x, y);
+        this.waterSplashEmitter.explode(14);
+    }
+
     setBiomeAtmosphere(biomeId) {
         const cfg = this._biomeConfigs[biomeId];
         if (!cfg) {
             this._biomeEmitter.stop();
             return;
+        }
+        if (cfg.texture) {
+            this._biomeEmitter.setTexture(cfg.texture);
+        } else {
+            this._biomeEmitter.setTexture('pixel');
         }
         this._biomeEmitter.setConfig({
             speed: cfg.speed,

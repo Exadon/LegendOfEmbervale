@@ -16,6 +16,7 @@ export class ClassMasteryScene extends Phaser.Scene {
 
     init(data) {
         this._classId = data.classId || 'adventurer';
+        this._returnScene = data.returnScene || 'ClassSelect';
     }
 
     create() {
@@ -27,6 +28,8 @@ export class ClassMasteryScene extends Phaser.Scene {
             return;
         }
 
+        this.cameras.main.fadeIn(350, 0, 0, 0);
+
         this._selectedIdx = 0;
         this._masteries = masteries;
         this._rows = [];
@@ -37,8 +40,9 @@ export class ClassMasteryScene extends Phaser.Scene {
         // Background
         this.add.rectangle(0, 0, width, height, 0x0A0A1E).setOrigin(0, 0);
 
-        // Title
-        this.add.text(width / 2, 14, `${classDef.className.toUpperCase()} MASTERIES`, {
+        // Title (with prestige stars)
+        const _pStars = MetaProgression.prestigeCount > 0 ? '  ' + '★'.repeat(MetaProgression.prestigeCount) : '';
+        this.add.text(width / 2, 14, `${classDef.className.toUpperCase()} MASTERIES${_pStars}`, {
             fontSize: '20px', color: colorStr, fontFamily: 'monospace', fontStyle: 'bold'
         }).setOrigin(0.5);
 
@@ -181,7 +185,15 @@ export class ClassMasteryScene extends Phaser.Scene {
                     break;
                 case 'Escape':
                     this.input.keyboard.removeAllListeners();
-                    this.scene.start('ClassSelect');
+                    this.cameras.main.fadeOut(350, 0, 0, 0);
+                    this.cameras.main.once('camerafadeoutcomplete', () => {
+                        if (this._returnScene === 'Level1') {
+                            this.scene.stop('ClassMasteryScene');
+                            this.scene.resume('Level1');
+                        } else {
+                            this.scene.start(this._returnScene);
+                        }
+                    });
                     break;
             }
         });

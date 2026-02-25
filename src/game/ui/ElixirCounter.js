@@ -12,20 +12,21 @@ export class ElixirCounter {
         this.icon = document.createElement('span');
         this.icon.className = 'hud-icon';
         this.icon.textContent = '\u25C6'; // ◆
-        this.icon.style.cssText = 'color:#00FFCC;font-size:14px;';
+        this.icon.style.cssText = 'color:#00FFCC;font-size:21px;';
 
         // Count text
         this.text = document.createElement('span');
         this.text.className = 'hud-value';
         this.text.textContent = '0';
-        this.text.style.cssText = 'color:#00FFCC;font-size:16px;';
+        this.text.style.cssText = 'color:#00FFCC;font-size:24px;';
 
         this.el.appendChild(this.icon);
         this.el.appendChild(this.text);
     }
 
     update() {
-        this.text.textContent = String(GlobalState.elixir);
+        const v = GlobalState.elixir;
+        this.text.textContent = v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v);
     }
 
     pop() {

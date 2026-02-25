@@ -29,9 +29,10 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         this.comboIndex = 0;
         this._lastAttackName = null;
 
-        // Sprint 7: vulnerability window (2x damage for 600ms after attack completes)
+        // Sprint 7: vulnerability window (2x damage for 1000ms after attack completes)
         this.vulnerabilityWindow = false;
         this._vulnerabilityTimer = 0;
+        this._vulnTween = null;
 
         // Sprint 9: phase text overlay
         this._phaseTextTimer = 0;
@@ -186,8 +187,18 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
 
     _openVulnerabilityWindow() {
         this.vulnerabilityWindow = true;
-        this._vulnerabilityTimer = 600;
+        this._vulnerabilityTimer = 1000;
         this._restoreTint(); // shows red tint
+        // Pulsing alpha makes the window unmissable
+        if (this._vulnTween) { this._vulnTween.destroy(); this._vulnTween = null; }
+        this._vulnTween = this.scene.tweens.add({
+            targets: this,
+            alpha: { from: 1.0, to: 0.6 },
+            duration: 150,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
+        });
     }
 
     update(delta, playerX, playerY) {
@@ -198,6 +209,8 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             this._vulnerabilityTimer -= delta;
             if (this._vulnerabilityTimer <= 0) {
                 this.vulnerabilityWindow = false;
+                if (this._vulnTween) { this._vulnTween.destroy(); this._vulnTween = null; }
+                this.setAlpha(1);
                 this._restoreTint();
             }
         }

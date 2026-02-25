@@ -13,7 +13,7 @@ export class ChallengeShrine extends Phaser.GameObjects.Container {
         this.used = false;
 
         // Skullflame sprite
-        this.skull = scene.add.sprite(0, -8, 'skullflame').setDisplaySize(48, 48);
+        this.skull = scene.add.sprite(0, 8, 'skullflame').setDisplaySize(48, 48);
         this.skull.setTint(0xFF4488);
         this.skull.play('skullflame_idle');
         this.add(this.skull);
@@ -30,7 +30,7 @@ export class ChallengeShrine extends Phaser.GameObjects.Container {
         });
 
         // Label
-        const label = scene.add.text(0, -42, 'CHALLENGE', {
+        const label = scene.add.text(0, -26, 'CHALLENGE', {
             fontSize: '8px', color: '#FF4488', fontFamily: 'monospace',
             stroke: '#000000', strokeThickness: 2
         }).setOrigin(0.5);
@@ -40,7 +40,8 @@ export class ChallengeShrine extends Phaser.GameObjects.Container {
     activate() {
         if (this.used) return false;
         this.used = true;
-        this.skull.setAlpha(0.3);
+        this.scene.tweens.killTweensOf(this.skull);
+        this.scene.tweens.add({ targets: this.skull, alpha: 0.3, scaleX: this.skull.scaleX, scaleY: this.skull.scaleY, duration: 300 });
         return true;
     }
 }

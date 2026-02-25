@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { SkillManager } from '../systems/SkillManager.js';
+import { CLASS_SKILL_TREES } from '../systems/ClassSkillTrees.js';
 
 // Base card dimensions (at zoom 1.0). Scaled down at higher zoom.
 const BASE_CARD_W = 280;
@@ -35,6 +36,9 @@ export class LevelUpOverlay {
         }
 
         this.scene.physics.pause();
+
+        // Level-up fanfare
+        if (this.scene.audio) this.scene.audio.playLevelUp();
 
         // Scale factor: shrink cards at higher zoom so they fit the viewport
         const zoom = this.scene.cameras.main.zoom;
@@ -150,6 +154,15 @@ export class LevelUpOverlay {
         }).setOrigin(0.5).setScrollFactor(0).setDepth(303).setScale(s);
         els.push(descText);
 
+        // Synergy hint — find acquired skills that share apply keys with this node
+        const _synergyHint = this._findSynergyHint(skill);
+        if (_synergyHint) {
+            const _shp = this.scene.add.text(x, y + Math.round(42 * s), `+ pairs with ${_synergyHint}`, {
+                fontSize: '10px', color: '#66EE88', fontFamily: 'monospace', fontStyle: 'italic'
+            }).setOrigin(0.5).setScrollFactor(0).setDepth(303).setScale(s);
+            els.push(_shp);
+        }
+
         // Tree indicator bar
         const bar = this.scene.add.rectangle(x, y + ch / 2 - Math.round(32 * s), cw - 30, 2, skill.color, 0.5)
             .setScrollFactor(0).setDepth(303);
@@ -172,8 +185,55 @@ export class LevelUpOverlay {
             repeat: -1
         });
 
+        // Mouse hover: scale background + white border; click to select
+        bg.setInteractive({ useHandCursor: true });
+        bg.on('pointerover', () => {
+            if (!this.active) return;
+            bg.setStrokeStyle(3, 0xFFFFFF);
+            this.scene.tweens.add({ targets: bg, scaleX: 1.05, scaleY: 1.05, duration: 130, ease: 'Back.easeOut' });
+        });
+        bg.on('pointerout', () => {
+            if (!this.active) return;
+            bg.setStrokeStyle(2, skill.color);
+            this.scene.tweens.add({ targets: bg, scaleX: 1, scaleY: 1, duration: 110 });
+        });
+        bg.on('pointerdown', () => {
+            if (!this.active) return;
+            const idx = this._cards ? this._cards.findIndex(c => c.bg === bg) : -1;
+            if (idx >= 0) this._selectCard(idx);
+        });
+
         this._elements.push(...els);
         return { els, bg, skill };
+    }
+
+    /** Extract the set of apply-key names a skill node touches via mock manager */
+    _getNodeKeys(node) {
+        const keys = new Set();
+        const mock = {
+            setMult: (k) => keys.add(k),
+            addFlat: (k) => keys.add(k),
+            setFlag: (k) => keys.add(k),
+        };
+        try { node.apply(mock); } catch (_e) {}
+        return keys;
+    }
+
+    /** Return the name of the first acquired skill that shares keys with this node, or null */
+    _findSynergyHint(skill) {
+        const tree = CLASS_SKILL_TREES[SkillManager.selectedClassId];
+        if (!tree || !SkillManager.acquired.length) return null;
+        const thisKeys = this._getNodeKeys(skill);
+        if (thisKeys.size === 0) return null;
+        for (const id of SkillManager.acquired) {
+            const node = tree.find(n => n.id === id);
+            if (!node) continue;
+            const acqKeys = this._getNodeKeys(node);
+            for (const k of thisKeys) {
+                if (acqKeys.has(k)) return node.name;
+            }
+        }
+        return null;
     }
 
     _selectCard(idx) {
@@ -188,16 +248,69 @@ export class LevelUpOverlay {
 
         // Acquire the skill
         SkillManager.acquireSkill(skill.id);
+        if (this.scene.audio) this.scene.audio.playSkillAcquire();
 
-        // Animate chosen card: scale up + flash
+        // Tier completion toast
+        const _TIER_NAMES = ['Foundation', 'Adept', 'Expert', 'Master'];
+        const _tree = CLASS_SKILL_TREES[SkillManager.selectedClassId];
+        if (_tree && skill.tier !== undefined) {
+            const _tierNodes = _tree.filter(n => n.tier === skill.tier);
+            const _acquiredInTier = SkillManager.acquired.filter(id => _tierNodes.some(n => n.id === id));
+            if (_tierNodes.length > 0 && _acquiredInTier.length === _tierNodes.length) {
+                const _tierName = (_TIER_NAMES[skill.tier] || `Tier ${skill.tier + 1}`).toUpperCase();
+                const { width, height } = this.scene.scale;
+                const _tp = this._uiXY(width / 2, Math.round(height * 0.25));
+                const _tierText = this.scene.add.text(_tp.x, _tp.y,
+                    `\u2605 TIER ${skill.tier + 1} COMPLETE \u2014 ${_tierName}`, {
+                    fontSize: '16px', color: '#FFDD44', fontFamily: 'monospace', fontStyle: 'bold',
+                    stroke: '#000000', strokeThickness: 3
+                }).setOrigin(0.5).setScrollFactor(0).setDepth(360).setScale(this._zs).setAlpha(0);
+                this._elements.push(_tierText);
+                this.scene.tweens.add({
+                    targets: _tierText,
+                    alpha: 1,
+                    y: _tierText.y - Math.round(8 * this._zs),
+                    duration: 300,
+                    ease: 'Power2',
+                    onComplete: () => {
+                        this.scene.time.delayedCall(1300, () => {
+                            if (_tierText.active) {
+                                this.scene.tweens.add({ targets: _tierText, alpha: 0, duration: 400 });
+                            }
+                        });
+                    }
+                });
+            }
+        }
+
+        // Celebration: camera shake + particle burst at chosen card
+        this.scene.cameras.main.shake(140, 0.003);
+        if (this.scene.textures.exists('pixel')) {
+            const emitter = this.scene.add.particles(chosen.bg.x, chosen.bg.y, 'pixel', {
+                speed: { min: 60, max: 180 },
+                angle: { min: 0, max: 360 },
+                scale: { start: 2.5, end: 0 },
+                alpha: { start: 1, end: 0 },
+                lifespan: { min: 300, max: 600 },
+                tint: [0xFFCC00, 0xFFEE44, 0xFFAA00],
+                blendMode: 'ADD',
+                quantity: 18,
+                emitting: false,
+            }).setScrollFactor(0).setDepth(350);
+            emitter.explode(18);
+            this.scene.time.delayedCall(700, () => { if (emitter.active) emitter.destroy(); });
+        }
+
+        // Animate chosen card: scale up + gold border + brighter fill
+        chosen.bg.setFillStyle(0x2A2A4E);
+        chosen.bg.setStrokeStyle(4, GOLD);
         this.scene.tweens.add({
             targets: chosen.bg,
-            scaleX: 1.1,
-            scaleY: 1.1,
-            duration: 300,
+            scaleX: 1.13,
+            scaleY: 1.13,
+            duration: 280,
             ease: 'Back.easeOut'
         });
-        chosen.bg.setStrokeStyle(3, GOLD);
 
         // Fade out other cards
         for (let i = 0; i < this._cards.length; i++) {

@@ -1,4 +1,4 @@
-import { WORLD, GENERATION, ELIXIR, LORE_ENTRIES, LORE_SCROLL, FLAME_SHRINE, ENEMIES, DECORATION, CRUMBLING_PLATFORM, SURVIVOR, CHALLENGE_SHRINE, CINDER_VESSEL, CRAFTSPERSON, OBELISK, DEADLY_SHROUD, UNDEAD_HAND, ENDLESS } from '../constants.js';
+import { WORLD, GENERATION, ELIXIR, LORE_ENTRIES, LORE_SCROLL, FLAME_SHRINE, ENEMIES, DECORATION, CRUMBLING_PLATFORM, SURVIVOR, CHALLENGE_SHRINE, CINDER_VESSEL, CRAFTSPERSON, OBELISK, DEADLY_SHROUD, UNDEAD_HAND, ENDLESS, HAZARD_ZONES, PIT, WATER } from '../constants.js';
 import { ElixirVein } from '../entities/ElixirVein.js';
 import { FlameWisp } from '../entities/FlameWisp.js';
 import { CorruptionPool } from '../entities/CorruptionPool.js';
@@ -32,9 +32,10 @@ export class LevelGenerator {
         this.obelisks = groups.obelisks;
         this.deadlyShroudZones = groups.deadlyShroudZones;
         this.undeadHands = groups.undeadHands;
+        this.groundGroup = groups.groundGroup;
         this.biomeManager = biomeManager;
 
-        this.generatedUpTo = 0;
+        this.generatedUpTo = -1; // -1 so generateAhead starts from segment 0
         this.difficulty = 0;
         this.loreIndex = 0; // cycles through LORE_ENTRIES
         this.loopCount = 0;
@@ -80,7 +81,12 @@ export class LevelGenerator {
         const rng = this._seededRandom(index);
         const biome = this.biomeManager.getBiomeAt(segX);
 
-        // Skip first 2 segments (player start area)
+        // --- Ground tiles (with pit support) — always generated, even in start area ---
+        if (this.groundGroup) {
+            this._generateGround(index, segX);
+        }
+
+        // Skip first 2 segments (player start area) for entity spawning
         if (index < 2) return;
 
         // --- Platforms ---
@@ -128,14 +134,19 @@ export class LevelGenerator {
         // --- Elixir Wells ---
         if (rng() < GENERATION.VEIN_CHANCE) {
             const vx = segX + 100 + rng() * (WORLD.SEGMENT_WIDTH - 200);
-            const vein = new ElixirVein(this.scene, vx, WORLD.GROUND_Y);
-            this.elixirVeins.add(vein);
+            // Skip if the well would land inside a pit gap
+            const halfGap = this._currentPitCenterX !== null ? PIT.WIDTH / 2 + 25 : 0;
+            const overPit = halfGap > 0 && Math.abs(vx - this._currentPitCenterX) < halfGap;
+            if (!overPit) {
+                const vein = new ElixirVein(this.scene, vx, WORLD.GROUND_Y);
+                this.elixirVeins.add(vein);
+            }
         }
 
         // --- Flame Wisps ---
         if (rng() < GENERATION.WISP_CHANCE) {
             const wx = segX + 50 + rng() * (WORLD.SEGMENT_WIDTH - 100);
-            const wy = WORLD.GROUND_Y - 320 + rng() * 250;
+            const wy = WORLD.GROUND_Y - 190 + rng() * 140;
             const wisp = new FlameWisp(this.scene, wx, wy);
             this.flameWisps.add(wisp);
         }
@@ -161,7 +172,7 @@ export class LevelGenerator {
         // --- Flame Shrines (rare) ---
         if (rng() < biome.shrineChance) {
             const shx = segX + 150 + rng() * (WORLD.SEGMENT_WIDTH - 300);
-            const shy = WORLD.GROUND_Y - FLAME_SHRINE.HEIGHT / 2 + 16;
+            const shy = WORLD.GROUND_Y - FLAME_SHRINE.HEIGHT / 2;
             const shrine = new FlameShrine(this.scene, shx, shy);
             this.flameShrines.add(shrine);
         }
@@ -176,7 +187,7 @@ export class LevelGenerator {
             );
 
             // Roll for up to MAX_ENEMIES_PER_SEGMENT enemies
-            const thresholds = [0, 0.4, 0.7]; // offset subtracted for 2nd and 3rd enemy
+            const thresholds = [0, 0.25, 0.55]; // offset subtracted for 2nd and 3rd enemy
             let spawnCount = 0;
             for (let i = 0; i < GENERATION.MAX_ENEMIES_PER_SEGMENT; i++) {
                 if (rng() < enemyChance - thresholds[i]) {
@@ -267,6 +278,20 @@ export class LevelGenerator {
             this.undeadHands.add(hand);
         }
 
+        // --- Hazard Zones (Phase J) ---
+        {
+            const biomeId = biome?.id || 'springlands';
+            for (const [zoneId, zone] of Object.entries(HAZARD_ZONES)) {
+                if (!zone.biomes.includes(biomeId)) continue;
+                if (index < zone.minSegment) continue;
+                if (rng() > zone.spawnChance) continue;
+                const zx = segX + rng() * WORLD.SEGMENT_WIDTH * 0.6 + WORLD.SEGMENT_WIDTH * 0.2;
+                const zy = WORLD.GROUND_Y - zone.height / 2 + 4;
+                this.scene.events.emit('spawnHazardZone', { id: zoneId, x: zx, y: zy, def: zone });
+                break; // max 1 hazard per segment
+            }
+        }
+
         // --- Deadly Shroud Zones (after segment 15, 3% chance) (Feature 9) ---
         if (index > 15 && rng() < DEADLY_SHROUD.CHANCE && this.deadlyShroudZones) {
             const dzx = segX + 80 + rng() * (WORLD.SEGMENT_WIDTH - 160);
@@ -296,6 +321,91 @@ export class LevelGenerator {
             if (roll <= 0) return d;
         }
         return DECORATION.TYPES[0];
+    }
+
+    _generateGround(index, segX) {
+        const SEG_W = WORLD.SEGMENT_WIDTH;
+        const groundY = WORLD.GROUND_Y + 8; // top surface of ground physics tile
+        const tileH = 20;
+
+        // Separate seed so pit RNG doesn't affect existing world layout
+        const rng2 = this._seededRandom(index + 88771);
+        const hasPit = index >= PIT.MIN_SEGMENT && rng2() < PIT.PIT_CHANCE;
+
+        // Biome tint for visible ground surface
+        const biome = this.biomeManager.getBiomeAt(segX);
+        const groundTint = biome?.groundTint ?? 0x3A2A1A;
+        const surfaceY = WORLD.GROUND_Y + WORLD.GROUND_HEIGHT / 2;
+
+        if (!hasPit) {
+            this._currentPitCenterX = null;
+            // Full-width ground tile for segment
+            const rect = this.scene.add.rectangle(
+                segX + SEG_W / 2, groundY, SEG_W, tileH, 0x000000, 0
+            );
+            this.scene.physics.add.existing(rect, true);
+            this.groundGroup.add(rect);
+            // Visible surface
+            this.scene.add.tileSprite(segX + SEG_W / 2, surfaceY, SEG_W, WORLD.GROUND_HEIGHT, 'ground')
+                .setTint(groundTint).setDepth(1);
+            return;
+        }
+
+        // Pit: position in middle 50% of segment
+        const pitW = PIT.WIDTH;
+        const pitCenterX = segX + SEG_W * 0.25 + rng2() * SEG_W * 0.5;
+        this._currentPitCenterX = pitCenterX;
+        const leftW = pitCenterX - pitW / 2 - segX;
+        const rightW = segX + SEG_W - (pitCenterX + pitW / 2);
+
+        // Left tile
+        if (leftW > 10) {
+            const lr = this.scene.add.rectangle(
+                segX + leftW / 2, groundY, leftW, tileH, 0x000000, 0
+            );
+            this.scene.physics.add.existing(lr, true);
+            this.groundGroup.add(lr);
+            this.scene.add.tileSprite(segX + leftW / 2, surfaceY, leftW, WORLD.GROUND_HEIGHT, 'ground')
+                .setTint(groundTint).setDepth(1);
+        }
+        // Right tile
+        if (rightW > 10) {
+            const rr = this.scene.add.rectangle(
+                pitCenterX + pitW / 2 + rightW / 2, groundY, rightW, tileH, 0x000000, 0
+            );
+            this.scene.physics.add.existing(rr, true);
+            this.groundGroup.add(rr);
+            this.scene.add.tileSprite(pitCenterX + pitW / 2 + rightW / 2, surfaceY, rightW, WORLD.GROUND_HEIGHT, 'ground')
+                .setTint(groundTint).setDepth(1);
+        }
+
+        const hasSpikes = rng2() < PIT.SPIKE_CHANCE;
+
+        // Water pit for non-spike pits in eligible biomes
+        const biomeId = biome?.id || '';
+        const hasWater = !hasSpikes && WATER.BIOMES.includes(biomeId) && rng2() < WATER.PIT_CHANCE;
+
+        // Spike visual
+        if (hasSpikes && this.scene.textures.exists('hazard_spike')) {
+            this.scene.add.image(pitCenterX, WORLD.GROUND_Y + 2, 'hazard_spike')
+                .setDisplaySize(pitW, 14).setDepth(3);
+        } else if (hasSpikes) {
+            // Procedural spike visual: row of red triangles
+            const spikeCount = Math.floor(pitW / 14);
+            for (let i = 0; i < spikeCount; i++) {
+                const sx = pitCenterX - pitW / 2 + 7 + i * 14;
+                this.scene.add.triangle(
+                    sx, WORLD.GROUND_Y + 2,
+                    -6, 12, 0, 0, 6, 12,
+                    0xFF2200, 0.9
+                ).setDepth(3);
+            }
+        }
+
+        // Notify Level1 of pit location
+        this.scene.events.emit('pitSpawned', {
+            x: pitCenterX, width: pitW, hasSpikes, hasWater
+        });
     }
 
     _seededRandom(seed) {

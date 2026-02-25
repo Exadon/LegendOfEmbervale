@@ -21,10 +21,11 @@ export class InteractionSystem {
 
     updateWisps() {
         const s = this.scene;
+        const magnetRange = FLAME_WISP.MAGNET_RANGE * (s._wispMagnetMult || 1.0);
         for (const wisp of s.flameWisps.getChildren()) {
             if (!wisp.active || wisp.collected) continue;
             const dist = Phaser.Math.Distance.Between(s.player.x, s.player.y, wisp.x, wisp.y);
-            if (dist < FLAME_WISP.MAGNET_RANGE && dist > 5) {
+            if (dist < magnetRange && dist > 5) {
                 wisp.magnetTo(s.player.x, s.player.y);
             }
             if (s.physics.overlap(s.player, wisp)) {
@@ -39,6 +40,11 @@ export class InteractionSystem {
                     s.popups.flameRestored(wisp.x, wisp.y, Math.round(restore));
                     s.particles.wispCollect(wisp.x, wisp.y);
                     s.audio.playWispCollect();
+
+                    // Phase J 2C: push shroud back on wisp collect
+                    const push = FLAME_WISP.SHROUD_PUSH * (s.relicManager?.getMult('wispRestoreMult') ?? 1);
+                    GlobalState.shroudX = Math.max(-200, GlobalState.shroudX - push);
+                    s.popups?.show(s.player.x, s.player.y - 30, '\u2190 Shroud pushed back!', '#88FFFF', '11px');
                 }
             }
         }
@@ -55,7 +61,7 @@ export class InteractionSystem {
                     s.popups.flameRestored(shrine.x, shrine.y, FLAME_SHRINE.RESTORE);
                     s.popups.show(shrine.x, shrine.y - 50, 'FLAME SHRINE', '#FF8833', '14px');
                     s.particles.wispCollect(shrine.x, shrine.y);
-                    s.audio.playWispCollect();
+                    s.audio.playShrine();
                     s.cameras.main.flash(300, 255, 136, 51, false, null, s);
 
                     const inscription = SHRINE_INSCRIPTIONS[Math.floor(Math.random() * SHRINE_INSCRIPTIONS.length)];
@@ -85,7 +91,7 @@ export class InteractionSystem {
                     this.loreScrollsCollected++;
                     s.runStats.loreScrollsFound++;
                     s.hud.showLoreScroll(entry);
-                    s.audio.playMineComplete();
+                    s.audio.playScrollRead();
 
                     const idx = LORE_ENTRIES.indexOf(entry);
                     if (idx >= 0) {
@@ -106,7 +112,7 @@ export class InteractionSystem {
                     this.hasCinderVessel = true;
                     s.popups.show(vessel.x, vessel.y - 60, 'CINDER VESSEL', '#FFCC00', '16px');
                     s.popups.show(vessel.x, vessel.y - 40, 'Death save acquired', '#D4A04A', '11px');
-                    s.audio.playWispCollect();
+                    s.audio.playCinderVesselCollect();
                     s.cameras.main.flash(200, 255, 200, 0);
                 }
             }
@@ -202,6 +208,18 @@ export class InteractionSystem {
         s.audio.playLevelUp();
         s.cameras.main.flash(300, 100, 255, 100);
 
+        // Fade the craftsperson out after a short celebration delay
+        s.time.delayedCall(2000, () => {
+            if (craftsperson.active) {
+                s.tweens.add({
+                    targets: craftsperson,
+                    alpha: 0,
+                    duration: 800,
+                    onComplete: () => { if (craftsperson.active) craftsperson.setActive(false).setVisible(false); }
+                });
+            }
+        });
+
         switch (type.reward) {
             case 'dash_damage':
                 this.blacksmithBuff = true;
@@ -243,7 +261,7 @@ export class InteractionSystem {
             if (s.physics.overlap(s.player, obelisk)) {
                 if (obelisk.activate()) {
                     s.obeliskOverlay.show();
-                    s.audio.playMineComplete();
+                    s.audio.playObeliskActivate();
                 }
             }
         }
@@ -262,7 +280,7 @@ export class InteractionSystem {
                         this.survivorBuffType = result.buff.id;
                         this.survivorBuffTimer = SURVIVOR.BUFF_DURATION;
                         s.hud.showSurvivorDialogue(result.dialogue, result.buff);
-                        s.audio.playWispCollect();
+                        s.audio.playSurvivorInteract();
                         s.time.delayedCall(4000, () => {
                             if (survivor.active) survivor.fadeAway();
                         });

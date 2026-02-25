@@ -26,6 +26,116 @@ export class TextureGenerator {
         this.generatePyrebat(scene);
         this.generateSoulLeech(scene);
         this.generateFrostHulk(scene);
+        // Phase J: hazard zone textures
+        this._genLavaPool(scene);
+        this._genFrostGround(scene);
+        this._genSpikeTrap(scene);
+        // Phase O: foreground decoration textures
+        this._genBones(scene);
+        this._genTorch(scene);
+        this._genRubble(scene);
+        // Phase S: biome particle textures
+        this._genParticleLeaf(scene);
+        this._genParticleSnowflake(scene);
+        this._genParticleEmber(scene);
+    }
+
+    static _genLavaPool(scene) {
+        const g = scene.make.graphics({ x: 0, y: 0, add: false });
+        g.fillGradientStyle(0xFF6600, 0xFF2200, 0xFF4400, 0xFF0000, 1);
+        g.fillRect(0, 0, 32, 16);
+        g.generateTexture('hazard_lava', 32, 16);
+        g.destroy();
+    }
+
+    static _genFrostGround(scene) {
+        const g = scene.make.graphics({ x: 0, y: 0, add: false });
+        g.fillStyle(0xAADDFF, 0.8);
+        g.fillRect(0, 0, 32, 12);
+        g.generateTexture('hazard_frost', 32, 12);
+        g.destroy();
+    }
+
+    static _genSpikeTrap(scene) {
+        const g = scene.make.graphics({ x: 0, y: 0, add: false });
+        g.fillStyle(0x886644, 1);
+        for (let i = 0; i < 5; i++) {
+            g.fillTriangle(i * 8, 16, i * 8 + 4, 0, i * 8 + 8, 16);
+        }
+        g.generateTexture('hazard_spike', 40, 16);
+        g.destroy();
+    }
+
+    static _genBones(scene) {
+        const g = scene.make.graphics({ x: 0, y: 0, add: false });
+        // Scattered bone fragments — cream/white shards
+        g.fillStyle(0xDDCCBB, 1);
+        g.fillRect(0, 8, 14, 4);   // horizontal long bone
+        g.fillRect(18, 10, 10, 3); // shorter fragment
+        g.fillStyle(0xCCBBAA, 1);
+        g.fillRect(4, 4, 3, 8);    // vertical shard
+        g.fillRect(22, 6, 3, 6);   // second shard
+        g.generateTexture('deco_bones', 32, 16);
+        g.destroy();
+    }
+
+    static _genTorch(scene) {
+        const g = scene.make.graphics({ x: 0, y: 0, add: false });
+        // Torch post
+        g.fillStyle(0x4A3A2A, 1);
+        g.fillRect(6, 20, 4, 28);
+        // Bracket
+        g.fillStyle(0x3A2A1A, 1);
+        g.fillRect(4, 20, 8, 4);
+        // Flame glow (warm orange circle at top)
+        g.fillStyle(0xFF8800, 0.9);
+        g.fillCircle(8, 12, 7);
+        g.fillStyle(0xFFDD44, 0.7);
+        g.fillCircle(8, 10, 4);
+        g.generateTexture('deco_torch', 16, 48);
+        g.destroy();
+    }
+
+    static _genRubble(scene) {
+        const g = scene.make.graphics({ x: 0, y: 0, add: false });
+        // Irregular stone rubble chunks
+        g.fillStyle(0x7A6A5A, 1);
+        g.fillRect(0, 10, 18, 14);  // large chunk
+        g.fillStyle(0x6A5A4A, 1);
+        g.fillRect(20, 14, 14, 10); // medium chunk
+        g.fillStyle(0x5A4A3A, 1);
+        g.fillRect(10, 6, 10, 8);   // top piece
+        g.fillStyle(0x8A7A6A, 1);
+        g.fillRect(2, 8, 8, 4);     // small highlight
+        g.generateTexture('deco_rubble', 48, 24);
+        g.destroy();
+    }
+
+    static _genParticleLeaf(scene) {
+        const g = scene.make.graphics({ add: false });
+        g.fillStyle(0x2D5A1B, 1);
+        g.fillEllipse(4, 2, 8, 4);
+        g.generateTexture('particle_leaf', 8, 4);
+        g.destroy();
+    }
+
+    static _genParticleSnowflake(scene) {
+        const g = scene.make.graphics({ add: false });
+        g.fillStyle(0xDDEEFF, 1);
+        g.fillRect(3, 0, 1, 7);
+        g.fillRect(0, 3, 7, 1);
+        g.generateTexture('particle_snowflake', 7, 7);
+        g.destroy();
+    }
+
+    static _genParticleEmber(scene) {
+        const g = scene.make.graphics({ add: false });
+        g.fillStyle(0xFF6600, 1);
+        g.fillEllipse(2, 3, 4, 6);
+        g.fillStyle(0xFFAA00, 1);
+        g.fillRect(1, 0, 2, 2);
+        g.generateTexture('particle_ember', 4, 6);
+        g.destroy();
     }
 
     static generateVineSpitter(scene) {

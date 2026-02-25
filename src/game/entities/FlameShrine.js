@@ -33,9 +33,9 @@ export class FlameShrine extends Phaser.Physics.Arcade.Sprite {
         this.scene.tweens.add({
             targets: this,
             alpha: 0.3,
-            duration: 800
+            duration: 800,
+            onComplete: () => { if (this.active) this.setTint(0x555555); }
         });
-        this.setTint(0x555555);
 
         return true;
     }

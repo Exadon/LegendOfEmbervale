@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { CLASS_DEFS } from '../systems/ClassDefs.js';
 import { MetaProgression, ALL_CLASS_IDS } from '../systems/MetaProgression.js';
+import { CLASS_MASTERIES } from '../systems/ClassMasteries.js';
+import { CLASS_SKILL_TREES } from '../systems/ClassSkillTrees.js';
 import { SkillManager } from '../systems/SkillManager.js';
 import { FlameAltar } from '../systems/FlameAltar.js';
 import { ModifierSelect } from '../ui/ModifierSelect.js';
@@ -91,9 +93,33 @@ export class ClassSelect extends Phaser.Scene {
             wordWrap: { width: 500 }, align: 'center'
         }).setOrigin(0.5, 0);
 
+        // Passive description
+        this._passiveText = this.add.text(width / 2, footerY + 88, '', {
+            fontSize: '11px', color: '#AAFFAA', fontFamily: 'monospace',
+            wordWrap: { width: 500 }, align: 'center'
+        }).setOrigin(0.5, 0);
+
         // Unlock cost display
-        this._unlockText = this.add.text(width / 2, footerY + 90, '', {
+        this._unlockText = this.add.text(width / 2, footerY + 106, '', {
             fontSize: '12px', color: '#FF8800', fontFamily: 'monospace'
+        }).setOrigin(0.5, 0);
+
+        // Mastery preview (shows first 3 mastery names for selected class)
+        this._masteryPreviewText = this.add.text(width / 2, footerY + 122, '', {
+            fontSize: '10px', color: '#7788AA', fontFamily: 'monospace',
+            wordWrap: { width: 520 }, align: 'center'
+        }).setOrigin(0.5, 0);
+
+        // W2: Tier-0 skill synergy preview
+        this._synergyText = this.add.text(width / 2, footerY + 136, '', {
+            fontSize: '10px', color: '#88AAFF', fontFamily: 'monospace',
+            wordWrap: { width: 520 }, align: 'center'
+        }).setOrigin(0.5, 0);
+
+        // Combo hint (S/E → Q enhanced Q description)
+        this._comboText = this.add.text(width / 2, footerY + 152, '', {
+            fontSize: '10px', color: '#BBAA44', fontFamily: 'monospace',
+            wordWrap: { width: 520 }, align: 'center'
         }).setOrigin(0.5, 0);
 
         // Dev mode indicator (hidden by default)
@@ -109,8 +135,21 @@ export class ClassSelect extends Phaser.Scene {
             }).setOrigin(0.5);
         }
 
+        // Prestige button
+        const canPrestige = MetaProgression.canPrestige();
+        const prestigeLevel = MetaProgression.prestigeCount;
+        const prestigeStars = prestigeLevel > 0 ? '  ' + '★'.repeat(prestigeLevel) : '';
+        const prestigeColor = canPrestige ? '#FFD700' : '#444444';
+        const prestigeLabel = canPrestige
+            ? `[P] PRESTIGE${prestigeStars}`
+            : `PRESTIGE (requires 100 lifetime elixir)${prestigeStars}`;
+        this._prestigeText = this.add.text(width / 2, height - 36, prestigeLabel, {
+            fontSize: '12px', color: prestigeColor, fontFamily: 'monospace',
+            fontStyle: canPrestige ? 'bold' : ''
+        }).setOrigin(0.5);
+
         // Controls hint
-        this.add.text(width / 2, height - 16, '[WASD/Arrows] Navigate   [1-0] Select   [U] Unlock   [M] Masteries   [SPACE] Confirm   [B] Boss Rush   [ESC] Back', {
+        this.add.text(width / 2, height - 16, '[WASD/Arrows] Navigate   [1-0] Select   [U] Unlock   [M] Masteries   [SPACE] Confirm   [B] Boss Rush   [P] Prestige   [ESC] Back', {
             fontSize: '10px', color: '#555555', fontFamily: 'monospace'
         }).setOrigin(0.5);
 
@@ -125,6 +164,7 @@ export class ClassSelect extends Phaser.Scene {
                 const idx = parseInt(key) - 1;
                 if (idx < ALL_CLASS_IDS.length) {
                     this._selectedIdx = idx;
+                    this._playNavSound();
                     this._updateSelection();
                     this._updateDescription();
                 }
@@ -132,6 +172,7 @@ export class ClassSelect extends Phaser.Scene {
             }
             if (key === '0' && ALL_CLASS_IDS.length >= 10) {
                 this._selectedIdx = 9;
+                this._playNavSound();
                 this._updateSelection();
                 this._updateDescription();
                 return;
@@ -148,6 +189,7 @@ export class ClassSelect extends Phaser.Scene {
                     if (now - this._navDebounce < 100) break;
                     this._navDebounce = now;
                     this._selectedIdx = Math.max(0, this._selectedIdx - 1);
+                    this._playNavSound();
                     this._updateSelection();
                     this._updateDescription();
                     break;
@@ -156,6 +198,7 @@ export class ClassSelect extends Phaser.Scene {
                     if (now - this._navDebounce < 100) break;
                     this._navDebounce = now;
                     this._selectedIdx = Math.min(ALL_CLASS_IDS.length - 1, this._selectedIdx + 1);
+                    this._playNavSound();
                     this._updateSelection();
                     this._updateDescription();
                     break;
@@ -164,6 +207,7 @@ export class ClassSelect extends Phaser.Scene {
                     if (now - this._navDebounce < 100) break;
                     this._navDebounce = now;
                     this._selectedIdx = Math.max(0, this._selectedIdx - 5);
+                    this._playNavSound();
                     this._updateSelection();
                     this._updateDescription();
                     break;
@@ -172,6 +216,7 @@ export class ClassSelect extends Phaser.Scene {
                     if (now - this._navDebounce < 100) break;
                     this._navDebounce = now;
                     this._selectedIdx = Math.min(ALL_CLASS_IDS.length - 1, this._selectedIdx + 5);
+                    this._playNavSound();
                     this._updateSelection();
                     this._updateDescription();
                     break;
@@ -183,6 +228,9 @@ export class ClassSelect extends Phaser.Scene {
                     break;
                 case 'KeyB':
                     this._launchBossRush();
+                    break;
+                case 'KeyP':
+                    this._tryPrestige();
                     break;
                 case 'Space':
                     this._confirmSelection();
@@ -262,6 +310,14 @@ export class ClassSelect extends Phaser.Scene {
             }).setOrigin(0.5);
         } else {
             const cost = MetaProgression.getUnlockCost();
+            const avail = MetaProgression.getAvailableElixir();
+            const pct = Math.min(avail / Math.max(cost, 1), 1);
+            const filled = Math.round(pct * 8);
+            const bar = '\u2588'.repeat(filled) + '\u2591'.repeat(8 - filled);
+            const barColor = avail >= cost ? '#44FF44' : '#FF8800';
+            this.add.text(x, bottomY - 14, `[${bar}] ${Math.round(pct * 100)}%`, {
+                fontSize: '9px', color: barColor, fontFamily: 'monospace'
+            }).setOrigin(0.5);
             this.add.text(x, bottomY, `Cost: ${cost} Elixir`, {
                 fontSize: '10px', color: '#FF8800', fontFamily: 'monospace'
             }).setOrigin(0.5);
@@ -271,13 +327,47 @@ export class ClassSelect extends Phaser.Scene {
         const glow = this.add.rectangle(x, y, w + 6, h + 6)
             .setStrokeStyle(3, colorNum).setFillStyle(colorNum, 0.08).setVisible(false);
 
+        // Mouse support: hover selects, click confirms (or selects if not yet selected)
+        bg.setInteractive({ useHandCursor: true });
+        bg.on('pointerover', () => {
+            if (this._selectedIdx !== index) {
+                this._selectedIdx = index;
+                this._playNavSound();
+                this._updateSelection();
+                this._updateDescription();
+            }
+        });
+        bg.on('pointerdown', () => {
+            if (this._selectedIdx === index) {
+                this._confirmSelection();
+            } else {
+                this._selectedIdx = index;
+                this._playNavSound();
+                this._updateSelection();
+                this._updateDescription();
+            }
+        });
+
         return { bg, glow, classId, classDef, unlocked, nameText, spritePreview, colorNum };
     }
 
     _updateSelection() {
         for (let i = 0; i < this._panels.length; i++) {
             const p = this._panels[i];
-            p.glow.setVisible(i === this._selectedIdx);
+            const glow = p.glow;
+            if (i === this._selectedIdx) {
+                if (!glow.visible) {
+                    glow.setVisible(true).setAlpha(0);
+                    this.tweens.add({ targets: glow, alpha: 1, duration: 150 });
+                }
+            } else {
+                if (glow.visible) {
+                    this.tweens.add({
+                        targets: glow, alpha: 0, duration: 100,
+                        onComplete: () => { if (glow.active) glow.setVisible(false); }
+                    });
+                }
+            }
         }
     }
 
@@ -321,6 +411,53 @@ export class ClassSelect extends Phaser.Scene {
             this._unlockText.setText(`Press [U] to unlock (${cost} Elixir)${canAfford ? '' : ' — Not enough elixir!'}`);
             this._unlockText.setColor(canAfford ? '#FF8800' : '#FF4444');
         }
+        // Phase J 1G: passive description
+        const passiveDesc = classDef.passive?.description;
+        if (passiveDesc && this._passiveText) {
+            this._passiveText.setText(`PASSIVE: ${passiveDesc}`);
+        } else if (this._passiveText) {
+            this._passiveText.setText('');
+        }
+
+        // U2: mastery preview
+        if (this._masteryPreviewText) {
+            const masteries = CLASS_MASTERIES[panel.classId];
+            if (masteries && masteries.length > 0) {
+                const names = masteries.slice(0, 3).map(m => `\u25C6 ${m.name}`).join('  ');
+                this._masteryPreviewText.setText(`MASTERIES: ${names}`);
+            } else {
+                this._masteryPreviewText.setText('');
+            }
+        }
+
+        // W2: tier-0 skill synergy preview
+        if (this._synergyText) {
+            const tree = CLASS_SKILL_TREES[panel.classId];
+            if (unlocked && tree) {
+                const tier0Names = tree.filter(n => n.tier === 0).map(n => n.name).join('  ·  ');
+                this._synergyText.setText(tier0Names ? `FOUNDATION: ${tier0Names}` : '');
+            } else {
+                this._synergyText.setText('');
+            }
+        }
+
+        // Combo hint: what enhanced Q does when primed by S or E
+        if (this._comboText) {
+            const _COMBO_DESCS = {
+                adventurer: 'AoE banish all in 140px',
+                barbarian:  'Charge 350px + 15 Flame/kill',
+                wizard:     'AoE 360px radius + 5 Flame per banish',
+                ranger:     '3 arrows pierce all enemies',
+                tank:       'Knockback 200px, 3s stun',
+                healer:     '+50 Flame + drain stopped 3s',
+                assassin:   'Blink 220px + 10 Flame/kill',
+                monk:       'Knockback 200px + Chi Wave',
+                duelist:    '3-hit: adds 100px blade sweep',
+                pyromancer: 'Triple fireball spread (\xB115\xB0)',
+            };
+            const desc = _COMBO_DESCS[panel.classId];
+            this._comboText.setText(desc ? `\u26A1 COMBO (S/E\u2192Q): ${desc}` : '');
+        }
     }
 
     _tryUnlock() {
@@ -349,6 +486,7 @@ export class ClassSelect extends Phaser.Scene {
     }
 
     _toggleDevMode() {
+        if (!['localhost', '127.0.0.1'].includes(window.location.hostname)) return;
         this._devMode = !this._devMode;
         if (this._devMode) {
             // Grant 9999 elixir for testing
@@ -369,6 +507,7 @@ export class ClassSelect extends Phaser.Scene {
         if (!panel) return;
         if (!MetaProgression.isClassUnlocked(panel.classId)) return;
 
+        this.tweens.killTweensOf(this._panels[this._selectedIdx].glow);
         SkillManager.selectClass(panel.classId);
         this.input.keyboard.removeAllListeners();
 
@@ -390,6 +529,61 @@ export class ClassSelect extends Phaser.Scene {
                 this.scene.start('Level1', { daily: _isDaily });
             });
         });
+    }
+
+    _playNavSound() {
+        try {
+            if (!this._navCtx) {
+                this._navCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            const ctx = this._navCtx;
+            const o = ctx.createOscillator(); const g = ctx.createGain();
+            o.connect(g); g.connect(ctx.destination);
+            o.frequency.value = 440; g.gain.value = 0.04;
+            o.start(); o.stop(ctx.currentTime + 0.05);
+        } catch (e) {}
+    }
+
+    _tryPrestige() {
+        if (!MetaProgression.canPrestige()) {
+            if (this._prestigeText) {
+                this._prestigeText.setColor('#FF4444');
+                this.time.delayedCall(500, () => {
+                    if (this._prestigeText && this._prestigeText.active) {
+                        this._prestigeText.setColor('#444444');
+                    }
+                });
+            }
+            return;
+        }
+
+        // Confirm popup
+        const { width, height } = this.scale;
+        const confirmBg = this.add.rectangle(width / 2, height / 2, 460, 100, 0x000000, 0.9)
+            .setStrokeStyle(2, 0xFFD700).setDepth(500);
+        const confirmText = this.add.text(width / 2, height / 2 - 18,
+            'PRESTIGE: Reset class unlocks, keep elixir.\n[Y] Confirm   [N] Cancel', {
+            fontSize: '13px', color: '#FFD700', fontFamily: 'monospace', align: 'center'
+        }).setOrigin(0.5).setDepth(501);
+
+        const cleanup = () => {
+            confirmBg.destroy();
+            confirmText.destroy();
+            this.input.keyboard.off('keydown', confirmHandler);
+        };
+        const confirmHandler = (e) => {
+            if (e.key === 'y' || e.key === 'Y') {
+                cleanup();
+                const success = MetaProgression.prestige();
+                if (success) {
+                    this.input.keyboard.removeAllListeners();
+                    this.scene.restart();
+                }
+            } else if (e.key === 'n' || e.key === 'N' || e.key === 'Escape') {
+                cleanup();
+            }
+        };
+        this.input.keyboard.on('keydown', confirmHandler);
     }
 
     _launchBossRush() {

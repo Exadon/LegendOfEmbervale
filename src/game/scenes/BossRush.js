@@ -137,8 +137,8 @@ export class BossRush extends Phaser.Scene {
 
         // Player events
         this.events.on('playerLanded', (x, y) => { this.particles.landingDust(x, y); if (this.audio.initialized) this.audio.playLand(); });
-        this.events.on('groundSlam', (x, y, sType) => { this.runStats.slamCount++; this.combatSystem.handleClassSAbility(sType || 'ground_slam', x, y); });
-        this.events.on('flameBurst', (x, y) => { this.runStats.burstCount++; this.combatSystem.handleFlameBurst(x, y); });
+        this.events.on('classAbility', (x, y, sType) => { this.runStats.slamCount++; this.combatSystem.handleSAbility(sType, x, y); });
+        this.events.on('eAbility', (x, y, eType) => { this.runStats.burstCount++; this.combatSystem.handleEAbility(eType, x, y); });
         this.events.on('classAttack', (x, y) => { this.runStats.classAttackCount++; this.combatSystem.handleClassAttack(x, y); });
         this.events.on('jump', () => { if (this.audio.initialized) this.audio.playJump(); });
         this.events.on('doubleJump', (x, y) => { this.particles.doubleJump(x, y); });
@@ -146,6 +146,18 @@ export class BossRush extends Phaser.Scene {
         // Boss events
         this.events.on('bossFightStart', () => {
             MusicManager.playBoss();
+            // Fade arena walls in for this fight
+            if (this._arenaWalls) {
+                const { leftBar, rightBar } = this._arenaWalls;
+                this.tweens.killTweensOf([leftBar, rightBar]);
+                this._wallPulseTween = null;
+                this.tweens.add({ targets: [leftBar, rightBar], alpha: 0.7, duration: 400 });
+                this._wallPulseTween = this.tweens.add({
+                    targets: [leftBar, rightBar],
+                    alpha: { from: 0.5, to: 0.9 },
+                    duration: 800, yoyo: true, repeat: -1, delay: 400,
+                });
+            }
         });
         this.events.on('bossFightEnd', () => {
             this._bossesKilled++;
@@ -153,6 +165,14 @@ export class BossRush extends Phaser.Scene {
 
             // BossManager already restores full flame; top up to 80 min for next fight
             GlobalState.flame = Math.max(GlobalState.flame, 80);
+
+            // Fade arena walls out between fights
+            if (this._arenaWalls) {
+                const { leftBar, rightBar } = this._arenaWalls;
+                this.tweens.killTweensOf([leftBar, rightBar]);
+                this._wallPulseTween = null;
+                this.tweens.add({ targets: [leftBar, rightBar], alpha: 0, duration: 600 });
+            }
 
             // Show relic overlay if possible, then advance to next boss
             if (this.relicManager.canDrop()) {
@@ -188,7 +208,11 @@ export class BossRush extends Phaser.Scene {
             }
         });
         this.events.on('bossProjectile', (bx, by, dir, speed) => {
-            const proj = this.add.circle(bx, by, 6, 0xFF4422, 0.8).setDepth(55);
+            const _useFB = this.textures.exists('fx_fireball');
+            const proj = _useFB
+                ? this.add.sprite(bx, by, 'fx_fireball').setDepth(55).setDisplaySize(24, 24)
+                : this.add.circle(bx, by, 6, 0xFF4422, 0.8).setDepth(55);
+            if (_useFB && this.anims.exists('fx_fireball_anim')) { proj.play('fx_fireball_anim'); proj.setFlipX(dir < 0); }
             this.tweens.add({
                 targets: proj, x: bx + dir * 500, duration: (500 / speed) * 1000,
                 onUpdate: () => {
@@ -208,7 +232,11 @@ export class BossRush extends Phaser.Scene {
             const baseAngle = Math.atan2(py - by, px - bx);
             const angle = baseAngle + (angleOffset * Math.PI / 180);
             const speed = 250;
-            const proj = this.add.circle(bx, by, 5, 0x44AA22, 0.9).setDepth(55);
+            const _useSP = this.textures.exists('fx_spell_proj');
+            const proj = _useSP
+                ? this.add.sprite(bx, by, 'fx_spell_proj').setDepth(55).setDisplaySize(20, 20)
+                : this.add.circle(bx, by, 5, 0x44AA22, 0.9).setDepth(55);
+            if (_useSP && this.anims.exists('fx_spell_proj_anim')) proj.play('fx_spell_proj_anim');
             this.tweens.add({
                 targets: proj, x: bx + Math.cos(angle) * speed * 2, y: by + Math.sin(angle) * speed * 2,
                 duration: 2000,
@@ -262,10 +290,12 @@ export class BossRush extends Phaser.Scene {
         const title = this.add.text(width / 2, height / 2 - 30, 'BOSS RUSH', {
             fontSize: '36px', color: '#FF4444', fontFamily: 'monospace', fontStyle: 'bold',
             stroke: '#000000', strokeThickness: 4
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(300);
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(300).setAlpha(0);
         const sub = this.add.text(width / 2, height / 2 + 20, 'Face all 6 bosses — pick a relic between each', {
             fontSize: '14px', color: '#AAAAAA', fontFamily: 'monospace'
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(300);
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(300).setAlpha(0);
+        this.tweens.add({ targets: title, alpha: 1, duration: 300 });
+        this.tweens.add({ targets: sub, alpha: 1, duration: 300, delay: 150 });
 
         this.time.delayedCall(1800, () => {
             this.tweens.add({
@@ -294,6 +324,16 @@ export class BossRush extends Phaser.Scene {
 
         this.popups.show(this.player.x, this.player.y - 80, `BOSS ${bossNum} / ${total}`, '#FF4444', '18px');
 
+        // Persistent counter text (top-right corner)
+        if (!this._bossCounterText) {
+            const { width } = this.scale;
+            this._bossCounterText = this.add.text(width - 10, 10, '', {
+                fontSize: '14px', color: '#FF4444', fontFamily: 'monospace', fontStyle: 'bold',
+                stroke: '#000000', strokeThickness: 2
+            }).setOrigin(1, 0).setScrollFactor(0).setDepth(200);
+        }
+        this._bossCounterText.setText(`BOSS ${bossNum} / ${total}`);
+
         // Slight delay then spawn
         this.time.delayedCall(1000, () => {
             if (!this._isGameOver) {
@@ -310,6 +350,17 @@ export class BossRush extends Phaser.Scene {
     _victory() {
         if (this._isGameOver) return;
         this._isGameOver = true;
+
+        // Stop arena wall pulse
+        if (this._arenaWalls) this.tweens.killTweensOf([this._arenaWalls.leftBar, this._arenaWalls.rightBar]);
+        this._wallPulseTween = null;
+
+        // "ALL BOSSES DEFEATED!" banner
+        const w = this.cameras.main.width, h = this.cameras.main.height;
+        const finTxt = this.add.text(w / 2, h / 2 - 60, 'ALL BOSSES DEFEATED!',
+            { fontSize: '22px', color: '#FFCC00', stroke: '#000000', strokeThickness: 3 }
+        ).setScrollFactor(0).setDepth(300).setOrigin(0.5);
+        this.tweens.add({ targets: finTxt, alpha: 0, duration: 500, delay: 2000 });
 
         // Big celebration
         if (this.particles) {
@@ -361,6 +412,7 @@ export class BossRush extends Phaser.Scene {
         // Consolation reward
         const consolation = this._bossesKilled * 8;
         if (consolation > 0) {
+            if (this.audio.initialized) { this.audio.playAchievement(); }
             FlameAltar.addElixir(consolation);
             this.popups.show(this.player.x, this.player.y - 60, `+${consolation} ELIXIR (${this._bossesKilled} bosses)`, '#00FFCC', '13px');
         }
@@ -404,8 +456,8 @@ export class BossRush extends Phaser.Scene {
         const leftX = centerX - arenaWidth / 2;
         const rightX = centerX + arenaWidth / 2;
 
-        const leftBar = this.add.rectangle(leftX, wallY, wallW, wallH, color, 0.7).setDepth(55);
-        const rightBar = this.add.rectangle(rightX, wallY, wallW, wallH, color, 0.7).setDepth(55);
+        const leftBar = this.add.rectangle(leftX, wallY, wallW, wallH, color, 0).setDepth(55);
+        const rightBar = this.add.rectangle(rightX, wallY, wallW, wallH, color, 0).setDepth(55);
 
         const leftBody = this.add.rectangle(leftX, wallY, 12, wallH, 0x000000, 0);
         this.physics.add.existing(leftBody, true);
@@ -414,12 +466,6 @@ export class BossRush extends Phaser.Scene {
 
         const colliderL = this.physics.add.collider(this.player, leftBody);
         const colliderR = this.physics.add.collider(this.player, rightBody);
-
-        this.tweens.add({
-            targets: [leftBar, rightBar],
-            alpha: { from: 0.5, to: 0.9 },
-            duration: 800, yoyo: true, repeat: -1
-        });
 
         return { leftBar, rightBar, leftBody, rightBody, colliderL, colliderR };
     }
@@ -441,6 +487,9 @@ export class BossRush extends Phaser.Scene {
 
         // Boss
         this.bossManager.update(delta);
+
+        // Boss-spawned minions (fell_vine, vukah_warrior, etc.) — update & allow banish
+        this.combatSystem.updateEnemies(delta);
 
         // Flame drain (small constant rate in boss rush)
         const drainRate = 1.5; // slower than normal — focus on boss fights

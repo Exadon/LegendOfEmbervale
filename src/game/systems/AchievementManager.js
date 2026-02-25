@@ -134,7 +134,7 @@ const ACHIEVEMENTS = [
     { id: 'achievements_15',  name: 'Completionist',          description: 'Unlock 15 achievements',      category: 'Meta', icon: '\u{1F480}', check: (s, state) => state.unlockedCount >= 15 },
 
     // Boss (Sprint 10 — 3)
-    { id: 'boss_first',   name: 'First Blood',   description: 'Defeat any boss',                       category: 'Combat', icon: '\u{1F480}', check: (s) => s.bossKilled },
+    { id: 'boss_first',   name: 'Bossbreaker',   description: 'Defeat any boss',                       category: 'Combat', icon: '\u{1F480}', check: (s) => s.bossKilled },
     { id: 'boss_all',     name: 'Boss Slayer',   description: 'Defeat all 5 bosses in one run',       category: 'Combat', icon: '\u{1F480}', check: (s) => s.bossesDefeated && s.bossesDefeated.size >= 5 },
     { id: 'boss_no_hit',  name: 'Untouchable',   description: 'Defeat a boss without taking damage',  category: 'Combat', icon: '\u{1F480}', check: (s) => s.bossKilledNoDamage },
 
@@ -171,6 +171,38 @@ const CATEGORY_ICONS = {
     Skills:     '\u{2B50}',
     Mechanics:  '\u{1F4A5}',
     Meta:       '\u{1F480}',
+};
+
+// ── Near-miss threshold map (numeric progress achievements only) ──
+
+const NEAR_MISS_THRESHOLDS = {
+    dist_100:     { key: 'distanceMeters',    total: 100,  suffix: 'm' },
+    dist_500:     { key: 'distanceMeters',    total: 500,  suffix: 'm' },
+    dist_1000:    { key: 'distanceMeters',    total: 1000, suffix: 'm' },
+    dist_2500:    { key: 'distanceMeters',    total: 2500, suffix: 'm' },
+    dist_5000:    { key: 'distanceMeters',    total: 5000, suffix: 'm' },
+    elixir_5:     { key: 'elixirMined',       total: 5  },
+    elixir_15:    { key: 'elixirMined',       total: 15 },
+    elixir_30:    { key: 'elixirMined',       total: 30 },
+    elixir_50:    { key: 'elixirMined',       total: 50 },
+    banish_10:    { key: 'enemiesBanished',   total: 10 },
+    banish_25:    { key: 'enemiesBanished',   total: 25 },
+    banish_50:    { key: 'enemiesBanished',   total: 50 },
+    combo_3:      { key: 'maxCombo',          total: 3  },
+    combo_5:      { key: 'maxCombo',          total: 5  },
+    combo_10:     { key: 'maxCombo',          total: 10 },
+    wisp_5:       { key: 'wispsCollected',    total: 5  },
+    wisp_10:      { key: 'wispsCollected',    total: 10 },
+    wisp_20:      { key: 'wispsCollected',    total: 20 },
+    survive_60:   { key: 'survivalTime',      total: 60,   suffix: 's' },
+    survive_120:  { key: 'survivalTime',      total: 120,  suffix: 's' },
+    survive_300:  { key: 'survivalTime',      total: 300,  suffix: 's' },
+    lore_3:       { key: 'loreScrollsFound',  total: 3  },
+    lore_5:       { key: 'loreScrollsFound',  total: 5  },
+    lore_10:      { key: 'loreScrollsFound',  total: 10 },
+    skill_3:      { key: 'skillsAcquired',    total: 3  },
+    skill_5:      { key: 'skillsAcquired',    total: 5  },
+    challenge_10: { key: 'challengesCompleted', total: 10 },
 };
 
 class _AchievementManager {
@@ -246,6 +278,7 @@ class _AchievementManager {
                     this._unlocked.add(ach.id);
                     this._toastQueue.push(ach);
                     this.save();
+                    window.dispatchEvent(new CustomEvent('achievement', { detail: { id: ach.id } }));
                     if (this._scene) {
                         this._scene.events.emit('achievementUnlocked', ach);
                     }
@@ -297,6 +330,24 @@ class _AchievementManager {
         const all = this.getByCategory(cat);
         const done = all.filter(a => this._unlocked.has(a.id)).length;
         return { done, total: all.length };
+    }
+
+    /** Returns up to `count` not-yet-unlocked achievements the player came closest to (40–99%). */
+    getNearMisses(stats, count = 1) {
+        if (!stats) return [];
+        const candidates = [];
+        for (const ach of ACHIEVEMENTS) {
+            if (this._unlocked.has(ach.id)) continue;
+            const thresh = NEAR_MISS_THRESHOLDS[ach.id];
+            if (!thresh) continue;
+            const current = Math.floor(stats[thresh.key] || 0);
+            const pct = Math.min(1, current / thresh.total);
+            if (pct < 0.4 || pct >= 1) continue;
+            const suffix = thresh.suffix || '';
+            candidates.push({ name: ach.name, icon: ach.icon, pct, label: `${current}${suffix} / ${thresh.total}${suffix}` });
+        }
+        candidates.sort((a, b) => b.pct - a.pct);
+        return candidates.slice(0, count);
     }
 }
 

@@ -39,6 +39,13 @@ export class Craftsperson extends Phaser.GameObjects.Container {
         }).setOrigin(0.5).setVisible(false);
         this.add(this.nameLabel);
 
+        // Rescue prompt
+        this.rescueLabel = scene.add.text(0, -38, '[F] Rescue', {
+            fontSize: '9px', color: '#44FF88', fontFamily: 'monospace',
+            stroke: '#000000', strokeThickness: 2,
+        }).setOrigin(0.5).setVisible(false);
+        this.add(this.rescueLabel);
+
         // Physics body for overlap
         scene.physics.add.existing(this, true);
         this.body.setSize(CRAFTSPERSON.RESCUE_RADIUS * 2, 60);
@@ -48,10 +55,12 @@ export class Craftsperson extends Phaser.GameObjects.Container {
     showPrompt() {
         if (!this.rescued && !this.failed && !this.rescueActive) {
             this.nameLabel.setVisible(true);
+            this.rescueLabel.setVisible(true);
         }
     }
 
     hidePrompt() {
         this.nameLabel.setVisible(false);
+        this.rescueLabel.setVisible(false);
     }
 }

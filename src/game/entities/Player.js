@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { PLAYER, FLAME_STEP, CORRUPTION_POOL, DOUBLE_JUMP, WALL_SLIDE, GLIDER, GROUND_SLAM, FLAME_BURST } from '../constants.js';
+import { PLAYER, FLAME_STEP, CORRUPTION_POOL, DOUBLE_JUMP, WALL_SLIDE, GLIDER, FLAME_BURST } from '../constants.js';
 import { SkillManager } from '../systems/SkillManager.js';
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
@@ -50,8 +50,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.isWallSliding = false;
         this.wallSideRight = false;
 
-        // Ground slam / S ability
-        this.isSlamming = false;
+        // S ability cooldown
         this.sAbilityCooldownTimer = 0;
 
         // Coyote time (brief forgiveness window after leaving ground)
@@ -64,8 +63,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         // Hit invincibility (post-damage protection)
         this.hitInvincibleTimer = 0;
 
-        // Flame burst
-        this.flameBurstCooldownTimer = 0;
+        // E ability cooldown
+        this.eAbilityCooldownTimer = 0;
 
         // Glider
         this.isGliding = false;
@@ -77,8 +76,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this._classDef = classDef;
         this._attackFallbackTimer = null;
 
-        // Run modifier flags
+        // Run modifier / challenge curse flags
         this._modifierNoDash = false;
+        this._cursedNoDash = false;
     }
 
     preUpdate(time, delta) {
@@ -98,14 +98,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         return 1 - (this.dashCooldownTimer / effectiveCooldown);
     }
 
-    get flameBurstReady() {
-        return this.flameBurstCooldownTimer <= 0;
+    get eAbilityReady() {
+        return this.eAbilityCooldownTimer <= 0;
     }
 
-    get flameBurstCooldownPct() {
-        if (this.flameBurstCooldownTimer <= 0) return 1;
-        const effectiveCooldown = SkillManager.getValue('flameBurst.cooldown', FLAME_BURST.COOLDOWN);
-        return 1 - (this.flameBurstCooldownTimer / effectiveCooldown);
+    get eAbilityCooldownPct() {
+        if (this.eAbilityCooldownTimer <= 0) return 1;
+        const cd = this._classDef?.eAbility?.cooldown ?? FLAME_BURST.COOLDOWN;
+        return 1 - (this.eAbilityCooldownTimer / cd);
     }
 
     get classAttackReady() {
@@ -120,7 +120,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     get sAbilityCooldownPct() {
         if (this.sAbilityCooldownTimer <= 0) return 1;
-        return 1 - (this.sAbilityCooldownTimer / 3000);
+        const cd = this._classDef?.sAbility?.cooldown ?? 8000;
+        return 1 - (this.sAbilityCooldownTimer / cd);
     }
 
     swapClassSprite(classDef) {
@@ -175,9 +176,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         // Update timers
         if (this.dashCooldownTimer > 0) {
             this.dashCooldownTimer -= delta;
+            if (this.dashCooldownTimer <= 0) this.scene.audio?.playDashReady?.();
         }
-        if (this.flameBurstCooldownTimer > 0) {
-            this.flameBurstCooldownTimer -= delta;
+        if (this.eAbilityCooldownTimer > 0) {
+            this.eAbilityCooldownTimer -= delta;
+            if (this.eAbilityCooldownTimer <= 0) this.scene.audio?.playDashReady?.();
         }
         if (this.invincibleTimer > 0) {
             this.invincibleTimer -= delta;
@@ -188,9 +191,16 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         }
         if (this.sAbilityCooldownTimer > 0) {
             this.sAbilityCooldownTimer -= delta;
+            if (this.sAbilityCooldownTimer <= 0) this.scene.audio?.playDashReady?.();
         }
         if (this.hitInvincibleTimer > 0) {
             this.hitInvincibleTimer -= delta;
+        }
+        // Alpha flicker while hit-invincible
+        if (this.hitInvincibleTimer > 0) {
+            this.setAlpha(Math.sin(this.scene.time.now / 70) > 0 ? 1 : 0.3);
+        } else if (!this.isDashing) {
+            this.setAlpha(1);
         }
         if (this.jumpBufferTimer > 0) {
             this.jumpBufferTimer -= delta;
@@ -220,18 +230,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
                     this.scene.events.emit('jump');
                 }
             }
-            // Land from slam / class S ability
-            if (this.isSlamming) {
-                this.isSlamming = false;
-                this.sAbilityCooldownTimer = 3000;
-                const sType = this._sAbilityType || 'ground_slam';
-                this._sAbilityType = null;
-                // Clear shadow dive state
-                if (sType === 'shadow_dive') {
-                    this.setAlpha(1);
-                }
-                this.scene.events.emit('groundSlam', this.x, this.y, sType);
-            }
         }
         this._wasOnFloor = onFloor;
 
@@ -244,12 +242,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
                 const dir = this.facingRight ? 1 : -1;
                 this.setVelocityX(dir * SkillManager.getValue('player.speed', PLAYER.SPEED));
             }
-            return;
-        }
-
-        // Ground slam overrides normal movement
-        if (this.isSlamming) {
-            this.setVelocityX(0);
             return;
         }
 
@@ -275,9 +267,16 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             }
         }
 
+        // Wall-slide blue tint
+        if (this.isWallSliding && !this.isInvincible && this.hitInvincibleTimer <= 0) {
+            this.setTint(0x88BBFF);
+        } else if (!this.isWallSliding && !this.isDashing && !this.isInvincible && this.hitInvincibleTimer <= 0) {
+            this.clearTint();
+        }
+
         // Glider: cap fall speed while active
         if (this.isGliding) {
-            if (onFloor || this.isWallSliding || this.isDashing || this.isSlamming) {
+            if (onFloor || this.isWallSliding || this.isDashing) {
                 this.isGliding = false;
             } else if (this.body.velocity.y > GLIDER.MAX_FALL_SPEED) {
                 this.setVelocityY(GLIDER.MAX_FALL_SPEED);
@@ -298,6 +297,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         if (input.jump) {
             if (this.isWallSliding) {
                 // Wall jump: kick away from wall
+                this.scene.tweens.killTweensOf(this, 'angle');
+                this.setAngle(0);
+                this.clearTint();
                 const kickDir = this.wallSideRight ? -1 : 1;
                 this.setVelocityX(kickDir * WALL_SLIDE.JUMP_VELOCITY_X);
                 this.setVelocityY(WALL_SLIDE.JUMP_VELOCITY_Y);
@@ -315,55 +317,45 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
                 this.airJumpsRemaining--;
                 this.setVelocityY(DOUBLE_JUMP.VELOCITY);
                 this.scene.events.emit('doubleJump', this.x, this.y);
+                // Front flip: one full rotation in the direction of travel
+                const _flipDir = this.facingRight ? 1 : -1;
+                this.scene.tweens.killTweensOf(this, 'angle');
+                this.setAngle(0);
+                this.scene.tweens.add({
+                    targets: this,
+                    angle: 360 * _flipDir,
+                    duration: 350,
+                    ease: 'Cubic.easeOut',
+                    onComplete: () => { if (this.active) this.setAngle(0); },
+                });
             } else if (this.isGliding) {
                 // Press jump while gliding — cancel glider
                 this.isGliding = false;
             } else {
                 // All air jumps exhausted — deploy glider or buffer jump
-                if (!this.isSlamming) {
-                    this.isGliding = true;
-                }
+                this.isGliding = true;
                 // Buffer the jump so it fires on landing
                 this.jumpBufferTimer = 100;
             }
         }
 
-        // Class S ability: S while airborne
-        if (input.downJustPressed && !onFloor && !this.isSlamming && this.sAbilityCooldownTimer <= 0) {
-            const sType = this._classDef.sAbility ? this._classDef.sAbility.type : 'ground_slam';
-            this.isSlamming = true;
-            this._sAbilityType = sType;
-
-            if (sType === 'shadow_dive') {
-                // Phase through enemies during descent
-                this.isInvincible = true;
-                this.invincibleTimer = 5000; // cleared on landing
-                this.setAlpha(0.3);
-                this.setVelocityX(0);
-                this.setVelocityY(SkillManager.getValue('groundSlam.velocity', GROUND_SLAM.VELOCITY));
-            } else if (sType === 'arcane_mine') {
-                // Drop mine at current position, then fall normally
-                this.scene.events.emit('arcaneMine', this.x, this.y, this._classDef.sAbility);
-                this.isSlamming = false; // don't lock movement, mine is placed
-                this._sAbilityType = null;
-            } else if (sType === 'piercing_thrust') {
-                // Fast diagonal dive
-                const dir = this.facingRight ? 1 : -1;
-                this.setVelocityX(dir * 350);
-                this.setVelocityY(SkillManager.getValue('groundSlam.velocity', GROUND_SLAM.VELOCITY) * 1.2);
-                this.isInvincible = true;
-                this.invincibleTimer = 500;
+        // Class S ability — instant, any state
+        if (input.downJustPressed && this.sAbilityCooldownTimer <= 0) {
+            const sAbility = this._classDef.sAbility;
+            const sType = sAbility ? sAbility.type : 'smoke_bomb';
+            this.sAbilityCooldownTimer = sAbility?.cooldown ?? 8000;
+            if (sType === 'arcane_mine') {
+                this.scene.events.emit('arcaneMine', this.x, this.y, sAbility);
             } else {
-                // Default slam downward
-                this.setVelocityX(0);
-                this.setVelocityY(SkillManager.getValue('groundSlam.velocity', GROUND_SLAM.VELOCITY));
+                this.scene.events.emit('classAbility', this.x, this.y, sType);
             }
         }
 
-        // Flame burst: E
-        if (input.flameBurst && this.flameBurstReady) {
-            this.flameBurstCooldownTimer = SkillManager.getValue('flameBurst.cooldown', FLAME_BURST.COOLDOWN);
-            this.scene.events.emit('flameBurst', this.x, this.y);
+        // E class ability
+        if (input.flameBurst && this.eAbilityReady) {
+            const eAbility = this._classDef.eAbility;
+            this.eAbilityCooldownTimer = eAbility?.cooldown ?? 8000;
+            this.scene.events.emit('eAbility', this.x, this.y, eAbility?.type ?? 'flame_burst');
         }
 
         // Class attack: Q
@@ -444,6 +436,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     startDash() {
+        this.scene.tweens.killTweensOf(this, 'angle');
+        this.setAngle(0);
         const duration = SkillManager.getValue('flameStep.duration', FLAME_STEP.DURATION);
         const cooldown = SkillManager.getValue('flameStep.cooldown', FLAME_STEP.COOLDOWN);
         const speed = SkillManager.getValue('flameStep.speed', FLAME_STEP.SPEED);
@@ -487,6 +481,24 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.setTint(0xFFCC00);
         this.scene.time.delayedCall(duration, () => {
             this.clearTint();
+        });
+
+        // Afterimage trail
+        this._spawnAfterimage();
+        this.scene.time.delayedCall(55,  () => { if (this.isDashing) this._spawnAfterimage(); });
+        this.scene.time.delayedCall(110, () => { if (this.isDashing) this._spawnAfterimage(); });
+    }
+
+    _spawnAfterimage() {
+        const ghost = this.scene.add.rectangle(
+            this.x, this.y,
+            this.displayWidth, this.displayHeight,
+            this._classDef?.color ?? 0xFFAA00, 0.45
+        ).setDepth(this.depth - 1);
+        this.scene.tweens.add({
+            targets: ghost, alpha: 0, scaleX: 1.15, scaleY: 1.15,
+            duration: 180, ease: 'Power2',
+            onComplete: () => ghost.destroy(),
         });
     }
 

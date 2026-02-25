@@ -1,12 +1,12 @@
 import Phaser from 'phaser';
 import { SkillManager } from '../systems/SkillManager.js';
 import { CLASS_SKILL_TREES } from '../systems/ClassSkillTrees.js';
-import { CLASS_DEFS } from '../systems/ClassDefs.js';
-import { ALL_CLASS_IDS } from '../systems/MetaProgression.js';
 import { Settings } from '../systems/Settings.js';
 import { AchievementManager } from '../systems/AchievementManager.js';
 import { DIFFICULTIES } from '../constants.js';
 import { KeybindOverlay } from './KeybindOverlay.js';
+import { MetaProgression } from '../systems/MetaProgression.js';
+import { CLASS_MASTERIES } from '../systems/ClassMasteries.js';
 
 const DIFFICULTY_ORDER = ['pilgrim', 'standard', 'torment'];
 
@@ -17,8 +17,6 @@ export class PauseOverlay {
         this._elements = [];
         this._keyHandler = null;
         this._soundText = null;
-        this._classKeys = ALL_CLASS_IDS;
-        this._classIndex = -1;
     }
 
     /** Convert desired screen position to zoom-adjusted object coords for scrollFactor(0) */
@@ -40,6 +38,7 @@ export class PauseOverlay {
     show() {
         if (this.active) return;
         this.active = true;
+        this.scene.audio?.playPauseOpen?.();
 
         this.scene.physics.pause();
 
@@ -86,31 +85,47 @@ export class PauseOverlay {
             fontSize: '16px', color: '#FFFFFF'
         });
 
+        // Active mastery summary (only shown if any mastery ranks are purchased)
+        const _classId = SkillManager.selectedClassId;
+        const _masteryDefs = CLASS_MASTERIES[_classId] || [];
+        const _activeMasteries = _masteryDefs
+            .map(m => ({ name: m.name, rank: MetaProgression.getMasteryRank(_classId, m.id) }))
+            .filter(m => m.rank > 0);
+        if (_activeMasteries.length > 0) {
+            const masteryStr = _activeMasteries.map(m => `${m.name} Rk.${m.rank}`).join('  ·  ');
+            _text(width / 2, Math.round(height * 0.135), `\u2605 ${masteryStr}`, {
+                fontSize: '10px', color: '#FFCC44'
+            });
+        }
+
         // Divider
-        const dp = this._uiXY(width / 2, Math.round(height * 0.14));
+        const dp = this._uiXY(width / 2, Math.round(height * 0.155));
         const divider = this.scene.add.rectangle(dp.x, dp.y, 400 * s, 1, 0x666666)
             .setScrollFactor(0).setDepth(301);
         this._elements.push(divider);
 
         // Skills header
-        _text(width / 2, Math.round(height * 0.15), 'ACQUIRED SKILLS', {
+        _text(width / 2, Math.round(height * 0.165), 'ACQUIRED SKILLS', {
             fontSize: '14px', color: '#AAAAAA'
         });
 
         // Skills section background
-        const skillPanelH = SkillManager.acquired.length === 0 ? 30 : Math.min(SkillManager.acquired.length * 35 + 10, 180);
-        _panel(width / 2, Math.round(height * 0.15) + skillPanelH / 2 + 10, 420, skillPanelH);
+        const _displayedCount = Math.min(SkillManager.acquired.length, 8);
+        const skillPanelH = SkillManager.acquired.length === 0 ? 30 : Math.min(_displayedCount * 35 + 10, 180);
+        _panel(width / 2, Math.round(height * 0.165) + skillPanelH / 2 + 10, 420, skillPanelH);
 
-        // Skill list
+        // Skill list (capped at 8 entries)
         if (SkillManager.acquired.length === 0) {
-            _text(width / 2, Math.round(height * 0.18), 'No skills acquired yet', {
+            _text(width / 2, Math.round(height * 0.195), 'No skills acquired yet', {
                 fontSize: '13px', color: '#666666', fontStyle: 'italic'
             });
         } else {
             const tree = CLASS_SKILL_TREES[SkillManager.selectedClassId] || [];
-            const startP = this._uiXY(0, Math.round(height * 0.18));
+            const startP = this._uiXY(0, Math.round(height * 0.195));
             let yPos = startP.y;
-            for (const nodeId of SkillManager.acquired) {
+            const _skillsToShow = SkillManager.acquired.slice(0, 8);
+            const _extraCount = SkillManager.acquired.length - 8;
+            for (const nodeId of _skillsToShow) {
                 const nodeDef = tree.find(n => n.id === nodeId);
                 if (!nodeDef) continue;
 
@@ -145,6 +160,14 @@ export class PauseOverlay {
                 this._elements.push(desc);
 
                 yPos += 35 * s;
+            }
+            // Overflow indicator
+            if (_extraCount > 0) {
+                const moreP = this._uiXY(width / 2, 0);
+                const moreText = this.scene.add.text(moreP.x, yPos, `\u2026 +${_extraCount} more`, {
+                    fontSize: '11px', color: '#666666', fontFamily: 'monospace'
+                }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(302).setScale(s);
+                this._elements.push(moreText);
             }
         }
 
@@ -198,7 +221,7 @@ export class PauseOverlay {
         });
 
         // Settings section background
-        _panel(width / 2, Math.round(height * 0.74), 420, 130);
+        _panel(width / 2, Math.round(height * 0.765), 420, 150);
 
         // Sound toggle
         const audio = this.scene.audio;
@@ -220,7 +243,7 @@ export class PauseOverlay {
 
         // Volume hint
         const volHintP = this._uiXY(width / 2 - 140, Math.round(height * 0.67) + 14);
-        const volHint = this.scene.add.text(volHintP.x, volHintP.y, '[-/+]  Volume', {
+        const volHint = this.scene.add.text(volHintP.x, volHintP.y, '[-/+] Volume', {
             fontSize: '11px', color: '#888888', fontFamily: 'monospace'
         }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301).setScale(s);
         this._elements.push(volHint);
@@ -266,19 +289,21 @@ export class PauseOverlay {
         }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301).setScale(s);
         this._elements.push(diffLabel);
         const diffValP = this._uiXY(width / 2 + 60, Math.round(height * 0.83));
+        const _diffId = Settings.data.difficulty || 'standard';
+        const _diffColors = { pilgrim: '#44FF44', standard: '#FFCC00', torment: '#FF4444' };
         this._diffText = this.scene.add.text(diffValP.x, diffValP.y,
-            DIFFICULTIES[Settings.data.difficulty || 'standard'].label, {
-            fontSize: '13px', color: '#FFCC00', fontFamily: 'monospace', fontStyle: 'bold'
+            DIFFICULTIES[_diffId].label, {
+            fontSize: '13px', color: _diffColors[_diffId] || '#FFCC00', fontFamily: 'monospace', fontStyle: 'bold'
         }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301).setScale(s);
         this._elements.push(this._diffText);
 
         // Colorblind mode [O]
-        const cbLabelP = this._uiXY(width / 2 - 140, Math.round(height * 0.87));
+        const cbLabelP = this._uiXY(width / 2 - 140, Math.round(height * 0.845));
         const cbLabel = this.scene.add.text(cbLabelP.x, cbLabelP.y, '[O]  Colorblind:', {
             fontSize: '13px', color: '#CCCCCC', fontFamily: 'monospace'
         }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301).setScale(s);
         this._elements.push(cbLabel);
-        const cbValP = this._uiXY(width / 2 + 60, Math.round(height * 0.87));
+        const cbValP = this._uiXY(width / 2 + 60, Math.round(height * 0.845));
         this._cbText = this.scene.add.text(cbValP.x, cbValP.y,
             Settings.data.colorblindMode ? 'ON' : 'OFF', {
             fontSize: '13px',
@@ -287,49 +312,77 @@ export class PauseOverlay {
         }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301).setScale(s);
         this._elements.push(this._cbText);
 
+        // Show FPS [P]
+        const fpsLabelP = this._uiXY(width / 2 - 140, Math.round(height * 0.86));
+        const fpsLabel = this.scene.add.text(fpsLabelP.x, fpsLabelP.y, '[P]  Show FPS:', {
+            fontSize: '13px', color: '#CCCCCC', fontFamily: 'monospace'
+        }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301).setScale(s);
+        this._elements.push(fpsLabel);
+        const fpsValP = this._uiXY(width / 2 + 60, Math.round(height * 0.86));
+        this._fpsToggleText = this.scene.add.text(fpsValP.x, fpsValP.y,
+            Settings.data.showFps ? 'ON' : 'OFF', {
+            fontSize: '13px',
+            color: Settings.data.showFps ? '#44FF44' : '#FF4444',
+            fontFamily: 'monospace', fontStyle: 'bold'
+        }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301).setScale(s);
+        this._elements.push(this._fpsToggleText);
+
+        // Class Mastery [C]
+        const cmLabelP = this._uiXY(width / 2 - 140, Math.round(height * 0.875));
+        const cmLabel = this.scene.add.text(cmLabelP.x, cmLabelP.y, '[C]  Class Mastery', {
+            fontSize: '13px', color: '#CCCCCC', fontFamily: 'monospace'
+        }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301).setScale(s);
+        this._elements.push(cmLabel);
+
+        // Main Menu [X]
+        const mmLabelP = this._uiXY(width / 2 - 140, Math.round(height * 0.89));
+        const mmLabel = this.scene.add.text(mmLabelP.x, mmLabelP.y, '[X]  Return to Main Menu', {
+            fontSize: '13px', color: '#FF8855', fontFamily: 'monospace', fontStyle: 'bold'
+        }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301).setScale(s);
+        this._elements.push(mmLabel);
+
         // Key Bindings [K]
-        const kbLabelP = this._uiXY(width / 2 - 140, Math.round(height * 0.91));
+        const kbLabelP = this._uiXY(width / 2 - 140, Math.round(height * 0.905));
         const kbLabel = this.scene.add.text(kbLabelP.x, kbLabelP.y, '[K]  Key Bindings', {
             fontSize: '13px', color: '#CCCCCC', fontFamily: 'monospace'
         }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301).setScale(s);
         this._elements.push(kbLabel);
 
-        // Key bindings reference (read-only, compact two-column)
-        const bindY = Math.round(height * 0.95);
-        const bindings = [
-            ['WASD / ←→', 'Move'],     ['SPACE / W/↑', 'Jump / Dbl'],
-            ['SHIFT / B', 'Dash'],     ['E / X', 'Flame Burst'],
-            ['Q / Y', 'Class Atk'],    ['S / RT', 'S Ability'],
-            ['M / LB', 'Mine'],        ['ESC / Start', 'Pause'],
-        ];
-        const bColL = width / 2 - 160;
-        const bColR = width / 2 + 10;
-        for (let i = 0; i < bindings.length; i++) {
-            const [key, action] = bindings[i];
-            const bx = i % 2 === 0 ? bColL : bColR;
-            const by = bindY + Math.floor(i / 2) * 11;
-            const bp = this._uiXY(bx, by);
-            const bt = this.scene.add.text(bp.x, bp.y, `${key.padEnd(14)} ${action}`, {
-                fontSize: '10px', color: '#666666', fontFamily: 'monospace'
-            }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301).setScale(s);
-            this._elements.push(bt);
+        // Active class ability reference (including combo hint)
+        const _COMBO_DESCS = {
+            adventurer: 'AoE banish all in 140px',
+            barbarian:  'Charge 350px + 15 Flame/kill',
+            wizard:     'AoE 360px radius + 5 Flame per banish',
+            ranger:     '3 arrows pierce all enemies',
+            tank:       'Knockback 200px, 3s stun',
+            healer:     '+50 Flame + drain stopped 3s',
+            assassin:   'Blink 220px + 10 Flame/kill',
+            monk:       'Knockback 200px + Chi Wave',
+            duelist:    '3-hit: adds 100px blade sweep',
+            pyromancer: 'Triple fireball spread (\xB115\xB0)',
+        };
+        const _cls = SkillManager.activeClass;
+        if (_cls) {
+            const abilY = Math.round(height * 0.955);
+            const _comboDesc = _COMBO_DESCS[_cls.id] || '';
+            const abilLines = [
+                `[Q] ${_cls.attackName}${_cls.attackDesc ? ': ' + _cls.attackDesc : ''}`,
+                `[S] ${_cls.sAbility?.desc || _cls.sAbility?.type || '\u2014'}`,
+                `[E] ${_cls.eAbility?.desc || _cls.eAbility?.type || '\u2014'}`,
+                `\u2726  ${_cls.passive?.description || 'No passive'}`,
+                `\u26A1 S/E\u2192Q COMBO: ${_comboDesc}`,
+            ];
+            const bColL = width / 2 - 180;
+            for (let i = 0; i < abilLines.length; i++) {
+                const isCombo = i === abilLines.length - 1;
+                const ap = this._uiXY(bColL, abilY + i * 12);
+                const at = this.scene.add.text(ap.x, ap.y, abilLines[i], {
+                    fontSize: '10px', color: isCombo ? '#BBAA44' : '#666666', fontFamily: 'monospace',
+                    wordWrap: { width: 380 / s }
+                }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(301).setScale(s);
+                this._elements.push(at);
+            }
         }
-
-        // ─── Dev Options (compact) ───
-        const devDiv = this._uiXY(width / 2, Math.round(height * 0.87));
-        const devDivider = this.scene.add.rectangle(devDiv.x, devDiv.y, 400 * s, 1, 0x666666)
-            .setScrollFactor(0).setDepth(301);
-        this._elements.push(devDivider);
-
-        const clsName = SkillManager.activeClass.className || 'Default';
-        const devLine = this.scene.add.text(0, 0,
-            `DEV  [L] Level Up  [G] Guide  [C] Class: ${clsName}`, {
-            fontSize: '11px', color: '#FF6666', fontFamily: 'monospace'
-        });
-        const devHp = this._uiXY(width / 2, Math.round(height * 0.91));
-        devLine.setPosition(devHp.x, devHp.y).setOrigin(0.5).setScrollFactor(0).setDepth(301).setScale(s);
-        this._elements.push(devLine);
-        this._devLine = devLine;
 
         // Resume prompt at bottom
         const pp = this._uiXY(width / 2, height - 30);
@@ -354,12 +407,8 @@ export class PauseOverlay {
                 this._toggleSound();
             } else if (event.key === 'r' || event.key === 'R') {
                 this._toggleResolution();
-            } else if (event.key === 'l' || event.key === 'L') {
-                this._forceLevelUp();
             } else if (event.key === 'g' || event.key === 'G') {
                 this._openGuide();
-            } else if (event.key === 'c' || event.key === 'C') {
-                this._cycleClass();
             } else if (event.key === 'j' || event.key === 'J') {
                 this._openLoreCompendium();
             } else if (event.key === 'd' || event.key === 'D') {
@@ -368,8 +417,14 @@ export class PauseOverlay {
                 this._cycleDifficulty();
             } else if (event.key === 'o' || event.key === 'O') {
                 this._toggleColorblind();
+            } else if (event.key === 'p' || event.key === 'P') {
+                this._toggleFps();
+            } else if (event.key === 'c' || event.key === 'C') {
+                this._openClassMastery();
             } else if (event.key === 'k' || event.key === 'K') {
                 this._openKeybinds();
+            } else if (event.key === 'x' || event.key === 'X') {
+                this._returnToMainMenu();
             } else if (event.key === '-' || event.key === '_') {
                 this._adjustVolume(-0.1);
             } else if (event.key === '=' || event.key === '+') {
@@ -426,13 +481,6 @@ export class PauseOverlay {
         this.scene.scene.launch('DevGuide');
     }
 
-    _forceLevelUp() {
-        this.hide();
-        if (this.scene.levelUpOverlay && !this.scene.levelUpOverlay.active) {
-            this.scene.levelUpOverlay.show();
-        }
-    }
-
     _toggleParticleDensity() {
         const cur = Settings.data.particleDensity || 'high';
         Settings.data.particleDensity = cur === 'high' ? 'low' : 'high';
@@ -456,7 +504,9 @@ export class PauseOverlay {
         Settings.data.difficulty = next;
         Settings.save();
         if (this._diffText) {
+            const diffColors = { pilgrim: '#44FF44', standard: '#FFCC00', torment: '#FF4444' };
             this._diffText.setText(DIFFICULTIES[next].label);
+            this._diffText.setColor(diffColors[next] || '#FFCC00');
         }
     }
 
@@ -469,6 +519,24 @@ export class PauseOverlay {
         }
     }
 
+    _toggleFps() {
+        Settings.data.showFps = !Settings.data.showFps;
+        Settings.save();
+        if (this._fpsToggleText) {
+            this._fpsToggleText.setText(Settings.data.showFps ? 'ON' : 'OFF');
+            this._fpsToggleText.setColor(Settings.data.showFps ? '#44FF44' : '#FF4444');
+        }
+        // Notify scene to create/destroy FPS counter
+        this.scene.events.emit('toggleFps', Settings.data.showFps);
+    }
+
+    _openClassMastery() {
+        this.hide();
+        const classId = SkillManager.selectedClassId || (SkillManager.activeClass && SkillManager.activeClass.id) || 'adventurer';
+        this.scene.scene.pause('Level1');
+        this.scene.scene.launch('ClassMasteryScene', { classId, returnScene: 'Level1' });
+    }
+
     _openKeybinds() {
         if (!this._keybindOverlay) {
             this._keybindOverlay = new KeybindOverlay(this.scene);
@@ -476,48 +544,38 @@ export class PauseOverlay {
         this._keybindOverlay.show();
     }
 
-    _cycleClass() {
-        this._classIndex = (this._classIndex + 1) % this._classKeys.length;
-        const classId = this._classKeys[this._classIndex];
-        const classDef = CLASS_DEFS[classId];
-        SkillManager.selectClass(classId);
-        if (this.scene.player) {
-            this.scene.player.swapClassSprite(classDef);
-        }
-        if (this.scene.hud && this.scene.hud.updateSkills) {
-            this.scene.hud.updateSkills();
-        }
-        if (this._devLine) {
-            const name = classDef.className || 'Default';
-            this._devLine.setText(`DEV  [L] Level Up  [G] Guide  [C] Class: ${name}`);
-        }
+    _returnToMainMenu() {
+        this.hide();
+        this.scene.cameras.main.fadeOut(600, 0, 0, 0);
+        this.scene.cameras.main.once('camerafadeoutcomplete', () => {
+            this.scene.scene.stop('Level1');
+            this.scene.scene.start('MainMenu');
+        });
     }
 
     hide() {
         if (!this.active) return;
+        this.scene.audio?.playPauseClose?.();
 
-        // Remove settings key handler
         if (this._keyHandler) {
             this.scene.input.keyboard.off('keydown', this._keyHandler);
             this._keyHandler = null;
         }
-        this._soundText = null;
-        this._resText = null;
-        this._densText = null;
-        this._diffText = null;
-        this._cbText = null;
-        this._devLine = null;
+        this._soundText = null; this._resText = null; this._densText = null;
+        this._diffText = null;  this._cbText = null;  this._fpsToggleText = null;
 
-        // Kill tweens and destroy all elements
-        for (const el of this._elements) {
+        const els = this._elements.slice();
+        this._elements = [];
+        this.active = false;
+        this.scene.physics.resume();
+
+        for (const el of els) {
             if (el && el.active) {
-                this.scene.tweens.killTweensOf(el);
-                el.destroy();
+                this.scene.tweens.add({
+                    targets: el, alpha: 0, duration: 180,
+                    onComplete: () => { if (el.active) el.destroy(); }
+                });
             }
         }
-        this._elements = [];
-
-        this.scene.physics.resume();
-        this.active = false;
     }
 }

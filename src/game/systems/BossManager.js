@@ -13,6 +13,7 @@ export class BossManager {
         this.active = false;
         this.defeated = new Set();
         this._elements = [];
+        this._bossPhase = 1;
     }
 
     trySpawnBoss(biomeId) {
@@ -47,8 +48,9 @@ export class BossManager {
                 // Pan camera to boss position
                 cam.pan(spawnX, WORLD.GROUND_Y - 100, 400, 'Linear', false, (cam2, progress) => {
                     if (progress >= 1) {
-                        // Hold 400ms then cut back
-                        this.scene.time.delayedCall(400, () => {
+                        // Show boss name card during hold, then cut back
+                        this._showBossNameCard(def);
+                        this.scene.time.delayedCall(2000, () => {
                             cam.pan(this.scene.player.x, this.scene.player.y, 300, 'Linear');
                             this.scene.tweens.add({
                                 targets: [topBar, botBar],
@@ -69,11 +71,61 @@ export class BossManager {
         });
     }
 
+    _showBossNameCard(def) {
+        const { width, height } = this.scene.scale;
+        const cx = width / 2;
+        const overlay = this.scene.add.rectangle(cx, height / 2, width, height, 0x000000, 0)
+            .setScrollFactor(0).setDepth(490);
+        const sub = this.scene.add.text(cx, height * 0.38, 'BOSS ENCOUNTER', {
+            fontSize: '12px', color: '#888888', fontFamily: 'monospace', letterSpacing: 4
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(491).setAlpha(0);
+        const name = this.scene.add.text(cx, height * 0.45, def.name.toUpperCase(), {
+            fontSize: '26px', color: '#FFD700', fontFamily: 'monospace', fontStyle: 'bold',
+            stroke: '#000000', strokeThickness: 4
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(491).setAlpha(0);
+        const hp = this.scene.add.text(cx, height * 0.53, `\u2665 ${def.health}`, {
+            fontSize: '14px', color: '#FF4444', fontFamily: 'monospace'
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(491).setAlpha(0);
+
+        // Fade in overlay + text, hold, then fade out
+        this.scene.tweens.add({
+            targets: overlay, alpha: 0.55, duration: 300,
+            onComplete: () => {
+                this.scene.tweens.add({ targets: [sub, name, hp], alpha: 1, duration: 300,
+                    onComplete: () => {
+                        this.scene.time.delayedCall(1400, () => {
+                            this.scene.tweens.add({
+                                targets: [overlay, sub, name, hp], alpha: 0, duration: 300,
+                                onComplete: () => [overlay, sub, name, hp].forEach(c => c.destroy())
+                            });
+                        });
+                    }
+                });
+            }
+        });
+    }
+
     _doSpawn(spawnX, def, surfaceY) {
+        // Clean up any lingering UI from a previous boss (prevents stacking in BossRush mode)
+        for (const el of this._elements) { if (el && el.active) el.destroy(); }
+        this._elements = [];
         this.active = true;
         this.boss = new Boss(this.scene, spawnX, def, surfaceY);
         this.scene.physics.add.collider(this.boss, this.scene.ground);
         this.scene.physics.add.collider(this.boss, this.scene.platforms);
+
+        // S3b: Arena glow floor
+        const glowColor = def.tint || 0xFF4444;
+        this._arenaGlow = this.scene.add.rectangle(
+            spawnX, WORLD.GROUND_Y - 10,
+            WORLD.SEGMENT_WIDTH * 4, 28,
+            glowColor, 0.06
+        ).setDepth(-1);
+        this.scene.tweens.add({
+            targets: this._arenaGlow,
+            alpha: { from: 0.03, to: 0.10 },
+            duration: 2000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
+        });
 
         // Pause shroud
         this.scene.events.emit('bossFightStart');
@@ -105,6 +157,9 @@ export class BossManager {
         }).setOrigin(0.5).setScrollFactor(0).setDepth(251).setScale(s);
         this._elements.push(this.nameText);
 
+        // Reset phase tracker for this fight
+        this._bossPhase = 1;
+
         // Boss warning audio
         if (this.scene.audio.initialized) {
             this.scene.audio.playBossWarning();
@@ -127,13 +182,21 @@ export class BossManager {
         if (this.healthBar && this.healthBarBg) {
             const pct = Math.max(0, this.boss.health / this.boss.maxHealth);
             this.healthBar.width = this.healthBarBg.width * pct;
-            // Color shift: green → yellow → red
+            // Color shift + phase transition detection
             if (pct > 0.5) {
                 this.healthBar.setFillStyle(0xFF6600);
             } else if (pct > 0.25) {
                 this.healthBar.setFillStyle(0xFF3300);
+                if (this._bossPhase === 1) {
+                    this._bossPhase = 2;
+                    this._onPhaseTransition(2);
+                }
             } else {
                 this.healthBar.setFillStyle(0xFF0000);
+                if (this._bossPhase < 3) {
+                    this._bossPhase = 3;
+                    this._onPhaseTransition(3);
+                }
             }
         }
 
@@ -165,8 +228,76 @@ export class BossManager {
         }
     }
 
+    _onPhaseTransition(phase) {
+        if (this.scene.audio && this.scene.audio.initialized) {
+            this.scene.audio.playBossPhaseTransition();
+        }
+
+        // S3c: Phase ring burst + audio stinger
+        if (this.scene.particles && this.boss) {
+            this.scene.particles.bossPhaseTransition(this.boss.x, this.boss.y);
+            if (phase === 3) {
+                // extra burst for enraged
+                this.scene.time.delayedCall(150, () => {
+                    if (this.boss && this.boss.active) {
+                        this.scene.particles.bossPhaseTransition(this.boss.x, this.boss.y);
+                    }
+                });
+            }
+        }
+        if (phase === 3 && this.scene.audio && this.scene.audio.initialized) {
+            this.scene.audio.playPhaseStinger();
+        }
+        this.scene.cameras.main.shake(250, 0.007);
+        // Color flash: orange for phase 2, red for enraged
+        if (phase === 3) {
+            this.scene.cameras.main.flash(400, 255, 20, 20, true);
+        } else {
+            this.scene.cameras.main.flash(300, 255, 110, 0, true);
+        }
+
+        const isEnraged = phase === 3;
+        const label = isEnraged ? '\u26A0 ENRAGED!' : 'PHASE 2';
+        const color = isEnraged ? '#FF2222' : '#FF8800';
+
+        const { width } = this.scene.scale;
+        const zoom = this.scene.cameras.main.zoom;
+        const s = 1 / zoom;
+        const cx = width / 2;
+        const cy = this.scene.scale.height / 2;
+        const _ui = (sx, sy) => ({ x: (sx - cx) / zoom + cx, y: (sy - cy) / zoom + cy });
+        const tp = _ui(width / 2, 60);
+        const phaseText = this.scene.add.text(tp.x, tp.y, label, {
+            fontSize: '22px', color, fontFamily: 'monospace', fontStyle: 'bold',
+            stroke: '#000000', strokeThickness: 3
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(252).setScale(s).setAlpha(0);
+        this._elements.push(phaseText);
+
+        this.scene.tweens.add({
+            targets: phaseText,
+            alpha: 1,
+            duration: 200,
+            yoyo: true,
+            hold: 1000,
+            onComplete: () => {
+                this.scene.tweens.add({ targets: phaseText, alpha: 0, duration: 300,
+                    onComplete: () => { if (phaseText.active) phaseText.destroy(); }
+                });
+            }
+        });
+
+        // Tint boss name red on enrage
+        if (isEnraged && this.nameText && this.nameText.active) {
+            this.nameText.setColor('#FF2222');
+        }
+    }
+
     _onBossDefeated(def) {
-        this.defeated.add(def.id);
+        // Skirmish mode: don't lock out the real biome boss
+        if (!this._skirmishMode) {
+            this.defeated.add(def.id);
+        }
+        this._skirmishMode = false;
         this.active = false;
 
         const bossX = this.boss ? this.boss.x : this.scene.player.x;
@@ -175,9 +306,9 @@ export class BossManager {
         // Sprint 9: Boss kill slow-mo + gray desaturate overlay
         this.scene.time.timeScale = 0.15;
         const { width, height } = this.scene.scale;
-        const grayOverlay = this.scene.add.rectangle(width / 2, height / 2, width, height, 0x888888, 0.35)
+        const grayOverlay = this.scene.add.rectangle(width / 2, height / 2, width, height, 0x888888, 0.55)
             .setScrollFactor(0).setDepth(250);
-        this.scene.time.delayedCall(1200 * 6.66, () => { // actual 1200ms wall time
+        window.setTimeout(() => { // real-time 1200ms (scene.time is slowed by timeScale)
             this.scene.time.timeScale = 1;
             if (grayOverlay && grayOverlay.active) {
                 this.scene.tweens.add({
@@ -187,7 +318,7 @@ export class BossManager {
                     onComplete: () => grayOverlay.destroy()
                 });
             }
-        });
+        }, 1200);
 
         // Sprint 9: explosion particle burst
         if (this.scene.particles && this.scene.particles.bossKillBurst) {
@@ -223,6 +354,14 @@ export class BossManager {
             }
             this._elements = [];
         });
+
+        // S3b: Fade out arena glow
+        if (this._arenaGlow) {
+            this.scene.tweens.add({
+                targets: this._arenaGlow, alpha: 0, duration: 800,
+                onComplete: () => { this._arenaGlow?.destroy(); this._arenaGlow = null; }
+            });
+        }
 
         // Resume shroud
         this.scene.events.emit('bossFightEnd');

@@ -143,7 +143,7 @@ export const BIOMES = Object.freeze([
         groundTint: 0x330044,
         platformTint: 0x440055,
         treeTint: 0x220033,
-        enemies: ['hollow_skeleton', 'corrupted_warrior', 'shroud_wraith'],
+        enemies: ['hollow_skeleton', 'corrupted_warrior', 'shroud_wraith', 'void_slime'],
         scrollChance: 0.2,
         shrineChance: 0.02,
         fogColor: 0x550066,
@@ -176,10 +176,10 @@ export const FLAME_STEP = Object.freeze({
 
 export const SHROUD = Object.freeze({
     START_X: -200,
-    BASE_SPEED: 30,
-    SPEED_RAMP: 3,
-    SPEED_MAX: 80,
-    RAMP_INTERVAL: 30,
+    BASE_SPEED: 65,
+    SPEED_RAMP: 6,
+    SPEED_MAX: 160,
+    RAMP_INTERVAL: 25,
     SURGE_AMOUNT: 80,
     ALPHA_MIN: 0.5,
     ALPHA_MAX: 0.85,
@@ -203,6 +203,7 @@ export const FLAME_WISP = Object.freeze({
     BOB_DURATION: 1500,
     MAGNET_RANGE: 120,
     MAGNET_SPEED: 4,
+    SHROUD_PUSH: 55,
 });
 
 export const FLAME_SHRINE = Object.freeze({
@@ -454,7 +455,7 @@ export const ENEMY_SPRITES = Object.freeze({
         isAtlas: false,
         idleAnim: 'rogue_idle',
         moveAnim: 'rogue_move',
-        displaySize: 24,
+        displaySize: 44,
         tint: 0xAA44CC,
     },
     fell_footsoldier: {
@@ -462,7 +463,7 @@ export const ENEMY_SPRITES = Object.freeze({
         isAtlas: true,
         idleAnim: 'barbarian_idle',
         moveAnim: 'barbarian_move',
-        displaySize: 36,
+        displaySize: 62,
         tint: 0x8844AA,
     },
     fell_vine: {
@@ -470,7 +471,7 @@ export const ENEMY_SPRITES = Object.freeze({
         isAtlas: false,
         idleAnim: 'fell_vine_idle',
         moveAnim: 'fell_vine_idle',
-        displaySize: 48,
+        displaySize: 76,
         tint: null,
     },
     fell_ranger: {
@@ -478,7 +479,7 @@ export const ENEMY_SPRITES = Object.freeze({
         isAtlas: true,
         idleAnim: 'elven_archeress_idle',
         moveAnim: 'elven_archeress_move',
-        displaySize: 32,
+        displaySize: 56,
         tint: 0x6633AA,
     },
     scavenger: {
@@ -486,7 +487,7 @@ export const ENEMY_SPRITES = Object.freeze({
         isAtlas: true,
         idleAnim: 'elite_swordsman_idle',
         moveAnim: 'elite_swordsman_move',
-        displaySize: 36,
+        displaySize: 62,
         tint: 0xBB6644,
     },
     scavenger_pyreblade: {
@@ -494,7 +495,7 @@ export const ENEMY_SPRITES = Object.freeze({
         isAtlas: false,
         idleAnim: 'pyromancer_idle',
         moveAnim: 'pyromancer_move',
-        displaySize: 32,
+        displaySize: 56,
         tint: 0xFF4422,
     },
     vukah_warrior: {
@@ -502,7 +503,7 @@ export const ENEMY_SPRITES = Object.freeze({
         isAtlas: true,
         idleAnim: 'monk_idle',
         moveAnim: 'monk_move',
-        displaySize: 40,
+        displaySize: 68,
         tint: 0xCC4433,
     },
     vukah_shaman: {
@@ -510,7 +511,7 @@ export const ENEMY_SPRITES = Object.freeze({
         isAtlas: false,
         idleAnim: 'necromancer_idle',
         moveAnim: 'necromancer_move',
-        displaySize: 38,
+        displaySize: 64,
         tint: 0x44AA44,
     },
     hollow_skeleton: {
@@ -518,7 +519,7 @@ export const ENEMY_SPRITES = Object.freeze({
         isAtlas: false,
         idleAnim: 'skeletal_warrior_idle',
         moveAnim: 'skeletal_warrior_move',
-        displaySize: 36,
+        displaySize: 62,
         tint: null,
     },
     hollow_mage: {
@@ -526,7 +527,7 @@ export const ENEMY_SPRITES = Object.freeze({
         isAtlas: false,
         idleAnim: 'skeletal_mage_idle',
         moveAnim: 'skeletal_mage_move',
-        displaySize: 34,
+        displaySize: 58,
         tint: 0x6644AA,
     },
     hollow_reaper: {
@@ -534,7 +535,7 @@ export const ENEMY_SPRITES = Object.freeze({
         isAtlas: false,
         idleAnim: 'death_sprite_idle',
         moveAnim: 'death_sprite_move',
-        displaySize: 40,
+        displaySize: 68,
         tint: 0x4444AA,
     },
     frost_fell: {
@@ -542,7 +543,7 @@ export const ENEMY_SPRITES = Object.freeze({
         isAtlas: false,
         idleAnim: 'ice_elemental_idle',
         moveAnim: 'ice_elemental_move',
-        displaySize: 34,
+        displaySize: 58,
         tint: null,
     },
     frost_scavenger: {
@@ -550,7 +551,7 @@ export const ENEMY_SPRITES = Object.freeze({
         isAtlas: true,
         idleAnim: 'rotting_soldier_idle',
         moveAnim: 'rotting_soldier_move',
-        displaySize: 36,
+        displaySize: 62,
         tint: 0x88CCFF,
     },
     skullflame: {
@@ -558,7 +559,7 @@ export const ENEMY_SPRITES = Object.freeze({
         isAtlas: false,
         idleAnim: 'skullflame_idle',
         moveAnim: 'skullflame_idle',
-        displaySize: 48,
+        displaySize: 76,
         tint: null,
     },
 });
@@ -591,11 +592,6 @@ export const PARALLAX = Object.freeze({
     SPEEDS: [0.05, 0.15, 0.3, 0.5],
 });
 
-export const TILE_FRAMES = Object.freeze({
-    GROUND_TOP: 0,
-    PLATFORM_STONE: 16,
-});
-
 export const DECORATION = Object.freeze({
     CHANCE: 0.7,
     MIN_PER_SEGMENT: 1,
@@ -610,6 +606,9 @@ export const DECORATION = Object.freeze({
         { key: 'deco_fence1', weight: 2, width: 32, height: 32, groundLevel: true },
         { key: 'deco_fence2', weight: 2, width: 32, height: 32, groundLevel: true },
         { key: 'deco_grass1', weight: 5, width: 32, height: 32, groundLevel: true },
+        { key: 'deco_bones',  weight: 3, width: 32, height: 16, groundLevel: true },
+        { key: 'deco_torch',  weight: 2, width: 16, height: 48, groundLevel: true },
+        { key: 'deco_rubble', weight: 3, width: 48, height: 24, groundLevel: true },
     ],
 });
 
@@ -779,34 +778,34 @@ export const OBELISK = Object.freeze({
             wrong: ['The Cinder Vault', 'The Hollow Halls'],
         },
         {
-            question: 'What does the Corrupted Sentinel guard?',
-            correct: 'The boundary between worlds',
-            wrong: ['The Elixir Wells', 'The Stone Pillar'],
+            question: "According to the Ancient Obelisk, what was the Elixir's true function inside the Wells?",
+            correct: 'A sedative to keep something ancient below from waking',
+            wrong: ['A reward for those who dug deepest', 'Proof of Ancient mercy toward humanity'],
         },
         {
-            question: 'What do Shroud Wraiths phase through?',
-            correct: 'Solid platforms',
-            wrong: ['Fire', 'The Flame barrier'],
+            question: 'What did Elin, Watchkeeper say the Shroud hunts by?',
+            correct: 'The warmth of living blood',
+            wrong: ['Sound and movement', 'The light of the Flame'],
         },
         {
-            question: 'How many prestiges can a Flameborn achieve?',
-            correct: 'Three',
-            wrong: ['One', 'Unlimited'],
+            question: 'What did Vorgoth believe the Elixir Wells truly were?',
+            correct: 'Cages for humanity',
+            wrong: ['Beacons of salvation', 'Fonts of the Void'],
         },
         {
-            question: 'What does the Ember Heart prestige relic grant?',
-            correct: '+5 starting flame',
-            wrong: ['-10% cooldowns', '50% more wisps'],
+            question: 'What did Alden Crowley fail to do that the new Flameborn must achieve?',
+            correct: 'Seal the final Well',
+            wrong: ['Defeat Vorgoth', "Reach the Shroud's Maw"],
         },
         {
-            question: 'What is the Void Slime\'s deadliest trait?',
-            correct: 'It splits on death',
-            wrong: ['It poisons the Flame', 'It is invincible'],
+            question: "What does the Unknown addict's journal claim they became by the final, dateless entry?",
+            correct: 'The Well itself',
+            wrong: ['A servant of the Void', 'Lost beyond all finding'],
         },
         {
-            question: 'What does the Shroud Heart relic do in the Shroud itself?',
-            correct: 'Heals the bearer',
-            wrong: ['Destroys enemies', 'Grants invincibility'],
+            question: 'What did Alden Crowley do upon hearing what sleeps beneath the lowest chamber?',
+            correct: 'He turned and ran',
+            wrong: ['He sealed it and wept', 'He called out to it and received no answer'],
         },
         {
             question: 'Who is the Stonefist?',
@@ -824,29 +823,60 @@ export const OBELISK = Object.freeze({
             wrong: ['The Cinder Vault', 'A second Shroud'],
         },
         {
-            question: 'What do the Corrupted Warriors guard before attacking?',
-            correct: 'During a windup, they shield',
-            wrong: ['They never defend', 'They flee first'],
+            question: 'What did the Wanderer leave behind at the deepest Well?',
+            correct: 'A warning for the next Flameborn',
+            wrong: ['Their weapon', 'An unsealed door'],
         },
         {
-            question: 'What reward comes from the Elixir Bloom relic?',
-            correct: 'A free wisp every 10 elixir',
-            wrong: ['Double elixir', 'Flame restore'],
+            question: 'What did the Ancients seal inside the Elixir Wells?',
+            correct: 'Something older than themselves',
+            wrong: ['Limitless elixir', 'The last Void spark'],
         },
         {
-            question: 'What colour does Time Fracture emit?',
-            correct: 'Cyan',
-            wrong: ['Gold', 'Crimson'],
+            question: 'What happened to the Ancient Sentinel when the Wells broke?',
+            correct: 'It watched too long — something watched back',
+            wrong: ['It was destroyed', 'It joined the survivors'],
         },
         {
-            question: 'Which biome has the coldDrain mechanic?',
-            correct: 'Albaneve Summits',
-            wrong: ["The Shroud's Maw", 'The Hollow'],
+            question: 'What did Sorcerer Ikora say the Void truly was, beyond mere darkness?',
+            correct: 'A silence that remembered being alone',
+            wrong: ['A hunger older than the Flame', 'A mirror of everything the world had lost'],
         },
         {
-            question: 'What is the Shroud\'s Maw ground tint?',
-            correct: 'Deep violet',
-            wrong: ['Ash grey', 'Blood red'],
+            question: 'What does the Vukah War Chant say makes a new chieftain?',
+            correct: 'The lone survivor of the stone pillar ritual',
+            wrong: ['The warrior who drinks the most Elixir', 'The one who slays an Ancient'],
+        },
+        // ─── Phase O additions ───
+        {
+            question: 'What did Vorgoth walk into willingly, believing he would master it?',
+            correct: 'The Void',
+            wrong: ['The Shroud', 'The deepest Elixir Well'],
+        },
+        {
+            question: 'According to the Revelwood Chronicle, what happened to Mire-Captain Calyx in the Blackmire?',
+            correct: 'He drank Shroud-tainted flame and forgot his name',
+            wrong: ['He sealed the Blackmire and perished', 'He led the survivors south'],
+        },
+        {
+            question: 'What did Elin, Watchkeeper say the thing at the Shroud\'s Maw truly was?',
+            correct: 'A wound in the world',
+            wrong: ['A creature older than the Ancients', 'The last Void spark'],
+        },
+        {
+            question: 'What does Alden Crowley say he cannot collect, despite centuries of trying?',
+            correct: 'An ending',
+            wrong: ['Peace', 'The truth about the Ancients'],
+        },
+        {
+            question: 'What did Balthazar confess he cannot make himself believe?',
+            correct: 'That someone else would have built the first Well anyway',
+            wrong: ['That the Elixir was ever truly safe', 'That Vorgoth acted alone'],
+        },
+        {
+            question: 'What does the Flame Shrine promise to remember even after the Flameborn is gone?',
+            correct: 'Their name',
+            wrong: ['Their deeds', 'Their sacrifice'],
         },
     ],
 });
@@ -1234,10 +1264,11 @@ export const GENERATION = Object.freeze({
     CORRUPTION_RAMP: 0.03,
     MAX_PLATFORMS_PER_SEGMENT: 2,
     LOOKAHEAD_SEGMENTS: 4,
-    ENEMY_CHANCE: 0.25,
+    ENEMY_CHANCE: 0.60,
     ENEMY_RAMP: 0.02,
     ENEMY_DISTANCE_RAMP: 0.00003,
     MAX_ENEMIES_PER_SEGMENT: 3,
+    ENEMY_CAP: 40,
 });
 
 // ─── Lore Fragments ───
@@ -1282,6 +1313,42 @@ export const LORE_ENTRIES = Object.freeze([
     { author: 'Sophie, Moth\'s Grove', text: 'We survive by rationing Flame-infused water and keeping the lanterns lit. If the light dies, we die with it. It is that simple.' },
     { author: 'Flame Shrine Inscription', text: 'The Ancients gave their lives to forge the Flame — a sacrifice of light against eternal darkness. Remember them.' },
     { author: 'Ancient Obelisk', text: 'When the Shroud devours the last ember, the Flameborn shall rise from the ashes of the old world and kindle the new.' },
+    // ─── Phase G1: New Lore Entries ───
+    { author: 'Vorgoth', text: 'The Wells were not built for salvation. They were built as cages — for us.' },
+    { author: 'Vorgoth', text: 'The Void does not consume. It clarifies. What remains is truth.' },
+    { author: 'The Mysterious Wanderer', text: 'I carried the Flame before you. I reached the deepest Well and could not seal it. I left a warning instead.' },
+    { author: 'Sorcerer Ikora', text: 'When the Void answered, I saw not the future — only the absence of it. A silence that stretched to the end of all things.' },
+    { author: 'Ancient Obelisk', text: 'The Wells were built to hold something down. The Ancients sealed it with their own essence — and it has been waiting ever since.' },
+    { author: 'Alden Crowley, The Collector', text: 'I was chosen, as you are chosen now. My flame guttered at the final threshold. I could not cross it. Perhaps you can.' },
+    { author: 'Unknown', text: 'Day 1: sharper than I have ever been. Day 7: one more vein, one more drop. Day — : I am the Well now.' },
+    { author: 'Vukah War Chant', text: 'The soft ones flee the black fog. The Vukah do not flee. We do not run. We are the stone that the Shroud breaks upon.' },
+    { author: 'Captain\'s Journal', text: 'When the Wells broke, the Sentinel watched too long. Something watched back. Now it wears the Sentinel\'s face.' },
+    { author: 'Flame Shrine Inscription', text: 'She was the Revelwood herself — spirit of root and canopy. The Shroud did not kill her. It recruited her.' },
+    // ─── Phase L: Lore Completion ───
+    { author: 'Vorgoth', text: 'I walked into the Void willingly. I thought I would master it. I was wrong. Something else answered first.' },
+    { author: 'The Mysterious Wanderer', text: 'The first Flameborn was not chosen by the Vault. She chose herself. She burned the brighter for it. I was the second. There was no third — until you.' },
+    { author: 'Ancient Obelisk', text: 'The Void predates the Ancients. It predates the Flame. It is not darkness — darkness is merely its shadow. It is the silence before the first word.' },
+    { author: 'Revelwood Chronicle', text: 'Mire-Captain Calyx survived the Blackmire by drinking Shroud-tainted flame. When he emerged, he had forgotten his name — but the fire obeyed him.' },
+    { author: 'Drak Scripture', text: 'Gorruk Ironhide called no council and named no heir. He fought the Shroud alone for three dawns and three nights. On the fourth morning only the Shroud remained.' },
+    { author: 'Elin, Watchkeeper', text: 'The thing at the Maw is not a creature. It is a wound — a place where the boundary between the world and the Void tore clean through.' },
+    // ─── Phase N: Narrative Lore Pass ───
+    { author: 'Vorgoth', text: 'I did not betray Embervale. I freed it. The Ancients dressed our chains as gifts. The Elixir was always ours — they simply convinced us to tend the lock.' },
+    { author: 'Vorgoth', text: 'The Void spoke first through the Elixir, then through the cracks in the stone. By the time I understood what I had opened, I was already part of it. I did not lose myself to the Void. I walked in willingly.' },
+    { author: 'The Mysterious Wanderer', text: 'They called me the First Flameborn. I refused the title then. I cannot refuse it now. I reached the deepest Well and flinched at what endured below. What waits there does not sleep. It endures.' },
+    { author: 'Sorcerer Ikora', text: 'The Void did not show me the future. It showed me before the beginning — a silence so absolute that the concept of sound had never occurred to it. It was not cruel. It simply remembered being alone, and did not understand why that should have changed.' },
+    { author: 'Ancient Obelisk', text: 'The Elixir was the sedative. We built the Wells to drive something downward — something that had been here long before us and would remain long after. The Elixir kept it dreaming. We trusted that would hold.' },
+    { author: 'Captain\'s Journal', text: 'He was a shaft-digger before the breaking. Three days afterward, he crawled from the rubble — eyes alight, hands radiating heat that would not cool. He called it a gift. We recognised it as a wound.' },
+    { author: 'Captain\'s Journal', text: 'The heat from the shattered Well fused to him. He radiates still. The Shroud follows him as a hound follows a scent — not because he commands it, but because it claimed him first. He has not realised this.' },
+    { author: 'Alden Crowley, The Collector', text: 'I stood where you stand now, centuries past. The Flame burned in my chest as it burns in yours. When I reached the lowest chamber I heard what sleeps beneath it. I turned and ran. I am still running.' },
+    { author: 'Unknown', text: 'Vorgoth shared the Elixir freely and called it liberation. By month two I would have harmed anyone for more. By month three I had. He never used the word addiction. I think that was deliberate.' },
+    { author: 'Vukah War Chant', text: 'They sent runners south begging us to follow. I sent the runners back wearing the Shroud\'s own fog around their shoulders. The Vukah do not retreat from stone. We become the stone.' },
+    // ─── Phase O: Final Lore Pass ───
+    { author: 'Queen Jezmina', text: 'The Flameborn burns cold and steady — not the wild fire of Elixir, but something older. A controlled flame, patient as starlight. I do not know if they feel warmth or only give it.' },
+    { author: 'Balthazar, Alchemist', text: 'If I had refused the commission to build the first Well, none of this would have happened. I tell myself that someone else would have built it. I am not sure I believe myself.' },
+    { author: 'Unknown Survivor', text: 'My sister ran south three days ago. She said the Flame was still lit in Springlands. I am going north instead. Someone has to see what the Shroud is actually doing at the Wells.' },
+    { author: 'Drak Scripture', text: 'The Vukah Chieftain does not fear the soft ones. He does not fear the Shroud. He fears only one thing — that the stone pillar will fall before he does. The stone outlasts all things.' },
+    { author: 'Flame Shrine Inscription', text: 'Kneel here and give your name to the Flame. It will remember. When you are gone, when the world forgets you, the Flame will not.' },
+    { author: 'Alden Crowley, The Collector', text: 'I have collected many things. Relics, scrolls, centuries. But the one thing I cannot collect is an ending. You carry that, Flameborn. I would trade everything I own for what you carry.' },
 ]);
 
 export const SHRINE_INSCRIPTIONS = Object.freeze([
@@ -1392,4 +1459,118 @@ export const DIFFICULTIES = Object.freeze({
     pilgrim:  { label: 'Pilgrim',  flameDrainMult: 0.65, enemySpeedMult: 0.80, enemyDamageMult: 0.70, enemyHpMult: 0.80 },
     standard: { label: 'Standard', flameDrainMult: 1.00, enemySpeedMult: 1.00, enemyDamageMult: 1.00, enemyHpMult: 1.00 },
     torment:  { label: 'Torment',  flameDrainMult: 1.60, enemySpeedMult: 1.30, enemyDamageMult: 1.50, enemyHpMult: 1.40 },
+});
+
+// ─── Phase J: Hazard Zones ───
+export const HAZARD_ZONES = Object.freeze({
+    lava_pool: {
+        id: 'lava_pool',
+        label: 'Lava Pool',
+        color: 0xFF4400,
+        alpha: 0.55,
+        width: 160,
+        height: 24,
+        drainMult: 2.5,
+        shroudPush: -40,
+        elixirBonus: 15,
+        description: 'Massive drain, but enemies slain here drop bonus elixir',
+        biomes: ['kindlewastes', 'shroud_maw'],
+        spawnChance: 0.10,
+        minSegment: 8,
+    },
+    frost_ground: {
+        id: 'frost_ground',
+        label: 'Frost Ground',
+        color: 0x88CCFF,
+        alpha: 0.35,
+        width: 200,
+        height: 20,
+        drainMult: 0.5,
+        slideMult: 1.8,
+        enemySpawnBonus: 0.3,
+        description: 'Cold reduces drain, but more enemies are drawn to the ice',
+        biomes: ['albaneve', 'hollow'],
+        spawnChance: 0.12,
+        minSegment: 10,
+    },
+    spike_trap: {
+        id: 'spike_trap',
+        label: 'Spike Field',
+        color: 0x886644,
+        alpha: 0.7,
+        width: 100,
+        height: 18,
+        contactDrain: 12,
+        contactCooldown: 1200,
+        elixirBonus: 8,
+        description: 'Painful to cross, but rewards those who survive',
+        biomes: ['springlands', 'revelwood', 'nomad_highlands'],
+        spawnChance: 0.08,
+        minSegment: 4,
+    },
+});
+
+export const PIT = Object.freeze({
+    WIDTH: 110,
+    SPIKE_CHANCE: 0.45,
+    MIN_SEGMENT: 5,
+    PIT_CHANCE: 0.22,
+    SPIKE_DRAIN: 18,
+    BOUNCE_VELOCITY: -700,
+    FALL_THRESHOLD: 50,    // px below WORLD.GROUND_Y before bounce triggers
+});
+
+export const WATER = Object.freeze({
+    PIT_CHANCE: 0.45,         // % of non-spike pits that become water pits
+    BIOMES: ['springlands', 'revelwood', 'hollow', 'albaneve'],
+    DEPTH: 80,                // px below WORLD.GROUND_Y for water floor
+    SLOW_MULT: 0.55,          // velocity.x multiplier per frame while in water
+    SURFACE_COLOR: 0x44AAFF,
+    FILL_COLOR: 0x1A4E8A,
+    FILL_ALPHA: 0.65,
+});
+
+export const BIRDS = Object.freeze({
+    // Per-biome config. Omitted biomes get no birds.
+    BIOMES: {
+        springlands:     { color: 0x111111, count: 5, speedMin: 55,  speedMax: 100, bat: false },
+        revelwood:       { color: 0x1A2A0A, count: 6, speedMin: 45,  speedMax: 85,  bat: false },
+        nomad_highlands: { color: 0x221A0A, count: 4, speedMin: 70,  speedMax: 140, bat: false },
+        kindlewastes:    { color: 0x3A1005, count: 4, speedMin: 80,  speedMax: 150, bat: true  },
+        hollow:          { color: 0x2A0A3A, count: 4, speedMin: 60,  speedMax: 120, bat: true  },
+        albaneve:        { color: 0xCCDDEE, count: 3, speedMin: 40,  speedMax: 80,  bat: false },
+    },
+    Y_MIN: 80,       // min screen Y (px from top of viewport)
+    Y_MAX: 320,      // max screen Y
+    WING_HALF: 9,    // base half-wingspan in px
+    FLAP_MS: 380,    // ms per flap half-cycle
+});
+
+// ─── Phase J: Weather ───
+export const WEATHER = Object.freeze({
+    rain: {
+        id: 'rain',
+        label: 'Rain',
+        drainBonus: 0,
+        biomes: ['springlands', 'revelwood'],
+        chance: 0.75,
+        particle: { tint: 0x88AAFF, angle: { min: 260, max: 280 }, speed: 350, lifespan: 600, quantity: 2, alpha: { start: 0.5, end: 0 }, scaleX: 0.5, scaleY: 3 },
+    },
+    volcanic_ash: {
+        id: 'volcanic_ash',
+        label: 'Volcanic Ash',
+        drainBonus: 0.5,
+        biomes: ['kindlewastes'],
+        chance: 0.40,
+        particle: { tint: 0xFF5500, angle: { min: 240, max: 300 }, speed: 120, lifespan: 1200, quantity: 1, alpha: { start: 0.6, end: 0 }, scale: { start: 2, end: 0 } },
+    },
+    shadow_fog: {
+        id: 'shadow_fog',
+        label: 'Shadow Fog',
+        drainBonus: 0.0,
+        visibilityAlpha: 0.45,
+        biomes: ['shroud_maw'],
+        chance: 0.60,
+        particle: { tint: 0x220044, speed: 20, lifespan: 3000, quantity: 1, alpha: { start: 0.3, end: 0 }, scale: { start: 6, end: 0 } },
+    },
 });
