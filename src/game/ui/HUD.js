@@ -1490,6 +1490,35 @@ export class HUD {
         this._classGroup.el.style.borderRadius = active ? '3px' : '';
     }
 
+    /** Cyan glow on Q bar — enemy telegraphed, charged shot window open */
+    setQCharged(active) {
+        if (!this._classGroup) return;
+        this._classGroup.el.style.boxShadow = active ? '0 0 8px 3px #00FFFF' : '';
+        this._classGroup.el.style.borderRadius = active ? '3px' : '';
+    }
+
+    /** Full-screen cyan flash + center text when charged Q fires */
+    showQChargedFire() {
+        const scene = this.scene;
+        const { width, height } = scene.scale;
+        // Cyan screen flash
+        const flash = scene.add.rectangle(width / 2, height / 2, width, height, 0x00FFFF, 0.18)
+            .setScrollFactor(0).setDepth(304);
+        scene.tweens.add({ targets: flash, alpha: 0, duration: 300, ease: 'Power2', onComplete: () => flash.destroy() });
+        // "CHARGED SHOT" text
+        const p = this._uiXY(width / 2, Math.round(height * 0.45));
+        const txt = scene.add.text(p.x, p.y, '⚡ CHARGED', {
+            fontSize: '24px', color: '#00FFFF', fontFamily: 'monospace', fontStyle: 'bold',
+            stroke: '#003344', strokeThickness: 4
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(305);
+        scene.tweens.add({
+            targets: txt,
+            scaleX: { from: 1.5, to: 0.9 }, scaleY: { from: 1.5, to: 0.9 },
+            alpha: { from: 1, to: 0 }, duration: 550, ease: 'Power2',
+            onComplete: () => { if (txt.active) txt.destroy(); }
+        });
+    }
+
     showComboLabel() {
         const scene = this.scene;
         const { width, height } = scene.scale;

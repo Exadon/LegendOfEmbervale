@@ -345,6 +345,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                     this._telegraphTimer = ENEMY_AI.TELEGRAPH_DURATION;
                     this.setVelocity(0, 0);
                     this.setTint(0xFFFFFF); // white flash
+                    // Signal Level1 to open the Q charged window
+                    this.scene.events.emit('enemyTelegraph', { x: this.x, y: this.y });
                 }
                 break;
             }

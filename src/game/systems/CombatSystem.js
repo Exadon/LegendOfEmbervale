@@ -189,6 +189,10 @@ export class CombatSystem {
         this.comboCount++;
         this.comboTimer = SkillManager.getValue('combo.window', COMBO.WINDOW) * s.relicManager.getMult('comboWindowMult');
 
+        // Baseline flame restore per kill — makes combat feel rewarding, not just punishing
+        const baseKillFlame = 2;
+        GlobalState.restoreFlame(baseKillFlame);
+
         // Kill streak audio escalation
         s.audio.playBanishCombo(this.comboCount);
 
@@ -219,6 +223,9 @@ export class CombatSystem {
         }
 
         if (this.comboCount >= 2) {
+            // Combo dash acceleration: each chained kill shaves 500ms off dash cooldown
+            s.player.dashCooldownTimer = Math.max(0, s.player.dashCooldownTimer - 500);
+
             // Scale text size and effects with combo count
             const size = Math.min(16 + this.comboCount * 2, 30);
             const comboTxt = s.popups.show(x, y - 60, `x${this.comboCount} COMBO!`, '#FFCC00', `${size}px`);
@@ -790,10 +797,24 @@ export class CombatSystem {
 
     // ─── Class Attack Dispatcher ───
 
-    handleClassAttack(x, y) {
+    handleClassAttack(x, y, charged = false) {
         const s = this.scene;
         const cls = SkillManager.activeClass;
         if (!cls || !cls.attackType) return;
+
+        // Q charged window: all enemies within 300px are temporarily set to 1 HP so the
+        // attack instant-banishes multi-hit enemies; HP is restored for survivors after dispatch.
+        s._qCharged = charged;
+        if (charged) {
+            for (const e of s.enemyGroup.getChildren()) {
+                if (e.active && e.alive && Phaser.Math.Distance.Between(x, y, e.x, e.y) < 300) {
+                    e._savedHp = e.hitsToKill;
+                    e.hitsToKill = 1;
+                }
+            }
+            s.hud?.showQChargedFire?.();
+            s.audio?.playComboFire?.();
+        }
 
         // Check and consume primed state (set by S or E use within 3s)
         s._qActivePrimed = !!(s._qPrimed && s.time.now < (s._qPrimedExpiry || 0));
@@ -847,6 +868,16 @@ export class CombatSystem {
                 break;
         }
         s._qActivePrimed = false;
+        s._qCharged = false;
+        // Restore HP for enemies that survived the charged Q (weren't banished)
+        if (charged) {
+            for (const e of s.enemyGroup.getChildren()) {
+                if (e.active && e.alive && e._savedHp != null) {
+                    e.hitsToKill = e._savedHp;
+                    e._savedHp = undefined;
+                }
+            }
+        }
     }
 
     // AOE banish (Wizard)

@@ -657,7 +657,7 @@ export const CRUMBLING_PLATFORM = Object.freeze({
 export const ENEMY_AI = Object.freeze({
     PATROL_RANGE: 60,
     PATROL_SPEED_MULT: 0.3,
-    CHASE_RANGE: 300,
+    CHASE_RANGE: 450,
     TELEGRAPH_DURATION: 200,
     RANGER_KITE_DISTANCE: 150,
     VUKAH_BURST_MULT: 1.5,

@@ -1308,6 +1308,49 @@ export class AudioManager {
         osc.stop(t + 0.15);
     }
 
+    /** Low ominous surge — shroud pulse incoming */
+    playShroudSurge() {
+        if (!this.initialized || this.muted) return;
+        const t = this.ctx.currentTime;
+        // Deep descending square + noise swell
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(100, t);
+        osc.frequency.exponentialRampToValueAtTime(40, t + 0.4);
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(0.18, t + 0.1);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.55);
+        osc.connect(gain); gain.connect(this.output);
+        osc.start(t); osc.stop(t + 0.55);
+        // High shimmer overlay
+        const osc2 = this.ctx.createOscillator();
+        const gain2 = this.ctx.createGain();
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(600, t + 0.05);
+        osc2.frequency.exponentialRampToValueAtTime(200, t + 0.4);
+        gain2.gain.setValueAtTime(0.06, t + 0.05);
+        gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.45);
+        osc2.connect(gain2); gain2.connect(this.output);
+        osc2.start(t + 0.05); osc2.stop(t + 0.45);
+    }
+
+    /** Airy exhale — shroud pulse receding */
+    playShroudRecede() {
+        if (!this.initialized || this.muted) return;
+        const t = this.ctx.currentTime;
+        // Ascending filtered noise: breath-out feel
+        const buf = this._makeNoiseBuffer(0.35);
+        const src = this.ctx.createBufferSource(); src.buffer = buf;
+        const flt = this.ctx.createBiquadFilter();
+        flt.type = 'bandpass'; flt.frequency.value = 400; flt.Q.value = 0.6;
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.12, t);
+        gain.gain.linearRampToValueAtTime(0.01, t + 0.35);
+        src.connect(flt); flt.connect(gain); gain.connect(this.output);
+        src.start(t); src.stop(t + 0.35);
+    }
+
     /** Rising sine stinger — plays on boss phase 3 (enraged) */
     playPhaseStinger() {
         if (!this.initialized || this.muted) return;

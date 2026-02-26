@@ -86,8 +86,8 @@ export class LevelGenerator {
             this._generateGround(index, segX);
         }
 
-        // Skip first 2 segments (player start area) for entity spawning
-        if (index < 2) return;
+        // Skip first segment (player start area) for entity spawning
+        if (index < 1) return;
 
         // --- Platforms ---
         if (rng() < GENERATION.PLATFORM_CHANCE) {
@@ -269,6 +269,66 @@ export class LevelGenerator {
             const ox = segX + 100 + rng() * (WORLD.SEGMENT_WIDTH - 200);
             const obelisk = new AncientObelisk(this.scene, ox);
             this.obelisks.add(obelisk);
+        }
+
+        // --- Guarded Wisp Clusters (every ~8 segments, feature 4) ---
+        if (index >= 3 && index % 8 === 0) {
+            const clusterX = segX + 200 + rng() * (WORLD.SEGMENT_WIDTH - 400);
+            // 3 wisps in a tight cluster
+            for (let w = 0; w < 3; w++) {
+                const wx = clusterX + (w - 1) * 55 + rng() * 20 - 10;
+                const wy = WORLD.GROUND_Y - 160 - rng() * 60;
+                const wisp = new FlameWisp(this.scene, wx, wy);
+                this.flameWisps.add(wisp);
+            }
+            // 2 guard enemies flanking the cluster
+            for (let g = 0; g < 2; g++) {
+                const typeId = biome.enemies.length > 0
+                    ? biome.enemies[Math.floor(rng() * biome.enemies.length)]
+                    : 'fell_critter';
+                const def = ENEMIES[typeId];
+                if (def) {
+                    const ex = clusterX + (g === 0 ? -120 : 120) + rng() * 40 - 20;
+                    const ey = WORLD.GROUND_Y - def.height / 2;
+                    const enemy = new Enemy(this.scene, ex, ey, typeId);
+                    this.enemies.add(enemy);
+                }
+            }
+            this.scene.events.emit('guardedCluster', { x: clusterX });
+        }
+
+        // --- Gauntlet Zones (every ~13 segments, feature 6) ---
+        if (index >= 5 && index % 13 === 0) {
+            const gx = segX + 100 + rng() * (WORLD.SEGMENT_WIDTH - 200);
+            // 5 enemies spread across the zone
+            for (let i = 0; i < 5; i++) {
+                const typeId = biome.enemies.length > 0
+                    ? biome.enemies[Math.floor(rng() * biome.enemies.length)]
+                    : 'fell_critter';
+                const def = ENEMIES[typeId];
+                if (def) {
+                    const ex = gx - 280 + i * 130 + rng() * 60 - 30;
+                    const ey = def.stationary
+                        ? WORLD.GROUND_Y - def.height / 2
+                        : WORLD.GROUND_Y - def.height / 2 - rng() * 80;
+                    const enemy = new Enemy(this.scene, ex, ey, typeId);
+                    this.enemies.add(enemy);
+                }
+            }
+            // Elite + 3 wisps as reward at zone exit
+            const eliteTypeId = 'skullflame';
+            const eliteDef = ENEMIES[eliteTypeId];
+            if (eliteDef) {
+                const elite = new Enemy(this.scene, gx + 350, WORLD.GROUND_Y - eliteDef.height / 2, eliteTypeId);
+                this.enemies.add(elite);
+            }
+            for (let w = 0; w < 3; w++) {
+                const wx = gx + 280 + w * 50;
+                const wy = WORLD.GROUND_Y - 150 - rng() * 60;
+                const wisp = new FlameWisp(this.scene, wx, wy);
+                this.flameWisps.add(wisp);
+            }
+            this.scene.events.emit('gauntletZone', { x: gx });
         }
 
         // --- Undead Hands (hollow/albaneve biomes only) ---

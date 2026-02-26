@@ -14,6 +14,7 @@ export class BossManager {
         this.defeated = new Set();
         this._elements = [];
         this._bossPhase = 1;
+        this._dashHitCooldown = 0;
     }
 
     trySpawnBoss(biomeId) {
@@ -176,6 +177,8 @@ export class BossManager {
     update(delta) {
         if (!this.active || !this.boss || !this.boss.alive) return;
 
+        if (this._dashHitCooldown > 0) this._dashHitCooldown -= delta;
+
         this.boss.update(delta, this.scene.player.x, this.scene.player.y);
 
         // Update health bar
@@ -205,15 +208,16 @@ export class BossManager {
         const dist = Phaser.Math.Distance.Between(player.x, player.y, this.boss.x, this.boss.y);
 
         if (dist < 60) {
-            if (player.isDashing || player.isInvincible) {
+            if ((player.isDashing || player.isInvincible) && this._dashHitCooldown <= 0) {
                 this.boss.hit();
+                this._dashHitCooldown = 600; // one hit per 600 ms — prevents every-frame damage
                 // Sprint 9: boss hit particles
                 if (this.scene.particles && this.scene.particles.bossHit) {
                     this.scene.particles.bossHit(this.boss.x, this.boss.y);
                 }
                 this.scene.cameras.main.shake(100, 0.005);
                 this.scene.audio.playWraithBanish();
-                player.dashCooldownTimer = 0;
+                if (player.isDashing) player.dashCooldownTimer = 0; // dash-through refreshes dash
             } else if (player.hitInvincibleTimer <= 0 && this.boss.aiState !== 3) {
                 // Boss damages player
                 const dmg = 15;

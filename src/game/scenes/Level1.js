@@ -296,6 +296,14 @@ export class Level1 extends Phaser.Scene {
         // Near-death slow-mo
         this._nearDeathCooldown = 0;
 
+        // Q charged window (opened when an enemy telegraphs)
+        this._qChargedWindowTimer = 0;
+
+        // Shroud pulse cycle
+        this._shroudPulseTimer = Phaser.Math.Between(18000, 24000);
+        this._shroudPulsePhase = 'idle'; // 'idle' | 'surge' | 'recede'
+        this._shroudPulsePhaseTimer = 0;
+
         // Deadly tendril zones from mutations (Feature 2)
         this._deadlyTendrilZones = [];
 
@@ -407,7 +415,36 @@ export class Level1 extends Phaser.Scene {
         this.events.on('classAbility', (x, y, sType) => { this.runStats.slamCount++; this.combatSystem.handleSAbility(sType, x, y); });
         this.events.on('arcaneMine', (x, y, cfg) => { this.combatSystem.handleArcaneMine(x, y, cfg); });
         this.events.on('eAbility', (x, y, eType) => { this.runStats.burstCount++; this.combatSystem.handleEAbility(eType, x, y); });
-        this.events.on('classAttack', (x, y) => { this.runStats.classAttackCount++; this.combatSystem.handleClassAttack(x, y); });
+        this.events.on('classAttack', (x, y) => {
+            this.runStats.classAttackCount++;
+            const charged = this._qChargedWindowTimer > 0;
+            if (charged) { this._qChargedWindowTimer = 0; this.hud?.showQChargedFire?.(); }
+            this.combatSystem.handleClassAttack(x, y, charged);
+        });
+
+        // Q charged window: opened when an enemy transitions to telegraph
+        this.events.on('enemyTelegraph', () => {
+            if (this._qChargedWindowTimer <= 0) {
+                this._qChargedWindowTimer = 1200;
+                this.hud?.setQCharged?.(true);
+                this.audio?.playQPrimed?.();
+            }
+        });
+
+        // Gauntlet zone visual
+        this.events.on('gauntletZone', ({ x }) => {
+            const overlay = this.add.rectangle(x + 300, WORLD.GROUND_Y - 50, 600, 200, 0xFF6600, 0.12).setDepth(2);
+            this.tweens.add({ targets: overlay, alpha: 0, duration: 4000, ease: 'Linear', onComplete: () => overlay.destroy() });
+            this.popups.show(x + 300, WORLD.GROUND_Y - 150, '⚔ GAUNTLET', '#FF8800', '20px');
+            this.cameras.main.shake(150, 0.004);
+            this.audio?.playShroudSurge?.();
+        });
+
+        // Guarded wisp cluster visual indicator
+        this.events.on('guardedCluster', ({ x }) => {
+            const glow = this.add.circle(x, WORLD.GROUND_Y - 80, 60, 0xFFDD44, 0.15).setDepth(2);
+            this.tweens.add({ targets: glow, alpha: 0, scaleX: 2, scaleY: 2, duration: 1500, ease: 'Power2', onComplete: () => glow.destroy() });
+        });
         this.events.on('skillAcquired', () => { this.runStats.skillsAcquired++; this._drainOverlayQueue(); });
         this.events.on('wallJump', () => { this.runStats.wallJumpCount++; this.audio.playJump(); });
         this.events.on('jump', () => this.audio.playJump());
@@ -1059,6 +1096,18 @@ export class Level1 extends Phaser.Scene {
 
         // --- Phase J: Hazard zones ---
         this._updateHazardZones(delta);
+
+        // --- Shroud pulse cycle ---
+        this._updateShroudPulse(delta);
+
+        // --- Q charged window countdown ---
+        if (this._qChargedWindowTimer > 0) {
+            this._qChargedWindowTimer -= delta;
+            if (this._qChargedWindowTimer <= 0) {
+                this._qChargedWindowTimer = 0;
+                this.hud?.setQCharged?.(false);
+            }
+        }
 
         // --- Pit fall detection ---
         this._updatePitFall();
@@ -2471,6 +2520,49 @@ export class Level1 extends Phaser.Scene {
             }
         }
         this._hazardExtraDrain = extraDrain;
+    }
+
+    // ─── Shroud Pulse Cycle ───
+
+    _updateShroudPulse(delta) {
+        // Don't run during boss fights, challenge arenas, or mutations
+        if (this.bossManager?.active || this.challengeArena?.active) return;
+
+        if (this._shroudPulsePhase === 'idle') {
+            this._shroudPulseTimer -= delta;
+            if (this._shroudPulseTimer <= 0) {
+                // Enter surge phase
+                this._shroudPulsePhase = 'surge';
+                this._shroudPulsePhaseTimer = 3000;
+                this.shroud.speedMultiplier = Math.min(this.shroud.speedMultiplier + 0.6, 3.0);
+                this.popups.show(this.player.x, this.player.y - 60, '⚠ SHROUD SURGES', '#FF4488', '14px');
+                this.cameras.main.shake(200, 0.005);
+                this.audio?.playShroudSurge?.();
+                // Red edge vignette for surge
+                const { width, height } = this.scale;
+                const surge = this.add.rectangle(width / 2, height / 2, width, height, 0xFF0044, 0.08)
+                    .setScrollFactor(0).setDepth(196);
+                this.time.delayedCall(3000, () => { if (surge.active) surge.destroy(); });
+            }
+        } else if (this._shroudPulsePhase === 'surge') {
+            this._shroudPulsePhaseTimer -= delta;
+            if (this._shroudPulsePhaseTimer <= 0) {
+                // Enter recede phase
+                this._shroudPulsePhase = 'recede';
+                this._shroudPulsePhaseTimer = 2000;
+                this.shroud.speedMultiplier = Math.max(this.shroud.speedMultiplier - 0.6, 0.3);
+                this.popups.show(this.player.x, this.player.y - 60, '✦ SHROUD RECEDES', '#44FFAA', '12px');
+                this.audio?.playShroudRecede?.();
+            }
+        } else if (this._shroudPulsePhase === 'recede') {
+            this._shroudPulsePhaseTimer -= delta;
+            if (this._shroudPulsePhaseTimer <= 0) {
+                // Back to idle — restore normal speed
+                this._shroudPulsePhase = 'idle';
+                this._shroudPulseTimer = Phaser.Math.Between(18000, 24000);
+                this.shroud.speedMultiplier = Math.max(this.shroud.speedMultiplier, 1.0);
+            }
+        }
     }
 
     // ─── Pit Fall Detection ───
