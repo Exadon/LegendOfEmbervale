@@ -165,6 +165,7 @@ export class WinScene extends Phaser.Scene {
         const mins = Math.floor((stats.survivalTime || 0) / 60);
         const secs = String(Math.floor((stats.survivalTime || 0) % 60)).padStart(2, '0');
         const relicCount = this.relicIds.length;
+        const className = stats.className || 'Adventurer';
 
         const cx = width / 2;
         const base = height * 0.32;
@@ -176,11 +177,12 @@ export class WinScene extends Phaser.Scene {
 
         const statEls = [
             _t(0,        '+100 ELIXIR REWARDED',                        '#FFCC00', '16px'),
-            _t(lh * 1.5, `\u25C6 Distance:  ${distM.toLocaleString()}m`, '#FFD700'),
-            _t(lh * 2.5, `\u25C6 Kills:     ${kills}`,                   '#FF7777'),
-            _t(lh * 3.5, `\u25C6 Time:      ${mins}:${secs}`,            '#88CCFF'),
-            _t(lh * 4.5, `\u25C6 Relics:    ${relicCount}`,              '#CC88FF'),
-            _t(lh * 6.2, 'Achievement Unlocked: Flameborn Legend \u2605', '#FFD700', '13px'),
+            _t(lh * 1.5, `\u25C6 Class:     ${className}`,              '#AAFFCC'),
+            _t(lh * 2.5, `\u25C6 Distance:  ${distM.toLocaleString()}m`, '#FFD700'),
+            _t(lh * 3.5, `\u25C6 Kills:     ${kills}`,                   '#FF7777'),
+            _t(lh * 4.5, `\u25C6 Time:      ${mins}:${secs}`,            '#88CCFF'),
+            _t(lh * 5.5, `\u25C6 Relics:    ${relicCount}`,              '#CC88FF'),
+            _t(lh * 7.2, 'Achievement Unlocked: Flameborn Legend \u2605', '#FFD700', '13px'),
         ];
 
         const returnHint = this.add.text(width / 2, height * 0.78, '[SPACE] Return to Menu', {

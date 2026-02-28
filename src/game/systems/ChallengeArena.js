@@ -15,6 +15,7 @@ export class ChallengeArena {
         // Gauntlet wave tracking
         this.waveNumber = 0;
         this.activeEnemiesThisWave = 0;
+        this._gauntletWaveAnnouncing = false;
 
         // Cursed modifier
         this.cursedModifier = null;
@@ -44,6 +45,7 @@ export class ChallengeArena {
         this.segmentIndex = segmentIndex;
         this.waveNumber = 0;
         this.activeEnemiesThisWave = 0;
+        this._gauntletWaveAnnouncing = false;
         this._flameKeeperFailed = false;
         this._bossSkirmishEnemy = null;
         this._cursedDrainTimer = 0;
@@ -141,7 +143,7 @@ export class ChallengeArena {
 
         if (this.challenge.id === 'kill') {
             this.objectiveText.setText(`Banish ${this.challenge.target - this.kills} more enemies`);
-        } else if (this.challenge.id === 'gauntlet') {
+        } else if (this.challenge.id === 'gauntlet' && !this._gauntletWaveAnnouncing) {
             this.objectiveText.setText(`Wave ${this.waveNumber + 1}/3 — ${this.kills} kills`);
         } else if (this.challenge.id === 'speed_kill') {
             this.objectiveText.setText(`Kill ${this.challenge.target - this.kills} more quickly!`);
@@ -209,8 +211,26 @@ export class ChallengeArena {
                 if (this.waveNumber >= 3) {
                     this._resolve(true);
                 } else {
+                    // Wave cleared — suppress normal text update and announce
+                    this._gauntletWaveAnnouncing = true;
+                    if (this.scene.audio) this.scene.audio.playGauntletWaveCleared();
+                    if (this.objectiveText && this.objectiveText.active) {
+                        const prevColor = this.cursedModifier ? '#FF4488' : '#FFFFFF';
+                        this.objectiveText.setText(`WAVE ${this.waveNumber} CLEARED!`).setColor('#00FFCC');
+                        this.scene.time.delayedCall(700, () => {
+                            if (this.objectiveText && this.objectiveText.active) {
+                                this.objectiveText.setText(`WAVE ${this.waveNumber + 1} INCOMING...`).setColor('#FFAA00');
+                            }
+                        });
+                        this.scene.time.delayedCall(1400, () => {
+                            if (this.objectiveText && this.objectiveText.active) {
+                                this.objectiveText.setColor(prevColor);
+                            }
+                        });
+                    }
                     // Short delay then next wave
                     this.scene.time.delayedCall(1500, () => {
+                        this._gauntletWaveAnnouncing = false;
                         if (this.active) this._spawnGauntletWave();
                     });
                 }
@@ -329,8 +349,11 @@ export class ChallengeArena {
         }
         this._elements = [];
 
-        // Failure audio + camera shake
-        if (!success && this.scene.audio) {
+        // Success flash + audio / failure audio + shake
+        if (success) {
+            this.scene.cameras.main.flash(250, 100, 255, 100);
+            if (this.scene.audio) this.scene.audio.playChallengeSuccess();
+        } else if (this.scene.audio) {
             this.scene.audio.playChallengeFailure();
             this.scene.cameras.main.shake(300, 0.008);
         }

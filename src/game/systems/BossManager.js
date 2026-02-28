@@ -128,8 +128,15 @@ export class BossManager {
             duration: 2000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
         });
 
-        // Pause shroud
+        // Pause shroud + create arena walls
         this.scene.events.emit('bossFightStart');
+
+        // Wire boss into the arena walls so it can't escape (walls are created synchronously above)
+        const walls = this.scene._arenaWalls;
+        if (walls) {
+            walls.colliderBossL = this.scene.physics.add.collider(this.boss, walls.leftBody);
+            walls.colliderBossR = this.scene.physics.add.collider(this.boss, walls.rightBody);
+        }
 
         // Health bar UI
         const { width } = this.scene.scale;

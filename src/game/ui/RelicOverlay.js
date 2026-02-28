@@ -143,6 +143,24 @@ export class RelicOverlay {
             yoyo: true,
             repeat: -1
         });
+
+        // Mouse hover and click — mirrors LevelUpOverlay behaviour
+        const cardIdx = num - 1;
+        bg.setInteractive({ useHandCursor: true });
+        bg.on('pointerover', () => {
+            if (!this.active) return;
+            bg.setStrokeStyle(3, 0xFFFFFF);
+            this.scene.tweens.add({ targets: bg, scaleX: 1.05, scaleY: 1.05, duration: 130, ease: 'Back.easeOut' });
+        });
+        bg.on('pointerout', () => {
+            if (!this.active) return;
+            bg.setStrokeStyle(2, relic.color);
+            this.scene.tweens.add({ targets: bg, scaleX: 1, scaleY: 1, duration: 110 });
+        });
+        bg.on('pointerdown', () => {
+            if (!this.active) return;
+            this._select(cardIdx);
+        });
     }
 
     _select(idx) {

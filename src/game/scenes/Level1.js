@@ -344,6 +344,7 @@ export class Level1 extends Phaser.Scene {
             bossesDefeated: new Set(),
             relicsCollected: [],
             isDaily: false,
+            className: SkillManager.activeClass?.className || 'Adventurer',
         };
         this._winTriggered = false;
 
@@ -532,7 +533,7 @@ export class Level1 extends Phaser.Scene {
             this.shroud.speedMultiplier = 0;
             MusicManager.playBoss();
             const arenaCenter = this.player.x + 150;
-            this._arenaWalls = this._createArenaWalls(arenaCenter, 800, 0xFF4422);
+            this._arenaWalls = this._createArenaWalls(arenaCenter, 1000, 0xFF4422);
             // Sprint 7f: spawn arena hazards
             const biome = this.biomeManager.getCurrentBiome();
             if (biome) this._spawnBossHazards(biome.id, arenaCenter);
@@ -1669,7 +1670,7 @@ export class Level1 extends Phaser.Scene {
                 sh => sh.active && !sh.used && Math.abs(sh.x - px) < 120
             );
             if (nearShrine) {
-                this._showTutorialHint('shrine', 'Flame Shrine nearby — press [F] to interact');
+                this._showTutorialHint('shrine', 'Flame Shrine ahead — walk into it to restore your Flame');
                 return;
             }
         }
@@ -1994,6 +1995,8 @@ export class Level1 extends Phaser.Scene {
                 }
                 walls.colliderL.destroy();
                 walls.colliderR.destroy();
+                walls.colliderBossL?.destroy();
+                walls.colliderBossR?.destroy();
             }
         });
     }

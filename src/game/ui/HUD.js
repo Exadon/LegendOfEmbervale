@@ -331,7 +331,7 @@ export class HUD {
         // Controls hint
         const ch = u(width / 2, height - 20);
         this.controlsHint = scene.add.text(ch.x, ch.y,
-            '[WASD] Move  [SPACE] Jump  [SHIFT] Dash  [S] Ability  [E] Burst  [Q] Class  [M] Mine Veins  [J] Lore  [ESC] Pause', {
+            '[WASD] Move  [SPACE] Jump  [SHIFT] Flame Step  [S] Ability  [E] Ability  [Q] Class  [M] Mine Veins  [J] Lore  [ESC] Pause', {
             fontSize: '12px', color: '#AAAAAA', fontFamily: 'monospace',
             backgroundColor: '#00000088', padding: { x: 12, y: 4 },
             stroke: '#000000', strokeThickness: 2
@@ -1450,7 +1450,7 @@ export class HUD {
         void el.offsetWidth; // force reflow to restart animation
         el.classList.add('cd-ready-ping');
         setTimeout(() => el.classList.remove('cd-ready-ping'), 600);
-        if (this.scene.audio?.initialized) { this.scene.audio.playComboMilestone?.(); }
+        if (this.scene.audio?.initialized) { this.scene.audio.playAbilityReady?.(); }
     }
 
     // ─── Shroud gap escalation ───

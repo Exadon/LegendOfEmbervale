@@ -625,6 +625,22 @@ export class AudioManager {
         }
     }
 
+    playAbilityReady() {
+        if (!this.initialized) return;
+        const t = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, t);
+        osc.frequency.exponentialRampToValueAtTime(1320, t + 0.08);
+        gain.gain.setValueAtTime(0.06, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+        osc.connect(gain);
+        gain.connect(this.output);
+        osc.start(t);
+        osc.stop(t + 0.12);
+    }
+
     playComboMilestone() {
         if (!this.initialized) return;
         const osc = this.ctx.createOscillator();
@@ -1093,6 +1109,32 @@ export class AudioManager {
             const g = this.ctx.createGain();
             g.gain.setValueAtTime(0.2, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
             osc.connect(g); g.connect(this.output); osc.start(t); osc.stop(t + 0.1);
+        });
+    }
+
+    /** Three ascending tones — played when a challenge is completed successfully */
+    playChallengeSuccess() {
+        if (!this.initialized) return;
+        [300, 500, 750].forEach((freq, i) => {
+            const t = this.ctx.currentTime + i * 0.08;
+            const osc = this.ctx.createOscillator(); osc.type = 'triangle';
+            osc.frequency.value = freq;
+            const g = this.ctx.createGain();
+            g.gain.setValueAtTime(0.18, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+            osc.connect(g); g.connect(this.output); osc.start(t); osc.stop(t + 0.14);
+        });
+    }
+
+    /** Two rising tones — played when a gauntlet wave is cleared and the next is incoming */
+    playGauntletWaveCleared() {
+        if (!this.initialized) return;
+        [350, 550].forEach((freq, i) => {
+            const t = this.ctx.currentTime + i * 0.1;
+            const osc = this.ctx.createOscillator(); osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, t); osc.frequency.exponentialRampToValueAtTime(freq * 1.5, t + 0.18);
+            const g = this.ctx.createGain();
+            g.gain.setValueAtTime(0.18, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+            osc.connect(g); g.connect(this.output); osc.start(t); osc.stop(t + 0.22);
         });
     }
 

@@ -4,11 +4,11 @@ import { Settings } from '../systems/Settings.js';
 
 const COLORBLIND_CODES = {
     fell_critter: 'CR', fell_footsoldier: 'FS', fell_vine: 'FV', fell_ranger: 'FR',
-    scavenger: 'SC', scavenger_pyreblade: 'SP', vukah_warrior: 'VK', vukah_shaman: 'VS',
+    scavenger: 'SC', scavenger_pyreblade: 'SP', vukah_warrior: 'VK', vukah_shaman: 'SH',
     hollow_skeleton: 'SK', hollow_mage: 'HM', hollow_reaper: 'HR', frost_fell: 'FF',
     frost_scavenger: 'FC', skullflame: 'EL', shroud_wraith: 'WR', corrupted_warrior: 'CW',
-    void_slime: 'SL', vine_spitter: 'VS', vukah_berserker: 'VB', pyrebat: 'PB',
-    soul_leech: 'SL', frost_hulk: 'FH',
+    void_slime: 'VS', vine_spitter: 'VI', vukah_berserker: 'VB', pyrebat: 'PB',
+    soul_leech: 'LC', frost_hulk: 'FH',
 };
 
 /**

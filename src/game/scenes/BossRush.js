@@ -82,8 +82,8 @@ export class BossRush extends Phaser.Scene {
         // Empty enemy group (CombatSystem iterates this; no regular enemies in Boss Rush)
         this.enemyGroup = this.physics.add.group();
 
-        // HUD stub (CombatSystem calls hud.popElixir / hud.updateCombo)
-        this.hud = { popElixir: () => {}, updateCombo: () => {} };
+        // HUD stub (CombatSystem calls hud.popElixir / hud.updateCombo / hud.showComboStamp)
+        this.hud = { popElixir: () => {}, updateCombo: () => {}, showComboStamp: () => {} };
 
         // Boss manager
         this.bossManager = new BossManager(this);

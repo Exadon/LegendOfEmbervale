@@ -111,6 +111,7 @@ export class CombatSystem {
                     const _diffDmgMult = s._diffEnemyDamageMult || 1;
                     const dmg = SkillManager.getValue('enemyDamage', enemy.def.damage) * (s.relicManager ? s.relicManager.getMult('enemyDamageMult') : 1) * _diffDmgMult;
                     GlobalState.drainFlame(dmg);
+                    s.popups.show(s.player.x, s.player.y - 30, `-${Math.round(dmg)} FLAME`, '#FF4444', '12px');
                     s.audio.playEnemyHit(enemy.def.key);
                     s.cameras.main.shake(200, 0.008);
                     enemy.banish();
